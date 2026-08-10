@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Class 44</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Class 44 — Custom (User-Defined) Exceptions</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Why built-in exceptions aren't always enough for business scenarios</li>
+<li>Creating a custom exception class — extending Exception or RuntimeException</li>
+<li>Choosing checked vs unchecked for your own custom exception</li>
+<li>Calling the parent constructor to carry the message (super)</li>
+<li>Throwing and catching custom exceptions</li>
+<li>Best practice: meaningful, specific exception class names</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Why Create Custom Exceptions?</b>
+<p>Built-in exceptions (NullPointerException, IOException, etc.) describe <b>technical</b> failures, not <b>business-specific</b> ones. A real application needs to communicate business rule violations clearly — e.g. "InsufficientBalanceException" or "UserAlreadyExistsException" — which don't exist as built-in Java classes. Custom exceptions let you model these scenarios explicitly and meaningfully.</p>
+</div>
+
+<div class="card">
+<b>Creating a Custom Exception — extends Exception or RuntimeException</b>
+<p>A custom exception is just a regular class that <b>extends</b> either <code>Exception</code> (making it <b>checked</b> — compiler-enforced handling) or <code>RuntimeException</code> (making it <b>unchecked</b> — handling optional).</p>
+<pre><code class="language-java">class InsufficientBalanceException extends Exception {
+    public InsufficientBalanceException(String message) {
+        super(message); // passes message up to Exception's constructor
+    }
+}</code></pre>
+</div>
+
+<div class="card">
+<b>Choosing Checked vs Unchecked for Your Custom Exception</b>
+<p>Extend <code>Exception</code> (checked) when the scenario is serious enough that callers <b>must</b> be forced to handle it — the compiler won't let them ignore it. Extend <code>RuntimeException</code> (unchecked) when handling should be <b>optional</b> — often used for programming errors or validation failures that don't need to be forcibly acknowledged at every call site.</p>
+</div>
+
+<div class="card">
+<b>Why Call super(message)</b>
+<p>The <code>Exception</code>/<code>RuntimeException</code> classes already have built-in support for storing and retrieving a descriptive message (via <code>getMessage()</code>). Calling <code>super(message)</code> in your custom exception's constructor passes your message up to be stored using that existing mechanism, rather than reinventing message-handling from scratch.</p>
+</div>
+
+<div class="card">
+<b>Throwing and Using a Custom Exception</b>
+<p>Once defined, a custom exception is thrown just like any other: <code>throw new InsufficientBalanceException("Balance is too low");</code> — and caught the same way, using its specific type in a catch block.</p>
+</div>
+
+<div class="card">
+<b>Best Practice: Meaningful, Specific Names</b>
+<p>Name custom exceptions clearly after the exact business scenario they represent (e.g. <code>InvalidOrderQuantityException</code>, not a vague name like <code>MyException</code>) — this makes catch blocks self-documenting and easier to reason about when reading code later.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>Custom checked exception — InsufficientBalanceException:</b></p>
+<pre><code class="language-java">class InsufficientBalanceException extends Exception {
+    public InsufficientBalanceException(String message) {
+        super(message);
+    }
+}</code></pre>
+<pre><code class="language-java">class Account {
+    private int balance;
+
+    public Account(int balance) {
+        this.balance = balance;
+    }
+
+    public void withdraw(int amount) throws InsufficientBalanceException {
+        if (amount > balance) {
+            throw new InsufficientBalanceException("Insufficient balance to withdraw " + amount);
+        }
+        balance -= amount;
+        System.out.println("Withdrawal successful, remaining balance: " + balance);
+    }
+}</code></pre>
+<pre><code class="language-java">class Driver {
+    public static void main(String[] args) {
+        Account account = new Account(1000);
+        try {
+            account.withdraw(5000);
+        } catch (InsufficientBalanceException e) {
+            System.out.println("Transaction failed: " + e.getMessage());
+        }
+    }
+}</code></pre>
+
+<p><b>Custom unchecked exception — InvalidOrderQuantityException:</b></p>
+<pre><code class="language-java">class InvalidOrderQuantityException extends RuntimeException {
+    public InvalidOrderQuantityException(String message) {
+        super(message);
+    }
+}</code></pre>
+<pre><code class="language-java">class OrderService {
+    public void placeOrder(String item, int quantity) {
+        if (quantity <= 0) {
+            throw new InvalidOrderQuantityException("Quantity must be greater than zero");
+        }
+        System.out.println("Order placed for " + quantity + " x " + item);
+    }
+}</code></pre>
+<pre><code class="language-java">class Driver {
+    public static void main(String[] args) {
+        OrderService service = new OrderService();
+        service.placeOrder("Laptop", -2); // throws unchecked — no try-catch required to compile
+        // If uncaught, program terminates abnormally with the custom exception's message
+    }
+}</code></pre>
+
+<p><b>Custom exception for a duplicate-user scenario:</b></p>
+<pre><code class="language-java">class UserAlreadyExistsException extends Exception {
+    public UserAlreadyExistsException(String message) {
+        super(message);
+    }
+}</code></pre>
+<pre><code class="language-java">class UserService {
+    public void createUser(String userId) throws UserAlreadyExistsException {
+        boolean exists = checkIfExists(userId); // assume this checks a DB
+        if (exists) {
+            throw new UserAlreadyExistsException("User with ID " + userId + " already exists");
+        }
+        System.out.println("User created: " + userId);
+    }
+
+    private boolean checkIfExists(String userId) {
+        return userId.equals("existingUser123"); // simulated check
+    }
+}</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>Why not just use the built-in Exception class directly with a custom message, instead of creating a whole new class?</td><td>A dedicated custom exception class gives a specific, self-documenting TYPE that can be caught distinctly from other exceptions — using generic Exception everywhere makes it impossible to differentiate between different failure scenarios in catch blocks.</td></tr>
+<tr><td>Should custom exceptions extend Exception or RuntimeException?</td><td>Depends on whether you want to force callers to handle it (extend Exception, checked) or leave handling optional (extend RuntimeException, unchecked) — a design decision based on how critical the scenario is.</td></tr>
+<tr><td>What does super(message) actually do in a custom exception's constructor?</td><td>It passes the message up to the parent Exception/RuntimeException class's constructor, which already has built-in support for storing and returning it via getMessage().</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Custom exceptions are just regular classes extending Exception (checked) or RuntimeException (unchecked).</li>
+<li>Always call super(message) to properly store the exception's message using the built-in mechanism.</li>
+<li>Choose checked vs unchecked deliberately based on whether handling should be mandatory or optional for callers.</li>
+<li>Name custom exceptions specifically and meaningfully — avoid vague names like "MyException" or "CustomException."</li>
+<li>Custom exceptions are thrown and caught exactly like built-in ones, using their specific class type.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Create a checked custom exception (extends Exception) for a business scenario of your choice, and use it in a method with throws + throw.</li>
+<li>Create an unchecked custom exception (extends RuntimeException) and confirm it compiles fine without any try-catch.</li>
+<li>Build at least 3 custom exceptions across different domains (banking, e-commerce, ticket booking) with meaningful names and messages.</li>
+<li>Practice catching your custom exceptions and printing their message via getMessage().</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Class:</b> Checked vs unchecked exceptions, throw vs throws</li>
+<li><b>Upcoming Topics:</b> To be confirmed in the next session</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, and formatting/styling. Content reconstructed based on the standard custom exceptions topic flow following directly from the previous class's checked/unchecked and throw/throws material — please flag if the actual transcript covered different specifics, and I'll correct this accordingly.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>

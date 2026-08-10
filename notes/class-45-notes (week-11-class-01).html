@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Week 11 Class 1 (Class 45)</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Week 11 · Class 1 (Course Class 45) — Memory Leaks & Introduction to ArrayList</p>
+</div>
+
+<div class="note" style="margin:24px 40px;">
+<b>Heads up:</b> The uploaded transcripts for this session came through empty on my end, so this file is built from the topics you described (memory leak, ArrayList intro) rather than extracted verbatim from the recording. Please cross-check against the actual class and let me know if anything needs correcting.
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: garbage collection and object reachability</li>
+<li>What a memory leak is in Java, despite having automatic GC</li>
+<li>Common causes of memory leaks (static references, unclosed resources, listeners, caches)</li>
+<li>Why arrays have a fixed size limitation</li>
+<li>Introduction to the Collections Framework</li>
+<li>ArrayList — a resizable, array-backed list</li>
+<li>Creating an ArrayList, adding/removing/accessing elements</li>
+<li>ArrayList vs plain arrays</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Recap: Garbage Collection & Reachability</b>
+<p>An object becomes eligible for garbage collection only when it is completely <b>unreachable</b> — no active reference points to it anymore. The garbage collector periodically reclaims memory from such unreachable objects.</p>
+</div>
+
+<div class="card">
+<b>What is a Memory Leak in Java?</b>
+<p>Even though Java has automatic garbage collection, a <b>memory leak</b> can still occur — it happens when objects that are <b>no longer actually needed</b> remain <b>reachable</b> (something still references them), so the garbage collector can never reclaim them. Over time, these unreleased objects accumulate, consuming more and more heap memory, eventually leading to <code>OutOfMemoryError</code>.</p>
+</div>
+
+<div class="card">
+<b>Why This Matters — It's Not a "Java Bug"</b>
+<p>A memory leak isn't caused by garbage collection failing to work — GC works exactly as designed, only cleaning up truly <b>unreachable</b> objects. The leak happens because of how the <b>application code</b> is written — objects are unintentionally kept reachable (e.g. via a reference that's never cleared) long after they're actually needed.</p>
+</div>
+
+<div class="card">
+<b>Common Cause 1: Static Fields Holding References</b>
+<p>A <code>static</code> field lives for the entire lifetime of the class (as long as the class is loaded) — if a static collection or field keeps accumulating object references (e.g. adding to a static List but never removing), those objects can never become unreachable, even if the rest of the application no longer needs them.</p>
+</div>
+
+<div class="card">
+<b>Common Cause 2: Unclosed Resources</b>
+<p>Database connections, file streams, and similar resources that are opened but never explicitly closed can hold onto memory and system resources indefinitely, even though the "user-facing" object referencing them may seem done with its work.</p>
+</div>
+
+<div class="card">
+<b>Common Cause 3: Listeners / Callbacks Not Removed</b>
+<p>If an object registers itself as a listener/callback with another long-lived object, and is never explicitly deregistered, the long-lived object continues to hold a reference to it — preventing garbage collection even after the listener is logically no longer needed.</p>
+</div>
+
+<div class="card">
+<b>Common Cause 4: Caches Without Eviction</b>
+<p>A cache that keeps adding entries without ever removing old/unused ones effectively becomes an ever-growing reachable structure — a very common real-world source of memory leaks in long-running applications.</p>
+</div>
+
+<div class="card">
+<b>Transition to Collections — Why Arrays Aren't Always Enough</b>
+<p>A plain array has a <b>fixed size</b>, decided at creation time — you cannot grow or shrink it afterward. In real applications, the number of elements needed is often <b>not known in advance</b> (e.g. how many items a user adds to a cart) — this limitation motivates Java's <b>Collections Framework</b>, which provides flexible, resizable data structures.</p>
+</div>
+
+<div class="card">
+<b>ArrayList — A Resizable, Array-Backed List</b>
+<p><code>ArrayList</code> (from <code>java.util</code>) is one of the most commonly used Collection classes — internally backed by an array, but it automatically <b>resizes itself</b> as elements are added or removed, so you never need to know the final size in advance.</p>
+</div>
+
+<div class="card">
+<b>ArrayList vs Array — Key Differences</b>
+<table>
+<tr><th>Array</th><th>ArrayList</th></tr>
+<tr><td>Fixed size, set at creation</td><td>Dynamically resizable</td></tr>
+<tr><td>Can hold primitives directly</td><td>Only holds objects (uses wrapper classes for primitives, e.g. Integer instead of int)</td></tr>
+<tr><td>Simple <code>[]</code> syntax</td><td>Rich set of built-in methods (add, remove, get, size, contains, etc.)</td></tr>
+</table>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>Memory leak example — static list that never shrinks:</b></p>
+<pre><code class="language-java">class SessionCache {
+    static List<String> activeSessions = new ArrayList<>();
+
+    public static void addSession(String sessionId) {
+        activeSessions.add(sessionId); // keeps growing, never removed
+    }
+    // If sessions are never removed after logout, this list grows forever,
+    // and every session object it references can never be garbage collected.
+}</code></pre>
+
+<p><b>Fixed-size limitation of arrays:</b></p>
+<pre><code class="language-java">int[] scores = new int[3]; // fixed at 3 — cannot add a 4th element without creating a new array
+scores[0] = 90;
+scores[1] = 85;
+scores[2] = 70;
+// scores[3] = 60; // ArrayIndexOutOfBoundsException — no room to grow</code></pre>
+
+<p><b>Creating and using an ArrayList:</b></p>
+<pre><code class="language-java">import java.util.ArrayList;
+import java.util.List;
+
+class CartDemo {
+    public static void main(String[] args) {
+        List<String> cartItems = new ArrayList<>();
+
+        cartItems.add("Laptop");
+        cartItems.add("Mouse");
+        cartItems.add("Keyboard");
+
+        System.out.println(cartItems);        // [Laptop, Mouse, Keyboard]
+        System.out.println(cartItems.size());  // 3
+
+        cartItems.remove("Mouse");
+        System.out.println(cartItems);        // [Laptop, Keyboard]
+
+        System.out.println(cartItems.get(0)); // Laptop
+        System.out.println(cartItems.contains("Keyboard")); // true
+    }
+}</code></pre>
+
+<p><b>ArrayList grows automatically — no fixed size needed:</b></p>
+<pre><code class="language-java">List<Integer> numbers = new ArrayList<>();
+for (int i = 0; i < 100; i++) {
+    numbers.add(i); // no size limit issues — ArrayList resizes internally as needed
+}
+System.out.println(numbers.size()); // 100</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>If Java has garbage collection, how can a memory leak still happen?</td><td>GC only reclaims UNREACHABLE objects. A leak happens when application code unintentionally keeps objects reachable (e.g. via a static collection that's never cleared) even though they're no longer actually needed.</td></tr>
+<tr><td>Why use ArrayList instead of a plain array?</td><td>Arrays have a fixed size decided at creation; ArrayList grows and shrinks dynamically as elements are added/removed, which fits most real-world scenarios where the final size isn't known upfront.</td></tr>
+<tr><td>Can an ArrayList store primitive types directly like an array can?</td><td>No — ArrayList only stores objects, so primitives are automatically wrapped using their corresponding wrapper classes (e.g. int becomes Integer) when added.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Memory leaks in Java happen due to objects being unintentionally kept REACHABLE, not because GC fails.</li>
+<li>Watch out for static collections, unclosed resources, unregistered listeners, and unbounded caches as common leak sources.</li>
+<li>Arrays have a fixed size; ArrayList resizes automatically as needed.</li>
+<li>ArrayList only stores objects — primitives are auto-boxed into their wrapper types.</li>
+<li>Import ArrayList from java.util before using it.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Write a small program simulating a memory leak using a static List that keeps growing without ever removing entries.</li>
+<li>Practice creating an ArrayList, adding/removing elements, and using size(), get(), and contains().</li>
+<li>Compare behavior: try to exceed a fixed array's size (observe the exception) vs adding beyond an ArrayList's current capacity (observe it just works).</li>
+<li>Research other common ArrayList methods (indexOf, isEmpty, clear) for the next session.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Class:</b> Custom exceptions (extending Exception/RuntimeException)</li>
+<li><b>Upcoming Topics:</b> Continued Collections Framework — likely LinkedList, HashMap, and other collection types</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+This file was built primarily from the topic names you provided (memory leak, ArrayList intro), since the uploaded transcript documents came through empty. Content reflects standard, accurate treatment of these topics, but has NOT been verified against your instructor's exact wording or examples — please flag any corrections needed.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Class 43</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.treebox{background:#1e1e2f;color:#d4d4f7;padding:16px;border-radius:10px;font-family:monospace;line-height:1.8;text-align:center;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Class 43 — Checked vs Unchecked Exceptions & throw vs throws</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: all exceptions occur at runtime — "compile time" only describes when handling is enforced</li>
+<li>Unchecked (Runtime) exceptions — handling is optional</li>
+<li>Checked (Compile-time) exceptions — handling is mandatory, enforced by the compiler</li>
+<li>FileNotFoundException, IOException as checked exception examples</li>
+<li>The Class class and dynamic class loading — ClassNotFoundException</li>
+<li>Exception hierarchy: RuntimeException vs Exception subtree</li>
+<li>throws keyword — declaring a method may throw an exception</li>
+<li>throw keyword — creating and throwing a new exception object</li>
+<li>Communicating meaningful exceptions back to the caller</li>
+<li>Practice: e-commerce order validation with negative quantity</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Critical Clarification: All Exceptions Occur at Runtime</b>
+<p>A common point of confusion: "checked" and "unchecked" do <b>NOT</b> refer to when the exception is thrown — every exception, without exception, is thrown at <b>runtime</b>. The distinction is about whether the <b>compiler forces you</b> to provide handling (try-catch or throws) before it will even let the code compile.</p>
+</div>
+
+<div class="card">
+<b>Unchecked (Runtime) Exceptions</b>
+<p>Exceptions like <code>NullPointerException</code>, <code>ArrayIndexOutOfBoundsException</code>, and <code>ArithmeticException</code> — the compiler does <b>not force</b> you to handle these. Code compiles fine even without try-catch; if the exception occurs at runtime and isn't handled, the program terminates abnormally, but there's no compile-time obligation.</p>
+</div>
+
+<div class="card">
+<b>Checked (Compile-Time-Enforced) Exceptions</b>
+<p>Exceptions like <code>FileNotFoundException</code>, <code>IOException</code>, <code>SQLException</code>, and <code>ClassNotFoundException</code> — the compiler <b>forces</b> you to provide a handling mechanism (try-catch, or declaring <code>throws</code>) before it will compile the code at all. These are considered serious enough (often representing scenarios where the operation fundamentally cannot proceed — e.g. the file/class simply doesn't exist) that Java mandates explicit acknowledgment.</p>
+</div>
+
+<div class="card">
+<b>Real-World Analogy — Amazon COD Restriction</b>
+<p>Just as Amazon proactively blocks Cash-on-Delivery for certain PIN codes before you even place the order (because it already "knows" this won't work), the compiler proactively blocks compilation for checked exceptions it "knows about" — forcing you to address the risk upfront rather than letting it fail silently at runtime.</p>
+</div>
+
+<div class="card">
+<b>The Class Class and Dynamic Class Loading</b>
+<p>Java has a built-in <code>Class</code> class with a method <code>Class.forName("ClassName")</code> used to dynamically load a class by name at runtime (commonly used with database drivers). If the specified class doesn't exist (e.g. due to a typo), it throws <code>ClassNotFoundException</code> — a checked exception, so the compiler requires it to be handled.</p>
+</div>
+
+<div class="card">
+<b>Static vs Dynamic Class Loading</b>
+<p><b>Static loading</b> — a class is loaded into memory automatically whenever you create an object of it directly (e.g. <code>new SomeClass()</code>). <b>Dynamic loading</b> — a class name is supplied at runtime (e.g. as a String) and loaded via <code>Class.forName()</code>, allowing flexibility in which class gets loaded without hardcoding it.</p>
+</div>
+
+<div class="card">
+<b>Exception Hierarchy — How to Tell Checked from Unchecked</b>
+<div class="treebox">
+Throwable<br>
+/&nbsp;&nbsp;&nbsp;&nbsp;\<br>
+Error&nbsp;&nbsp;&nbsp;&nbsp;Exception<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/&nbsp;&nbsp;&nbsp;&nbsp;\<br>
+RuntimeException&nbsp;&nbsp;&nbsp;(everything else under Exception)<br>
+&nbsp;&nbsp;&nbsp;(UNCHECKED)&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;(CHECKED)
+</div>
+<p style="margin-top:10px;">Any class that is a <b>direct or indirect child of RuntimeException</b> is an unchecked exception (e.g. NullPointerException, ArrayIndexOutOfBoundsException, ArithmeticException). Any class that's a child of <b>Exception but NOT under RuntimeException</b> is a checked exception (e.g. IOException, FileNotFoundException, SQLException, ClassNotFoundException).</p>
+</div>
+
+<div class="card">
+<b>throws Keyword — Declaring a Method May Throw</b>
+<p>Written in a method's <b>signature</b>, <code>throws</code> tells the caller: "this method may throw this exception — you must handle it." It doesn't itself create or throw anything — it's a declaration/warning to whoever calls the method.</p>
+<pre><code class="language-java">public String createUser(String username) throws NullPointerException {
+    // ...
+}</code></pre>
+</div>
+
+<div class="card">
+<b>throw Keyword — Actually Creating and Throwing</b>
+<p><code>throw</code> is used <b>inside</b> a method's body to create a <b>new exception object</b> and throw it immediately: <code>throw new SomeException("message");</code>. This is how you communicate a <b>meaningful, business-specific</b> exception to the caller instead of letting a generic/technical one (like NullPointerException) leak through untranslated.</p>
+</div>
+
+<div class="card">
+<b>Why Translate Technical Exceptions into Meaningful Ones</b>
+<p>A caller (and eventually an end user) usually doesn't care about "NullPointerException" — they need meaningful context like "Username is already taken" or "Insufficient balance." Catching a low-level technical exception and re-throwing a business-meaningful one lets the caller (and ultimately the UI) respond appropriately, instead of showing cryptic technical errors to end users.</p>
+</div>
+
+<div class="card">
+<b>Handle vs Throw — Two Valid Strategies</b>
+<p>You don't always have to handle an exception yourself — you can also choose to simply declare <code>throws</code> and let the <b>caller</b> handle it, if that's more appropriate. Alternatively, you can <b>catch</b> a technical exception and <b>throw</b> a new, more meaningful one — combining both handling and throwing together.</p>
+</div>
+
+<div class="card">
+<b>What Happens If an Exception is Never Handled Anywhere?</b>
+<p>If no method in the call chain handles it, the exception ultimately propagates all the way up to the <b>JVM</b>, which terminates the program abnormally — though in well-designed real systems, exceptions are meant to be handled or meaningfully translated well before reaching that point.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>Unchecked exception — compiles without any handling:</b></p>
+<pre><code class="language-java">String name = null;
+int len = name.length(); // NullPointerException — compiles fine, no handling required</code></pre>
+
+<p><b>Checked exception — compiler REFUSES to compile without handling:</b></p>
+<pre><code class="language-java">// This does NOT compile without try-catch or throws:
+ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream("file.txt"));
+// ERROR: unhandled exception type FileNotFoundException</code></pre>
+<pre><code class="language-java">// Fixed with try-catch:
+try {
+    ObjectOutputStream os = new ObjectOutputStream(new FileOutputStream("file.txt"));
+} catch (FileNotFoundException e) {
+    System.out.println("File not found");
+} catch (IOException e) {
+    System.out.println("IO error occurred");
+}</code></pre>
+
+<p><b>ClassNotFoundException — dynamic class loading:</b></p>
+<pre><code class="language-java">try {
+    Class.forName("com.example.SomeDriver"); // may not exist -> ClassNotFoundException
+} catch (ClassNotFoundException e) {
+    System.out.println("Class not found: " + e.getMessage());
+}</code></pre>
+
+<p><b>throws — declaring a method may throw, letting the caller handle it:</b></p>
+<pre><code class="language-java">class UserService {
+
+    public String createUser(String username) throws NullPointerException {
+        int length = username.length(); // may throw if username is null
+        return "USR" + length;
+    }
+
+}</code></pre>
+<pre><code class="language-java">class Driver {
+    public static void main(String[] args) {
+        UserService service = new UserService();
+        try {
+            String userId = service.createUser(null);
+        } catch (NullPointerException e) {
+            System.out.println("Failed to create user: " + e.getMessage());
+        }
+    }
+}</code></pre>
+
+<p><b>throw — translating a technical exception into a meaningful one:</b></p>
+<pre><code class="language-java">class UserService {
+
+    public String createUser(String username) throws Exception {
+        try {
+            int length = username.length();
+            return "USR" + length;
+        } catch (NullPointerException e) {
+            throw new Exception("Username is not provided"); // meaningful message for the caller
+        }
+    }
+
+}</code></pre>
+<pre><code class="language-java">class Driver {
+    public static void main(String[] args) {
+        UserService service = new UserService();
+        try {
+            String userId = service.createUser(null);
+        } catch (Exception e) {
+            System.out.println(e.getMessage()); // "Username is not provided"
+            // caller can now take meaningful action, e.g. assign a default user ID
+        }
+    }
+}</code></pre>
+
+<p><b>Business-meaningful exception example — user already exists:</b></p>
+<pre><code class="language-java">public void createUser(String userId) throws Exception {
+    boolean exists = checkIfUserExistsInDB(userId);
+    if (exists) {
+        throw new Exception("User already exists");
+    }
+    // proceed with creation...
+}</code></pre>
+
+<p><b>Practice exercise — negative quantity validation:</b></p>
+<pre><code class="language-java">class OrderService {
+
+    public void placeOrder(String item, int quantity) throws Exception {
+        if (quantity < 0) {
+            throw new Exception("Quantity cannot be negative");
+        }
+        System.out.println("Order placed for " + quantity + " x " + item);
+    }
+
+}</code></pre>
+<pre><code class="language-java">class Driver {
+    public static void main(String[] args) {
+        OrderService service = new OrderService();
+        try {
+            service.placeOrder("Laptop", -5);
+        } catch (Exception e) {
+            System.out.println("Order failed: " + e.getMessage());
+        }
+    }
+}</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>Do checked exceptions get thrown at compile time?</td><td>No — the exception is always thrown at runtime; only the requirement to HANDLE it is enforced at compile time.</td></tr>
+<tr><td>What's the difference between throw and throws?</td><td>throws (in the method signature) declares that a method may throw a given exception, informing callers they must handle it. throw (inside the method body) actually creates and throws a specific exception object at that point in the code.</td></tr>
+<tr><td>If a method declares "throws SomeException" and also has a try-catch handling that exact exception internally, is that a conflict?</td><td>Not a conflict, but redundant — if the method already fully handles the exception internally, there's no need to also declare throws for it, since the caller would never actually receive it.</td></tr>
+<tr><td>Can a method throw multiple different exceptions?</td><td>Yes — a method can declare multiple exception types in throws (comma-separated), and internally throw different specific exception objects depending on the scenario (e.g. "user already exists" vs "invalid input").</td></tr>
+<tr><td>What happens if an exception is thrown all the way up without any catch anywhere?</td><td>It eventually reaches the JVM, which terminates the program abnormally.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>All exceptions occur at runtime — checked/unchecked only describes whether handling is compiler-enforced.</li>
+<li>Checked exceptions (FileNotFoundException, IOException, SQLException, ClassNotFoundException) must be handled or declared with throws, or the code won't compile.</li>
+<li>Unchecked exceptions (children of RuntimeException) don't require any compile-time handling.</li>
+<li>throws goes in the method signature (declaration); throw is used inside the method body to actually create and throw an exception.</li>
+<li>Translate low-level/technical exceptions into meaningful, business-specific ones before they reach the end user.</li>
+<li>You can choose to handle an exception yourself, or declare throws and let the caller handle it — both are valid strategies depending on context.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Write code that triggers FileNotFoundException and ClassNotFoundException, and observe the compiler forcing you to handle them.</li>
+<li>Practice distinguishing checked vs unchecked exceptions by checking whether they're a child of RuntimeException in the Java documentation.</li>
+<li>Build the UserService example: catch a technical NullPointerException internally and throw a meaningful custom message via a new Exception.</li>
+<li>Complete the e-commerce order validation exercise: throw a meaningful exception for negative quantity, and handle it at the caller with an appropriate message.</li>
+<li>Prepare to discuss, in an interview-style answer, real examples of checked exceptions encountered in a project (file handling, database, class loading).</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Class:</b> Error vs Exception, multiple catch blocks, finally block, exception hierarchy basics</li>
+<li><b>Upcoming Topics:</b> User-defined (custom) exceptions — explicitly mentioned as the next topic</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, the hierarchy diagram, and formatting/styling. No new technical content was added beyond what the instructor taught. Extensive live classroom Q&A and individual student code-review dialogue were summarized into the relevant concept cards and code examples rather than transcribed as dialogue. Note: two transcripts submitted for this session were identical in content, so this file reflects a single consolidated class.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>
