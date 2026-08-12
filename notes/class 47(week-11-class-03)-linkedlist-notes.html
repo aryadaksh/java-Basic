@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Week 11 Class 2 - LinkedList</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.nodebox{display:flex;align-items:center;gap:4px;margin:14px 0;flex-wrap:wrap;font-family:monospace;}
+.node{background:#1e1e2f;border-radius:8px;padding:8px 10px;display:flex;gap:6px;color:#d4d4f7;font-size:13px;}
+.node .prev{color:#ff9a76;}
+.node .data{color:#7cffb2;font-weight:bold;}
+.node .next{color:#8fc4ff;}
+.arrow{color:#888;font-size:18px;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Week 11 · Class 2 — LinkedList Internal Working & ArrayList vs LinkedList</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Quick revision of ArrayList (index-based, continuous memory, O(1) get, O(N) middle modification)</li>
+<li>LinkedList — Node-based structure (data + next/previous references)</li>
+<li>Singly vs Doubly linked lists — Java's LinkedList is doubly linked</li>
+<li>Continuous (ArrayList) vs non-continuous (LinkedList) memory</li>
+<li>Why LinkedList doesn't need an initial capacity</li>
+<li>LinkedList maintains order and allows duplicates (same List behavior)</li>
+<li>Internal node structure — first/last node references</li>
+<li>Why LinkedList is NOT truly index-based — traversal required</li>
+<li>Time complexity: get() O(N), link modification O(1), overall insert/delete O(N)</li>
+<li>Full ArrayList vs LinkedList comparison table</li>
+<li>Interview decision-making guidance</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Quick Revision — ArrayList</b>
+<p>ArrayList is index-based, uses continuous memory, and is best for <b>random access by index</b> (get() is O(1)). Middle insertion/removal generally requires shifting → O(N). Adding at the end can trigger resizing/data movement, so don't blindly say add() is always O(1) — always consider the actual scenario.</p>
+</div>
+
+<div class="card">
+<b>LinkedList — Basic Idea</b>
+<p>A <b>LinkedList</b> is another List implementation, but instead of a continuous array, it's made of <b>Nodes</b>. Each Node stores <b>data</b> plus the <b>address/reference of the next node</b>. In a <b>doubly linked list</b>, each Node also stores a reference to the <b>previous</b> node: <code>[previous | data | next]</code>. <b>Java's LinkedList is a doubly linked list.</b></p>
+</div>
+
+<div class="card">
+<b>Singly vs Doubly Linked List</b>
+<ul>
+<li><b>Singly:</b> each node knows only the <b>next</b> node's address — moves in one direction only (Node1 → Node2 → Node3 → null).</li>
+<li><b>Doubly:</b> each node knows both <b>previous</b> and <b>next</b> (null ← Node1 ↔ Node2 ↔ Node3 → null). Java's LinkedList uses this — every node has both references.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Continuous vs Non-Continuous Memory</b>
+<p>ArrayList requires elements to sit <b>next to each other</b> in memory (continuous). LinkedList does <b>NOT</b> require this — nodes can live at completely different, random memory addresses. Each node simply stores <b>references</b> connecting it to the next/previous node, regardless of where they physically sit in memory.</p>
+</div>
+
+<div class="card">
+<b>Why LinkedList Doesn't Need Initial Capacity</b>
+<p>ArrayList has an "initial capacity" concept because it needs to reserve a continuous memory block upfront. LinkedList has no such requirement — since it doesn't need continuous memory, each new element simply becomes a new node, connected via references to existing nodes, growing organically without any capacity planning.</p>
+</div>
+
+<div class="card">
+<b>Order and Duplicates — Same as ArrayList</b>
+<p>LinkedList follows the same core List behavior: it <b>maintains insertion order</b> and <b>allows duplicates</b>. So if the requirement is just "ordered + duplicates allowed," both ArrayList and LinkedList qualify — the actual choice depends on the specific use case (covered later in this class).</p>
+</div>
+
+<div class="card">
+<b>Internal Node Structure</b>
+<p>Each node in a LinkedList knows its previous and next neighbors. The <b>first</b> node's <code>previous</code> is <code>null</code>; the <b>last</b> node's <code>next</code> is <code>null</code>. Every node in between knows both its previous and next nodes. The LinkedList itself keeps a reference to the <b>first</b> and <b>last</b> nodes.</p>
+</div>
+
+<div class="card">
+<b>LinkedList is NOT Truly Index-Based</b>
+<p>LinkedList methods can still accept a position, like <code>get(2)</code> — but this position does <b>NOT</b> mean the memory address can be calculated directly like an array. The index represents a <b>logical</b> position in the list. To actually reach that position, LinkedList must <b>traverse</b> through the nodes one by one.</p>
+</div>
+
+<div class="card">
+<b>Traversal — Moving Through Nodes One by One</b>
+<p>You cannot directly jump from Node1 to Node5 just because Node1 exists — you must follow the chain: check Node1's next → move to Node2 → check its next → move to Node3 → and so on, until you reach the target. Finding an element at a given position generally requires this kind of traversal.</p>
+</div>
+
+<div class="card">
+<b>LinkedList get() — O(N)</b>
+<p>Since LinkedList cannot directly calculate a memory address from an index, it must traverse nodes to reach the desired position — in the worst case, traveling through most/all of the list. Therefore, <code>get(index)</code> on a LinkedList is <b>O(N)</b>, compared to ArrayList's O(1).</p>
+</div>
+
+<div class="card">
+<b>LinkedList Insertion/Deletion — Two-Part Complexity</b>
+<p>Once you've already <b>reached</b> the target position/node, actually inserting or removing there just means <b>changing a few references</b> — no large-scale shifting like ArrayList. This link/reference change itself is <b>O(1)</b>. BUT reaching that position in the first place (if not already known) requires <b>traversal</b>, which is <b>O(N)</b>. So the <b>overall</b> operation, when you need to locate the position first, is <b>O(N)</b>.</p>
+</div>
+
+<div class="card">
+<b>The Interview-Critical Distinction</b>
+<p>Don't simply say "LinkedList insertion is always O(1)." The better, interview-correct explanation: <b>"The actual node-link modification is O(1), but if we need to traverse to the target position first, the overall operation can be O(N)."</b> This two-part breakdown is exactly what interviewers are listening for.</p>
+</div>
+
+<div class="card">
+<b>Why LinkedList Can Be Better for Modification-Heavy Use Cases</b>
+<p>With ArrayList, inserting/removing in the middle of a large list means shifting many elements — expensive at scale. With LinkedList, existing nodes stay exactly where they are; only the <b>connections</b> between nodes change — no mass movement of data. So when frequent modification is the priority (especially if the position/node is already known or easily reachable), LinkedList can be preferable.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>Visualizing a doubly linked list (5 cities inserted):</b></p>
+<div class="nodebox">
+<div class="node"><span class="prev">null</span> | <span class="data">Bangalore</span> | <span class="next">•</span></div>
+<span class="arrow">⇄</span>
+<div class="node"><span class="prev">•</span> | <span class="data">Chennai</span> | <span class="next">•</span></div>
+<span class="arrow">⇄</span>
+<div class="node"><span class="prev">•</span> | <span class="data">Hyderabad</span> | <span class="next">•</span></div>
+<span class="arrow">⇄</span>
+<div class="node"><span class="prev">•</span> | <span class="data">Delhi</span> | <span class="next">•</span></div>
+<span class="arrow">⇄</span>
+<div class="node"><span class="prev">•</span> | <span class="data">Mumbai</span> | <span class="next">null</span></div>
+</div>
+
+<p><b>Creating and using a LinkedList:</b></p>
+<pre><code class="language-java">import java.util.LinkedList;
+import java.util.List;
+
+class CityService {
+
+    public List<String> getCityNamesLinked() {
+        List<String> cities = new LinkedList<>();
+        cities.add("Bangalore");
+        cities.add("Chennai");
+        cities.add("Hyderabad");
+        cities.add("Delhi");
+        cities.add("Mumbai");
+        return cities;
+    }
+
+}</code></pre>
+
+<p><b>get() on LinkedList — O(N), requires traversal:</b></p>
+<pre><code class="language-java">List<String> cities = new LinkedList<>();
+cities.add("Bangalore"); cities.add("Chennai"); cities.add("Hyderabad");
+cities.add("Delhi"); cities.add("Mumbai");
+
+String result = cities.get(4);
+// Cannot jump directly to index 4's memory address like an array —
+// must traverse: Bangalore -> Chennai -> Hyderabad -> Delhi -> Mumbai</code></pre>
+
+<p><b>Insertion in the middle — reference changes, no shifting:</b></p>
+<pre><code class="language-java">// Conceptual: inserting Node X between B and C
+// Before: A -> B -> C
+// After:  A -> B -> X -> C
+
+// Only these references change:
+// B.next -> X
+// X.previous -> B
+// X.next -> C
+// C.previous -> X
+// No existing data is shifted — unlike ArrayList</code></pre>
+
+<p><b>Deletion from the middle — reference changes, no shifting:</b></p>
+<pre><code class="language-java">// Before: A -> B -> C -> D
+// Remove C
+// After:  A -> B -> D
+
+// Links adjusted:
+// B.next -> D
+// D.previous -> B
+// C itself is simply no longer referenced (eligible for garbage collection)</code></pre>
+
+</div>
+
+<div class="section">
+<h2>📊 ArrayList vs LinkedList — Full Comparison</h2>
+<table>
+<tr><th>Operation</th><th>ArrayList</th><th>LinkedList</th></tr>
+<tr><td>get(index)</td><td>O(1)</td><td>O(N)</td></tr>
+<tr><td>Random access by index</td><td>Excellent</td><td>Poor</td></tr>
+<tr><td>Middle insertion</td><td>O(N) — shifting</td><td>O(N) overall* — traversal, then O(1) link change</td></tr>
+<tr><td>Middle deletion</td><td>O(N) — shifting</td><td>O(N) overall* — traversal, then O(1) link change</td></tr>
+<tr><td>Actual link/element modification</td><td>N/A</td><td>O(1)</td></tr>
+<tr><td>Memory layout</td><td>Continuous</td><td>Non-continuous (nodes anywhere)</td></tr>
+<tr><td>Structure</td><td>Array-backed</td><td>Node-based (doubly linked)</td></tr>
+<tr><td>Allows duplicates</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Maintains insertion order</td><td>Yes</td><td>Yes</td></tr>
+<tr><td>Needs initial capacity</td><td>Yes (continuous block)</td><td>No</td></tr>
+</table>
+<p style="font-size:13px;color:#777;margin-top:10px;">*For LinkedList, O(N) overall applies when traversal is required to reach the position. If the node is already known/reachable, the actual link change alone is O(1).</p>
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>When would you use ArrayList?</td><td>When the application frequently needs random access/read by index — ArrayList is preferred since indexed access is O(1).</td></tr>
+<tr><td>When would you use LinkedList?</td><td>When frequent insertion/deletion is important and the required node/position can be reached efficiently — the actual link modification is O(1) and doesn't require shifting elements.</td></tr>
+<tr><td>Why not use LinkedList for random access?</td><td>Because LinkedList must traverse nodes to reach a position, making indexed access O(N), whereas ArrayList provides O(1) indexed access directly.</td></tr>
+<tr><td>Why is ArrayList slower for middle insertion/deletion?</td><td>Because it's a continuous, array-backed structure — elements must shift to preserve that continuous layout.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Java's LinkedList is doubly linked — every node has both previous and next references.</li>
+<li>LinkedList does NOT require continuous memory, unlike ArrayList.</li>
+<li>LinkedList does NOT need an initial capacity, since it doesn't reserve a continuous block upfront.</li>
+<li>get(index) on LinkedList is O(N) due to required traversal — NOT O(1) like ArrayList.</li>
+<li>LinkedList's actual link/reference modification is O(1), but reaching the target position (traversal) is O(N) — so state BOTH parts in interviews, not a single blanket complexity.</li>
+<li>Both ArrayList and LinkedList maintain insertion order and allow duplicates — the choice between them depends on whether random access or frequent modification matters more for your use case.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Practice add(), remove(), and get() operations on a LinkedList at different positions.</li>
+<li>Observe traversal behavior — trace through how LinkedList reaches a given index conceptually.</li>
+<li>Compare ArrayList's shifting behavior side-by-side with LinkedList's link-changing behavior using your own examples.</li>
+<li>Be ready to explain, unprompted, the two-part complexity breakdown for LinkedList insertion/deletion (traversal O(N) + link change O(1)).</li>
+<li>Practice spontaneously comparing ArrayList and LinkedList in an interview-style answer — explain WHY each complexity occurs, not just the label.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Class:</b> Collection Framework introduction and ArrayList internal working</li>
+<li><b>Upcoming Topics:</b> Likely continuing the Collections Framework — Set, Map, or further List operations</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, the node-diagram visual, the comparison table, and formatting/styling. Content extracted directly from your uploaded transcript file. No new technical content was added beyond what the instructor taught.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>

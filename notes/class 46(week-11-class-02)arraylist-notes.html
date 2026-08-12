@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Week 11 Class 1 - ArrayList</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.arraybox{display:flex;gap:4px;margin:14px 0;flex-wrap:wrap;}
+.cell{background:#1e1e2f;color:#7cffb2;width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-family:monospace;font-weight:bold;position:relative;}
+.cell .idx{position:absolute;top:-18px;font-size:11px;color:#888;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Week 11 · Class 1 — Collection Framework & ArrayList Internal Working</p>
+</div>
+
+<div class="note" style="margin:24px 40px;">
+<b>Correction:</b> An earlier version of this class's notes incorrectly covered "memory leaks" — that was built without the real transcript and was wrong. This version replaces it with the actual class content: Collection Framework, ArrayList internals, and time complexity.
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Collection Framework overview: Collection interface → List interface → ArrayList/LinkedList</li>
+<li>Ordered data and duplicates — what "List" guarantees</li>
+<li>Real-world example: storing and processing city names</li>
+<li>Array/ArrayList internal working — index-based, continuous memory</li>
+<li>Shifting on insertion and removal (left/right)</li>
+<li>Random access by index — O(1)</li>
+<li>What time complexity actually means (the ball-in-a-box analogy)</li>
+<li>O(1) vs O(N) explained</li>
+<li>ArrayList get(), add(), and modification time complexity</li>
+<li>Why continuous memory affects resizing cost</li>
+<li>Amortized complexity of add() — not always O(1)</li>
+<li>When to use vs avoid ArrayList</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Collection Framework Hierarchy (Recap)</b>
+<p><b>Collection</b> is a super interface. <b>List</b> is an interface under Collection. If your requirement is (1) <b>ordered data</b> and (2) <b>duplicates allowed</b>, you use a class implementing List — such as <b>ArrayList</b> or <b>LinkedList</b>.</p>
+</div>
+
+<div class="card">
+<b>What "Ordered" Means</b>
+<p>Ordered means the way elements are <b>inserted</b> is the way they can be <b>read back</b>. If you insert A, B, C, the list maintains exactly A, B, C — not some rearranged order.</p>
+</div>
+
+<div class="card">
+<b>Golden Rule: Don't Pick a Data Structure Blindly</b>
+<p>"ArrayList vs LinkedList — when should you use each?" is a classic interview question. The instructor's core message: <b>do not immediately choose a data structure</b> — first understand the <b>exact use case</b>, then decide.</p>
+</div>
+
+<div class="card">
+<b>Real-World Example: City Names Service</b>
+<p>Requirement: store city names, which <b>may contain duplicates</b> (e.g. "Mumbai" can appear more than once — there's no uniqueness rule for city names). A service class exposes a method like <code>getCityNames()</code> that returns a <code>List&lt;String&gt;</code>. In a real app this data would come from a database; here it's hardcoded for the example. Another developer calls this method and <b>processes</b> the returned list (e.g. filtering cities starting with "M").</p>
+</div>
+
+<div class="card">
+<b>The Core Idea: Storage + Processing</b>
+<p>The Collection Framework's purpose: <b>store similar kinds of objects together as a unit</b>, and allow you to <b>process</b> that data afterward (filter, search, transform) — e.g. a list of cities, or a list of student marks, followed by filtering/processing based on a requirement.</p>
+</div>
+
+<div class="card">
+<b>Array/ArrayList Internal Working — Index-Based & Continuous Memory</b>
+<p>Arrays (and ArrayList internally) are <b>index-based</b> — each element has a position (0, 1, 2, ...) allowing direct access. The key internal concept: elements are considered to be stored in <b>continuous (contiguous) memory locations</b>, right next to each other. This continuous arrangement is exactly WHY shifting happens when elements are inserted or removed.</p>
+</div>
+
+<div class="card">
+<b>Removing an Element — Shifting Left</b>
+<p>If you remove an element from the <b>middle</b> (e.g. index 2), all elements <b>after</b> it must shift <b>left</b> by one position to maintain the continuous arrangement. Removing from the <b>end</b> requires <b>no shifting</b> at all — much cheaper.</p>
+</div>
+
+<div class="card">
+<b>Adding an Element — Shifting Right</b>
+<p>If you insert an element into the <b>middle</b> (e.g. at index 4), all elements from that position onward must shift <b>right</b> by one position to make room. <b>Rule:</b> Insert in the middle → shift RIGHT. Remove from the middle → shift LEFT.</p>
+</div>
+
+<div class="card">
+<b>Random Access by Index — O(1)</b>
+<p>Since ArrayList is index-based, if you already know the index you want (e.g. index 3), the system can <b>directly access</b> that position instead of searching through everything before it. This direct-access capability is called <b>random access by index</b>, and it has a time complexity of <b>O(1)</b> — constant time.</p>
+</div>
+
+<div class="card">
+<b>What Time Complexity Actually Means</b>
+<p>Time complexity does <b>NOT</b> mean "how many seconds did it take." It represents <b>how the amount of work grows as input size grows</b>.</p>
+</div>
+
+<div class="card">
+<b>The Ball-in-a-Box Analogy</b>
+<p><b>O(N) scenario:</b> A closed box has 10 balls, only 1 is red, and you can't see inside — you may have to check multiple balls, worst case all 10. With 100 balls, worst case is 100 checks; with 1,000 balls, worst case is 1,000 checks. Work grows <b>linearly</b> with input size → <b>O(N)</b>.</p>
+<p><b>O(1) scenario:</b> Now imagine the box is <b>open</b> and all balls are visible — you can directly see and grab the red ball without searching. This constant, input-size-independent work is <b>O(1)</b>.</p>
+</div>
+
+<div class="card">
+<b>ArrayList get() — O(1)</b>
+<p>Calling <code>get(3)</code> on an ArrayList — since the index is known, the system directly accesses that position; it does NOT need to search from index 0 up to 3. So <code>get(index)</code> is <b>O(1)</b>. Conclusion: ArrayList is best suited for random access by index.</p>
+</div>
+
+<div class="card">
+<b>ArrayList Modification (Middle Insert/Remove) — O(N)</b>
+<p>Because of the shifting requirement, inserting or removing in the <b>middle or beginning</b> can be <b>O(N)</b> — potentially every element after that position needs to move. This becomes significant with large data: for a 2,000-element list, or an application serving 100,000 users, repeated unnecessary shifting adds up to real cost. Don't dismiss this by thinking "I only have 5 elements" — real systems can have thousands or millions.</p>
+</div>
+
+<div class="card">
+<b>Why Continuous Memory Affects Resizing</b>
+<p>RAM is divided into occupied and free regions (shared with other applications — browser, music, games, etc.). An ArrayList needs a <b>continuous</b> block of free memory for its elements. If the current free spaces are scattered (e.g. 3 free, then occupied, then 1 free, then occupied, then 2 free) and you need 6 continuous spaces, these scattered free chunks <b>cannot simply be combined</b> — the system may need to find an entirely new continuous region and <b>move all the existing data</b> there.</p>
+</div>
+
+<div class="card">
+<b>Amortized Complexity of add() — Not Always O(1)</b>
+<p>Some sources casually say <code>add()</code> is O(1) — but the instructor stresses: <b>it depends on the situation</b>. If there's already available capacity, add() can indeed be O(1). But if adding triggers a <b>resize/move to a new memory location</b>, additional work occurs, making that particular add() more expensive. <b>Never blindly state "add() is always O(1)"</b> — understand what actually triggers data movement.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>City names service — storage + processing pattern:</b></p>
+<pre><code class="language-java">import java.util.ArrayList;
+import java.util.List;
+
+class CityService {
+
+    public List<String> getCityNames() {
+        List<String> cities = new ArrayList<>();
+        cities.add("Mumbai");
+        cities.add("Delhi");
+        cities.add("Bangalore");
+        cities.add("Mumbai"); // duplicate — allowed
+        return cities;
+    }
+
+}</code></pre>
+
+<p><b>Processing: find cities starting with "M":</b></p>
+<pre><code class="language-java">class Driver {
+    public static void main(String[] args) {
+        CityService cityService = new CityService();
+        List<String> cities = cityService.getCityNames();
+
+        for (String city : cities) {
+            if (city.startsWith("M")) {
+                System.out.println(city);
+            }
+        }
+    }
+}</code></pre>
+
+<p><b>Visualizing the shift on removal (index 2 removed):</b></p>
+<div class="arraybox">
+<div class="cell"><span class="idx">0</span>A</div>
+<div class="cell"><span class="idx">1</span>B</div>
+<div class="cell" style="background:#442222;color:#ff8888;"><span class="idx">2</span>C</div>
+<div class="cell"><span class="idx">3</span>D</div>
+<div class="cell"><span class="idx">4</span>E</div>
+<div class="cell"><span class="idx">5</span>F</div>
+</div>
+<p style="font-size:14px;color:#777;">Before: A B [C] D E F — removing C shifts D, E, F each one position LEFT →</p>
+<div class="arraybox">
+<div class="cell"><span class="idx">0</span>A</div>
+<div class="cell"><span class="idx">1</span>B</div>
+<div class="cell"><span class="idx">2</span>D</div>
+<div class="cell"><span class="idx">3</span>E</div>
+<div class="cell"><span class="idx">4</span>F</div>
+</div>
+
+<p><b>get() — O(1) direct access:</b></p>
+<pre><code class="language-java">List<String> list = new ArrayList<>();
+list.add("A"); list.add("B"); list.add("C"); list.add("D"); list.add("E"); list.add("F");
+
+String element = list.get(3); // directly jumps to index 3 — O(1), no scanning from 0</code></pre>
+
+<p><b>Middle insertion — triggers shifting, O(N):</b></p>
+<pre><code class="language-java">List<String> cities = new ArrayList<>();
+cities.add("A"); cities.add("B"); cities.add("C"); cities.add("D"); cities.add("E"); cities.add("F");
+
+cities.add(4, "Jaipur"); // inserting at index 4 shifts E, F to the right
+// Result: A B C D Jaipur E F</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>Is add() always O(1) for ArrayList?</td><td>Not always — if there's available capacity, yes O(1); but if adding triggers a resize (moving data to a new continuous memory block), it becomes more expensive. Depends on the actual situation.</td></tr>
+<tr><td>Why does removing from the beginning cost more than removing from the end?</td><td>Removing from the beginning/middle requires shifting ALL subsequent elements left to maintain the continuous arrangement; removing from the end requires no shifting at all.</td></tr>
+<tr><td>What does time complexity actually measure?</td><td>How the amount of work/number of operations grows as input size grows — NOT literal seconds taken to run.</td></tr>
+<tr><td>Why can't ArrayList just use any free memory it finds, even if scattered?</td><td>Because it requires a CONTINUOUS block of memory; scattered free spaces (even if the total is enough) can't be combined without moving data to a new, sufficiently large continuous region.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>List guarantees ordered elements and allows duplicates — that's the defining characteristic shared by ArrayList and LinkedList.</li>
+<li>ArrayList's get(index) is O(1) — true random access.</li>
+<li>ArrayList's middle insertion/removal is O(N) due to shifting.</li>
+<li>Insert in the middle → elements shift RIGHT. Remove from the middle → elements shift LEFT.</li>
+<li>Operations at the very end are cheap (little/no shifting needed).</li>
+<li>Don't blindly memorize "add() is O(1)" — understand that resizing can make specific add() calls more expensive.</li>
+<li>Never choose a data structure without first understanding the exact use case.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Explore ArrayList methods: add(), get(), remove() — and understand each one's time complexity.</li>
+<li>Practice storing elements in an ArrayList and then processing/filtering them (like the city names example).</li>
+<li>Deliberately practice inserting/removing at the beginning, middle, and end, and observe/reason about the shifting cost each time.</li>
+<li>Be ready to answer, with reasoning (not memorized one-liners): "In which scenario will you use ArrayList?"</li>
+<li>Get comfortable with ArrayList before the next class moves to LinkedList.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Class:</b> Custom exceptions</li>
+<li><b>Upcoming Topics:</b> LinkedList — internal structure and comparison with ArrayList (next class)</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, the visual array-shift diagram, and formatting/styling. Content extracted directly from your uploaded transcript file. No new technical content was added beyond what the instructor taught.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>
