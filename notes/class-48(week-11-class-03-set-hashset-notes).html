@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Week 11 Class 3 - Set & HashSet Internals</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.bucketrow{display:flex;gap:4px;margin:14px 0;flex-wrap:wrap;}
+.bucket{background:#1e1e2f;color:#7cffb2;min-width:44px;height:44px;display:flex;align-items:center;justify-content:center;border-radius:6px;font-family:monospace;font-weight:bold;font-size:12px;position:relative;padding:0 4px;}
+.bucket .idx{position:absolute;top:-18px;font-size:10px;color:#888;}
+.bucket.filled{background:#2a3a2f;}
+.bucket.collision{background:#3a2a2a;color:#ff9a76;}
+.contractbox{background:#1e1e2f;color:#d4d4f7;padding:16px 20px;border-radius:10px;font-family:monospace;line-height:2;}
+.contractbox b{color:#7cffb2;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Week 11 · Class 3 — Set, HashSet & the hashCode()/equals() Contract</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: ArrayList vs LinkedList — read O(1) vs O(N), insertion complexity breakdown</li>
+<li>Set interface — uniqueness, no duplicates, unordered</li>
+<li>Why brute-force duplicate checking doesn't scale</li>
+<li>hashCode() — what it is, where it comes from (Object class, JVM-assigned)</li>
+<li>The bucket/hashing mechanism — how HashSet decides WHERE to store an element</li>
+<li>The bitwise AND formula: hashCode & (capacity − 1)</li>
+<li>Why HashSet appears "unordered"</li>
+<li>Hash collision — two different objects getting the same hashCode</li>
+<li>Buckets are internally linked lists (to handle collisions)</li>
+<li>The hashCode()/equals() contract — the classic interview question</li>
+<li>Live demonstration: forcing a hash collision by overriding hashCode()</li>
+<li>HashSet is internally backed by HashMap</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Recap: ArrayList vs LinkedList Complexity</b>
+<p>For <b>reading</b>: ArrayList is O(1) (direct index access), LinkedList is O(N) (must traverse). For <b>inserting into the middle</b> of a LinkedList: you first need to <b>traverse</b> to the desired location (O(N)), then the actual insertion itself is O(1) — so overall it's described as O(N) + O(1), commonly summarized as O(N) once traversal is required.</p>
+</div>
+
+<div class="card">
+<b>What is a Set?</b>
+<p>A <code>Set</code> is a Collection interface where the defining rule is <b>uniqueness</b> — no duplicates allowed. Unlike List (which allows duplicates and maintains order), Set specifically exists for when your requirement is: unique elements, and order doesn't matter.</p>
+</div>
+
+<div class="card">
+<b>List vs Set — Choosing Based on Requirement</b>
+<p>If you want an <b>ordered</b> collection where duplicates are <b>allowed</b> → use List (ArrayList/LinkedList). If you want <b>uniqueness</b> (no duplicates) → use a class under <b>Set</b>. Classes under Set: <code>HashSet</code>, <code>LinkedHashSet</code>, <code>TreeSet</code> (this class focuses on HashSet).</p>
+</div>
+
+<div class="card">
+<b>Why NOT Just Brute-Force Check for Duplicates?</b>
+<p>A naive approach: before adding any element, check it against every existing element to see if it's already present. But if a Set already has 10,000 elements, adding ONE more element would require checking it against all 10,000 — this is slow and doesn't scale. The real question: <b>is there a mechanism where all duplicate elements automatically go to the SAME location</b>, so you never need to search the whole set?</p>
+</div>
+
+<div class="card">
+<b>hashCode() — A Unique(ish) Number Per Object</b>
+<p>Every object in Java gets a number assigned by the <b>JVM</b> — its <b>hashCode</b>. This number can be positive or negative. For practical purposes, assume it's <b>unique per object</b> — though in rare corner cases, JVM MAY assign the same hashCode to two genuinely different objects (this limitation is not something developers or even the JVM can fully control). <code>hashCode()</code> is defined in the <b>Object class</b>, so every object inherits it.</p>
+</div>
+
+<div class="card">
+<b>The Bucket Mechanism — How HashSet Decides WHERE to Store</b>
+<p>When you create a HashSet, it internally creates a set of <b>buckets</b> (a table), with a <b>default capacity of 16</b> (indices 0 to 15). When adding an element, its <code>hashCode()</code> is calculated, and a <b>formula</b> is applied to convert that hashCode into a specific bucket index — so the element always lands in a <b>predictable, calculable position</b>, without ever needing to scan the whole set.</p>
+</div>
+
+<div class="card">
+<b>The Formula: hashCode & (capacity − 1)</b>
+<p>The classic mechanism uses the <b>bitwise AND</b> operator (<code>&</code>): <code>hashCode & (n - 1)</code>, where <code>n</code> is the total capacity (e.g. 16). This always produces a number between <b>0 and n−1</b> (e.g. 0 to 15) — guaranteeing the result always maps to a valid bucket index. <b>Note:</b> the exact formula has been refined in newer Java versions, but the core idea (hashCode → deterministic bucket index) is what matters — you don't need to memorize the exact bitwise formula.</p>
+</div>
+
+<div class="card">
+<b>Same Input → Same Output (Key Insight)</b>
+<p>Since hashCode is deterministic for a given object's state, and the formula is fixed, the <b>same element will always compute to the same bucket index</b>. So if you try to add "Chennai" five times, it always lands in the exact same bucket — no searching required, just recomputing the formula and checking that ONE location.</p>
+</div>
+
+<div class="card">
+<b>Why HashSet Appears "Unordered"</b>
+<p>This is the single concept the instructor called out as the mark of really understanding Java: elements are placed based on their <b>calculated bucket index</b>, which has <b>nothing to do with insertion order</b>. You might insert "Bangalore" first, but its hashCode-derived bucket might be far down the list, while a later-inserted element lands in an earlier bucket. When you iterate/print the set, you get bucket order — NOT insertion order — which is why it looks "unordered" and unpredictable.</p>
+</div>
+
+<div class="card">
+<b>Checking for Duplicates — hashCode First, Then equals()</b>
+<p>When adding an element: (1) compute its hashCode → determine the target bucket. (2) If that bucket is EMPTY, add the element there. (3) If something already exists at that bucket, call <code>.equals()</code> to check if it's a TRUE duplicate. If <code>equals()</code> returns true → ignore (don't add). If false → this is a hash collision (different object, same bucket) → add it as an additional node.</p>
+</div>
+
+<div class="card">
+<b>Hash Collision — Two Different Objects, Same hashCode</b>
+<p>In rare cases, JVM may assign the <b>same hashCode</b> to two genuinely <b>different</b> objects — this is a known limitation, not something JVM or developers fully control. When this happens, both objects compute to the <b>same bucket</b>, but <code>equals()</code> correctly identifies they are NOT duplicates, so both get stored — this scenario is called a <b>hash collision</b>.</p>
+</div>
+
+<div class="card">
+<b>Buckets Are Internally Linked Lists</b>
+<p>To handle hash collisions, each bucket isn't just a single slot — it's implemented as a <b>linked list</b>. Normally each bucket holds just one node (one element). If a collision occurs, a second node is <b>attached</b> to the existing one at that bucket, forming a short linked list at that specific index.</p>
+</div>
+
+<div class="card">
+<b>The hashCode()/equals() Contract — Classic Interview Question</b>
+<div class="contractbox">
+Rule 1: If two objects are <b>equal</b> (via equals()) → their <b>hashCode() must be the same</b>.<br><br>
+Rule 2: If two objects have the <b>same hashCode()</b> → they <b>may or may not be equal</b>.
+</div>
+<p style="margin-top:12px;">Rule 1 is a hard requirement — equal objects MUST produce the same hashCode, or the hashing mechanism breaks. Rule 2 is the reverse case — matching hashCodes don't guarantee equality (this is exactly the hash collision scenario), so <code>equals()</code> must always be used as the final confirmation.</p>
+</div>
+
+<div class="card">
+<b>Live Demo: Forcing a Hash Collision</b>
+<p>To deliberately demonstrate this (not standard practice, purely for learning), the instructor <b>overrode hashCode()</b> in an Employee class to always return a fixed number. Two different Employee objects were then created — both computed to the <b>same bucket</b> (e.g. bucket 13). Since <code>equals()</code> correctly determined they were different objects, BOTH were stored — as two separate nodes within that bucket's linked list.</p>
+</div>
+
+<div class="card">
+<b>HashSet is Internally Backed by HashMap</b>
+<p>HashSet has <b>no independent storage implementation</b> of its own — internally, it creates and delegates to a <code>HashMap</code> object. When you call <code>hashSet.add(element)</code>, it internally calls <code>map.put(element, someValue)</code>. This is why the instructor emphasized: <b>"whoever learns Set is also learning Map"</b> — since the internal mechanics are shared. Inside HashMap, each bucket entry is technically a <code>Node</code> (an inner class holding key, value, and a reference to the next node) — this Node IS the linked list structure used to handle collisions.</p>
+</div>
+
+<div class="card">
+<b>Rehashing — Flagged for a Future Class</b>
+<p>Just like ArrayList grows when it runs out of space, HashSet's internal bucket table also grows (commonly doubling) as more elements are added — this process is called <b>rehashing</b>, and what happens to existing elements during rehashing was explicitly deferred to a future session.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>🖼️ Visualizing the Bucket Mechanism</h2>
+<p style="font-size:14px;color:#777;">Default capacity 16 → buckets 0 through 15. Chennai's hashCode computes to bucket 4; Bangalore's computes to bucket 15.</p>
+<div class="bucketrow">
+<div class="bucket"><span class="idx">0</span></div>
+<div class="bucket"><span class="idx">1</span></div>
+<div class="bucket"><span class="idx">2</span></div>
+<div class="bucket"><span class="idx">3</span></div>
+<div class="bucket filled"><span class="idx">4</span>Chennai</div>
+<div class="bucket"><span class="idx">5</span></div>
+<div class="bucket"><span class="idx">6</span></div>
+<div class="bucket"><span class="idx">7</span></div>
+<div class="bucket"><span class="idx">8</span></div>
+<div class="bucket"><span class="idx">9</span></div>
+<div class="bucket"><span class="idx">10</span></div>
+<div class="bucket"><span class="idx">11</span></div>
+<div class="bucket"><span class="idx">12</span></div>
+<div class="bucket collision"><span class="idx">13</span>Emp1→Emp2</div>
+<div class="bucket"><span class="idx">14</span></div>
+<div class="bucket filled"><span class="idx">15</span>Bangalore→Mysore</div>
+</div>
+<p style="font-size:13px;color:#777;">Bucket 13 shows the forced collision demo (two Employee objects, same hashCode, different objects — both stored). Bucket 15 shows an actual accidental JVM-level collision the instructor encountered live (Bangalore and Mysore).</p>
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>Creating a HashSet and observing "unordered" behavior:</b></p>
+<pre><code class="language-java">import java.util.HashSet;
+import java.util.Set;
+
+class Driver {
+    public static void main(String[] args) {
+        Set<String> cities = new HashSet<>();
+
+        cities.add("Bangalore");
+        cities.add("Jaipur");
+        cities.add("Mysore");
+        cities.add("Hyderabad");
+        cities.add("Chennai");
+        cities.add("Chennai"); // duplicate — will be ignored
+
+        for (String city : cities) {
+            System.out.println(city);
+        }
+        // Output order does NOT match insertion order —
+        // it reflects bucket order based on each city's hashCode
+        // "Chennai" appears only once — duplicate was silently ignored
+    }
+}</code></pre>
+
+<p><b>Checking hashCode of objects:</b></p>
+<pre><code class="language-java">class Person { }
+
+class Driver {
+    public static void main(String[] args) {
+        Person p1 = new Person();
+        System.out.println(p1.hashCode()); // some JVM-assigned number
+
+        Person p2 = new Person();
+        System.out.println(p2.hashCode()); // a DIFFERENT number (different object)
+
+        String s1 = "Java";
+        String s2 = "Java";
+        System.out.println(s1.hashCode()); // some number
+        System.out.println(s2.hashCode()); // SAME number — s1 and s2 refer to the same SCP object
+    }
+}</code></pre>
+
+<p><b>Forcing a hash collision — demonstration purposes only:</b></p>
+<pre><code class="language-java">class Employee {
+    String name;
+
+    public Employee(String name) {
+        this.name = name;
+    }
+
+    @Override
+    public int hashCode() {
+        return 100; // forced — NOT normal practice, purely to demonstrate collision handling
+    }
+}</code></pre>
+<pre><code class="language-java">class Driver {
+    public static void main(String[] args) {
+        Set<Employee> employees = new HashSet<>();
+
+        Employee e1 = new Employee("Kodewala");
+        Employee e2 = new Employee("Devwin");
+
+        employees.add(e1); // computes to some bucket, e.g. bucket 13
+        employees.add(e2); // SAME hashCode -> same bucket 13
+
+        // equals() (default, from Object class) says e1 != e2 (different objects)
+        // Both are added as SEPARATE nodes within bucket 13's linked list
+
+        System.out.println(employees.size()); // 2 — both stored, since they aren't truly equal
+    }
+}</code></pre>
+
+<p><b>The bucket index formula (conceptual):</b></p>
+<pre><code class="language-java">int hashCode = someObject.hashCode();
+int capacity = 16; // default HashSet capacity
+int bucketIndex = hashCode & (capacity - 1); // bitwise AND -> always between 0 and 15
+
+// Note: the EXACT formula has evolved across Java versions,
+// but the core idea (hashCode -> deterministic bucket index) remains the same.</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What is the internal data structure inside each bucket?</td><td>A linked list — normally holding just one node, but capable of holding multiple nodes if a hash collision occurs at that bucket.</td></tr>
+<tr><td>What happens when the bucket capacity is exceeded (more elements than buckets)?</td><td>Rehashing occurs — the internal table grows (similar to ArrayList resizing) — the exact mechanics of what happens to existing elements during this process was flagged as a topic for a future class.</td></tr>
+<tr><td>Is hashCode the same as a memory address?</td><td>No — hashCode is a unique integer assigned to an object by the JVM; it is NOT literally the memory address, even though it's often loosely described that way.</td></tr>
+<tr><td>Since HashSet has no size() concept mentioned directly for capacity — how do you find a Set's current capacity if already given one?</td><td>Raised as an open question in class — using .size() gives the number of elements currently stored, not the underlying bucket capacity, which is an internal implementation detail.</td></tr>
+<tr><td>Does HashSet have its own separate storage implementation?</td><td>No — internally, HashSet creates and delegates to a HashMap object; hashSet.add() calls map.put() internally.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Set guarantees uniqueness (no duplicates) but does NOT guarantee order — this is the key trade-off vs List.</li>
+<li>HashSet uses each element's hashCode() + a formula to determine a deterministic bucket, avoiding the need to scan the whole collection for duplicates.</li>
+<li>"Unordered" specifically means: iteration order reflects bucket placement (based on hashCode), NOT insertion order.</li>
+<li>hashCode()/equals() contract: equal objects MUST have the same hashCode; same hashCode does NOT guarantee the objects are equal.</li>
+<li>A hash collision (two different objects, same hashCode) is a rare JVM-level limitation — handled gracefully via linked lists within buckets, not a bug in your code.</li>
+<li>HashSet has no independent implementation — it's built entirely on top of HashMap internally.</li>
+<li>Never manually force a hashCode override like the demo unless you're deliberately studying collision behavior — this was for learning purposes only, not real-world practice.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Create at least 5 objects, print their hashCode() values, and manually apply the bucket formula (hashCode & (capacity-1)) to predict which bucket each would land in.</li>
+<li>Create a HashSet, add several duplicate and non-duplicate elements, and observe/explain the resulting iteration order.</li>
+<li>Revise and be ready to explain, unprompted: (1) why HashSet is unordered, and (2) how it maintains uniqueness with O(1) average time complexity.</li>
+<li>Memorize and be able to explain the full hashCode()/equals() contract — this is a guaranteed interview question.</li>
+<li>Try overriding hashCode() to force a collision (as demonstrated) and observe how both objects still get stored correctly via equals() checking.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Class:</b> LinkedList internal working and ArrayList vs LinkedList comparison</li>
+<li><b>Upcoming Topics:</b> Continued Set/HashMap internals — rehashing, and likely the Map interface in more depth (explicitly flagged: "understanding Set means you're already learning Map")</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, the bucket visualization, the hashCode/equals contract box, and formatting/styling. Content reconstructed from your pasted transcript, including the live demo of forcing a hash collision. Some phrasing in the original transcript was garbled by Zoom's auto-transcription (e.g. "M percent" for the modulus/bitwise formula, "Massur" for Mysore) — interpreted based on surrounding technical context. No new technical content was added beyond what the instructor taught.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>
