@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Week 12 Class 1 - HashSet Deep Dive</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.growbox{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0;font-family:monospace;}
+.growstep{background:#1e1e2f;color:#7cffb2;padding:10px 16px;border-radius:8px;text-align:center;font-size:14px;}
+.growarrow{color:#888;font-size:20px;}
+.interviewbox{background:#1e1e2f;color:#d4d4f7;padding:20px;border-radius:10px;font-size:14.5px;line-height:1.9;}
+.interviewbox b{color:#7cffb2;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Week 12 · Class 1 (Course Class 49) — HashSet Deep Dive: Load Factor, Threshold & Rehashing</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: HashSet bucket array structure, one linked list PER bucket</li>
+<li>Full hashCode → bucket flow: hashCode() → spread → bitwise AND → bucket index</li>
+<li>Duplicate detection vs hash collision — the complete decision flow</li>
+<li>HashSet is internally backed by HashMap — table of buckets</li>
+<li>Why HashSet is unordered (bucket-position based, not insertion-based)</li>
+<li>contains() — HashSet has no get(), only contains()</li>
+<li>How contains() actually works internally</li>
+<li>Time complexity: best case O(1), worst case O(n) — where n is the COLLISION CHAIN length, not total set size</li>
+<li>add() return value — boolean, true/false based on duplicate detection</li>
+<li>Load Factor (default 0.75) and Threshold (capacity × load factor)</li>
+<li>Capacity growth: 16 → 32 → 64 ...</li>
+<li>Rehashing — what it is, why it happens, why it's expensive</li>
+<li>Why different hashCodes can still land in the same bucket</li>
+<li>Full interview-ready answer for "how does HashSet work internally?"</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>HashSet Internal Structure — Recap</b>
+<p>By default, HashSet capacity is <b>16</b>. Internally it creates an <b>array of buckets</b>. Each bucket has its <b>own independent linked-list structure</b> — there is NOT one single linked list shared across all buckets; every bucket manages its own chain.</p>
+</div>
+
+<div class="card">
+<b>The Full hashCode → Bucket Flow</b>
+<p>When <code>add()</code> is called: <code>hashCode()</code> is computed for the element → a <b>spread operation</b> is applied (further mixing the bits for better distribution) → a <b>bitwise AND</b> operation is applied → this produces the final <b>bucket index</b>.</p>
+<pre><code class="language-java">hash & (n - 1)   // n = capacity
+
+// For capacity 16:
+hash & 15   // always produces a number from 0 to 15</code></pre>
+</div>
+
+<div class="card">
+<b>Duplicate vs Hash Collision — The Full Decision Flow</b>
+<ol style="padding-left:20px;">
+<li>Bucket is <b>empty</b> → add the element directly. No collision.</li>
+<li>Bucket already has an element → call <code>equals()</code>.</li>
+<li><code>equals()</code> returns <b>true</b> → it's a genuine <b>duplicate</b> → HashSet does NOT add it.</li>
+<li><code>equals()</code> returns <b>false</b> → the elements are different but landed in the same bucket → this is a <b>hash collision</b> → a new node is added to that bucket's linked list.</li>
+</ol>
+</div>
+
+<div class="card">
+<b>Hash Collision Example</b>
+<p>Suppose "Bangalore" and "Chennai" both compute to bucket 8, despite being different elements. Bucket 8 then holds a small linked list: <code>Bangalore → Chennai → null</code>. Multiple colliding elements are chained together this way.</p>
+</div>
+
+<div class="card">
+<b>HashSet Uses HashMap Internally</b>
+<p>HashSet's job is to maintain <b>unique elements</b>; HashMap stores <b>key-value pairs</b>. But whether you're learning "how HashSet works" or "how HashMap works," the underlying <b>hashing/bucket mechanism is essentially the same</b>.</p>
+</div>
+
+<div class="card">
+<b>Why HashSet is Unordered</b>
+<p>Elements are placed according to their <b>calculated bucket position</b>, not insertion sequence. Example: "iPhone 17" → bucket 14, "Samsung" → bucket 3, "LG" → bucket 8. When reading the set back, elements may appear in bucket order, not the order you added them. <b>The goal is good time complexity for add/check operations — NOT preserving insertion order.</b></p>
+</div>
+
+<div class="card">
+<b>HashSet Has No get() — Only contains()</b>
+<p>A <code>Set</code> holds standalone <b>elements</b>, not key-value pairs — so there's no "key" to fetch a "value" by. (Contrast: <code>HashMap</code> has <code>get("Karnataka")</code> returning "Bangalore" because it stores key→value pairs.) Since HashSet just needs to answer "is this element present?", it provides <code>contains(element)</code> instead.</p>
+</div>
+
+<div class="card">
+<b>How contains() Actually Works</b>
+<p>Calling <code>products.contains("iPhone 17")</code>: (1) compute hashCode of "iPhone 17". (2) apply the same bucket calculation used during add(). (3) identify the target bucket. (4) go directly to that bucket. (5) search the linked list inside it. If found → <code>true</code>. If the end of the chain (null) is reached without a match → <code>false</code>.</p>
+</div>
+
+<div class="card">
+<b>Time Complexity — Best Case vs Worst Case</b>
+<p><b>Best case: O(1)</b> — the bucket has zero or one element, so the check is immediate. <b>Worst case: O(n)</b> — where <b>n is the number of elements in that SPECIFIC bucket's collision chain</b>, NOT the total size of the HashSet. Example: total elements = 1000, but bucket 100 has only 10 colliding elements → a search landing in bucket 100 is O(10), i.e. O(n) for that bucket's chain specifically. <b>Don't say "O(n) because the HashSet has n elements"</b> — that's imprecise; explain it in terms of the specific bucket's chain length.</p>
+</div>
+
+<div class="card">
+<b>add() Return Value — boolean</b>
+<p><code>HashSet.add()</code> returns <code>true</code> if the element was successfully added, and <code>false</code> if it was already present (a duplicate). This return value is directly useful for detecting duplicates in code without a separate contains() check.</p>
+</div>
+
+<div class="card">
+<b>Load Factor and Threshold</b>
+<p><b>Load Factor</b> (default <b>0.75</b>, i.e. 75%) determines how "full" the table can get before it needs to grow. <b>Threshold</b> = capacity × load factor. For capacity 16: <code>16 × 0.75 = 12</code>. So the table can hold up to 12 elements comfortably; adding the <b>13th</b> element crosses the threshold and triggers growth.</p>
+</div>
+
+<div class="card">
+<b>Capacity Growth Pattern</b>
+<div class="growbox">
+<div class="growstep">16<br><small>threshold 12</small></div>
+<div class="growarrow">→</div>
+<div class="growstep">32<br><small>threshold 24</small></div>
+<div class="growarrow">→</div>
+<div class="growstep">64<br><small>threshold 48</small></div>
+<div class="growarrow">→</div>
+<div class="growstep">...</div>
+</div>
+<p>13th element → capacity 16 becomes 32 (new threshold 24). 25th element → capacity 32 becomes 64 (new threshold 48). Capacity keeps doubling as thresholds are crossed.</p>
+</div>
+
+<div class="card">
+<b>Rehashing — What It Is</b>
+<p>When capacity increases, the bucket formula itself changes: old capacity 16 → <code>hash & 15</code>; new capacity 32 → <code>hash & 31</code>. Since the FORMULA'S INPUT (capacity) changed, an element that was previously in one bucket may now need to move to a <b>different</b> bucket under the new formula. Java must therefore <b>redistribute all existing elements</b> according to the new capacity — this redistribution process is called <b>rehashing</b>.</p>
+</div>
+
+<div class="card">
+<b>What Happens During Rehashing — Step by Step</b>
+<p>Suppose the 13th element crosses the threshold (16 → 32). For <b>every existing element</b>: (1) use its hash information again, (2) apply the NEW bucket calculation (now using 32 as capacity), (3) identify its new bucket, (4) move it there.</p>
+</div>
+
+<div class="card">
+<b>Why Rehashing is Expensive</b>
+<p>Rehashing requires processing and redistributing ALL existing elements — not just the new one being added. This is genuinely costly at scale. <b>Practical tip:</b> if you already know roughly how many elements you'll store (e.g. ~1000), it's beneficial to specify an appropriate <b>initial capacity</b> upfront, avoiding repeated resize/rehash cycles as the set grows from the small default.</p>
+</div>
+
+<div class="card">
+<b>Important Nuance: Different hashCodes CAN Land in the Same Bucket</b>
+<p>Two elements can have genuinely <b>different</b> hashCode values (X ≠ Y) and STILL land in the <b>same bucket</b> — because the bucket index is constrained by capacity (e.g. only 0–15 possible values for capacity 16). Many different hashCode values can map to the same final bucket index through the AND operation. <b>Key nuance:</b> "same bucket" does NOT necessarily mean "same hashCode" — a bucket collision can happen even when hashCodes genuinely differ, purely due to how the modulo-like AND operation compresses a huge range of possible hashCodes into a small number of buckets.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>add() return value for detecting duplicates:</b></p>
+<pre><code class="language-java">import java.util.HashSet;
+import java.util.Set;
+
+class Driver {
+    public static void main(String[] args) {
+        Set<String> set = new HashSet<>();
+
+        boolean r1 = set.add("A"); // true — newly added
+        boolean r2 = set.add("A"); // false — already present (duplicate)
+
+        System.out.println(r1); // true
+        System.out.println(r2); // false
+    }
+}</code></pre>
+
+<p><b>contains() usage:</b></p>
+<pre><code class="language-java">Set<String> products = new HashSet<>();
+products.add("iPhone 17");
+products.add("Mac Pro");
+products.add("Samsung");
+
+boolean exists = products.contains("iPhone 17"); // true
+// Internally: hashCode("iPhone 17") -> bucket calculation -> go to that bucket
+// -> search its linked list -> found -> return true</code></pre>
+
+<p><b>Visualizing bucket structure with collisions:</b></p>
+<pre><code class="language-java">// table (array of buckets)
+//   bucket 0  -> empty
+//   bucket 3  -> Samsung -> null
+//   bucket 8  -> iPhone 17 -> Mac Pro -> null   (collision — 2 nodes chained)
+//   bucket 12 -> Apple -> null
+//   bucket 14 -> empty
+//   bucket 15 -> empty
+// Only buckets with collisions have multiple nodes; most have just one (or zero).</code></pre>
+
+<p><b>The bucket formula, and how it changes on resize:</b></p>
+<pre><code class="language-java">// Capacity 16
+int bucketIndex = hash & (16 - 1); // hash & 15 -> range 0-15
+
+// After rehashing, capacity 32
+int newBucketIndex = hash & (32 - 1); // hash & 31 -> range 0-31
+// Same hash, but DIFFERENT bucket possible, since the AND mask changed</code></pre>
+
+<p><b>Specifying initial capacity to avoid repeated rehashing:</b></p>
+<pre><code class="language-java">// If you expect ~1000 elements, avoid growing from the tiny default (16)
+Set<String> largeSet = new HashSet<>(1024); // initial capacity hint, reduces rehash cycles</code></pre>
+
+</div>
+
+<div class="section">
+<h2>🎤 Interview-Ready Answer: "How Does HashSet Work Internally?"</h2>
+<div class="interviewbox">
+"When we add an element to a HashSet, internally HashSet uses a <b>HashMap</b>. The <code>hashCode()</code> of the incoming element is calculated first. Using the hash code, the <b>bucket</b> is identified using the hashing logic. JVM then checks the identified bucket.<br><br>
+If the bucket is empty, the element is directly stored there.<br><br>
+If an element already exists in that bucket, <code>equals()</code> is used to compare the incoming element with the existing element.<br><br>
+If <code>equals()</code> returns true, the element is considered a <b>duplicate</b> and is not added.<br><br>
+If <code>equals()</code> returns false, it is considered a <b>hash collision</b>. A new node is created in the existing bucket's linked-list structure and the new element is stored there.<br><br>
+The default capacity is <b>16</b> and the default load factor is <b>0.75</b>. Therefore, the initial threshold is <b>12</b>. When the threshold is crossed, the capacity increases and <b>rehashing</b> occurs. During rehashing, elements are redistributed according to the new capacity."
+</div>
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>Why doesn't HashSet have a get() method like HashMap?</td><td>Because a Set holds standalone elements, not key-value pairs — there's no "key" to look a "value" up by. contains() answers the relevant question ("is this present?") instead.</td></tr>
+<tr><td>Is the worst-case O(n) based on total HashSet size or something else?</td><td>Based on the length of the SPECIFIC bucket's collision chain being searched — not the total number of elements across the entire HashSet.</td></tr>
+<tr><td>Can two elements with genuinely different hashCodes still collide into the same bucket?</td><td>Yes — because the AND operation compresses a huge range of hashCode values into a small number of buckets (e.g. 0-15 for capacity 16); "same bucket" does not imply "same hashCode."</td></tr>
+<tr><td>Why is providing an initial capacity useful if you know the expected size?</td><td>It avoids repeated, expensive rehashing cycles as the set grows from the small default capacity up to the size you actually need.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Every bucket has its OWN linked list — not one shared linked list for the whole HashSet.</li>
+<li>Duplicate = same bucket + equals() true. Hash collision = same bucket + equals() false.</li>
+<li>HashSet has no get(); use contains() to check for element presence.</li>
+<li>Worst-case time complexity is O(n) where n is the specific bucket's chain length, not the total set size — always phrase it this way in interviews.</li>
+<li>add() returns a boolean — true if newly added, false if it was a duplicate.</li>
+<li>Default load factor is 0.75; threshold = capacity × load factor.</li>
+<li>Crossing the threshold triggers capacity doubling AND rehashing (redistributing every existing element).</li>
+<li>Rehashing is expensive — provide an initial capacity if the approximate final size is known in advance.</li>
+<li>Different hashCodes CAN still map to the same bucket — don't assume same bucket implies same hashCode.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Practice explaining, unprompted, the full "how does HashSet work internally" interview answer from memory.</li>
+<li>Write code that adds elements one by one and prints add()'s boolean return value, observing true/false for new vs duplicate elements.</li>
+<li>Manually calculate threshold values for capacities 16, 32, 64, and 128 using the 0.75 load factor.</li>
+<li>Trace through what happens step-by-step when the 13th element is added to a HashSet with default capacity (resize + rehash).</li>
+<li>Explain, in your own words, why "same bucket" does not necessarily mean "same hashCode."</li>
+<li>Practice writing contains() usage examples and explaining its internal O(1)/O(n) behavior.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Class:</b> Set/HashSet introduction — bucket basics, hashCode()/equals() contract</li>
+<li><b>Upcoming Topics:</b> Likely HashMap in dedicated depth (key-value pairs), or LinkedHashSet/TreeSet as other Set implementations</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, the capacity-growth visual, and formatting/styling. Content extracted directly from your uploaded transcript file, including the full interview-ready answer block, which was provided verbatim in the source material. No new technical content was added beyond what the instructor taught.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>
