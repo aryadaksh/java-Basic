@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - LinkedHashSet & TreeSet</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Supplementary — LinkedHashSet & TreeSet</p>
+</div>
+
+<div class="note" style="margin:24px 40px;">
+<b>Heads up:</b> No class transcript was provided for this topic — these are <b>standard supplementary notes</b>, not extracted from an actual recorded session like the rest of your files. They're built to continue naturally from your HashSet material (which covered hashCode()/equals(), collisions, and Treeify), since LinkedHashSet and TreeSet are the two other Set implementations typically covered next. Please treat this as reference material to cross-check against your actual next class, not a replacement for it.
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: what HashSet guarantees (uniqueness) and doesn't (order)</li>
+<li>LinkedHashSet — uniqueness + insertion order preserved</li>
+<li>How LinkedHashSet achieves this internally (hash table + doubly linked list)</li>
+<li>TreeSet — uniqueness + sorted order</li>
+<li>TreeSet's internal structure — Red-Black Tree (not a hash table)</li>
+<li>Natural ordering via Comparable, custom ordering via Comparator</li>
+<li>TreeSet does NOT allow null</li>
+<li>Important nuance: TreeSet determines duplicates via compareTo(), NOT equals()/hashCode()</li>
+<li>TreeSet navigation methods: first(), last(), higher(), lower(), ceiling(), floor()</li>
+<li>Time complexity comparison across all three Set implementations</li>
+<li>Full HashSet vs LinkedHashSet vs TreeSet decision table</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Recap: HashSet's Trade-off</b>
+<p>HashSet gives you fast, hash-based uniqueness checking (O(1) average) — but sacrifices any predictable ordering. Iteration order depends on internal bucket placement, not insertion sequence.</p>
+</div>
+
+<div class="card">
+<b>LinkedHashSet — Uniqueness + Insertion Order</b>
+<p><code>LinkedHashSet</code> extends <code>HashSet</code> and adds ONE guarantee HashSet lacks: it <b>maintains insertion order</b> during iteration. Internally, it combines a hash table (same bucket/hashCode mechanism as HashSet, for fast lookups) with an additional <b>doubly linked list</b> running through all entries, threading them together in the order they were inserted.</p>
+</div>
+
+<div class="card">
+<b>Why LinkedHashSet Costs a Little More</b>
+<p>Maintaining that extra linked list means slightly more memory overhead and marginally more bookkeeping per insertion compared to plain HashSet — but lookup/insertion/removal are still effectively O(1) average, same as HashSet. The trade-off is worth it whenever predictable iteration order matters.</p>
+</div>
+
+<div class="card">
+<b>When to Use LinkedHashSet</b>
+<p>Choose LinkedHashSet when you need BOTH: (1) no duplicates, AND (2) elements returned in the exact order they were added — e.g. displaying a user's recently viewed items with duplicates removed, but still showing them in the order they were first viewed.</p>
+</div>
+
+<div class="card">
+<b>TreeSet — Uniqueness + Sorted Order</b>
+<p><code>TreeSet</code> implements <code>NavigableSet</code> (which extends <code>SortedSet</code>). Unlike HashSet/LinkedHashSet, it is <b>NOT</b> backed by a hash table — it's backed by a <b>Red-Black Tree</b> (a self-balancing binary search tree). Elements are always kept in <b>sorted order</b> — either their natural order, or an order you define.</p>
+</div>
+
+<div class="card">
+<b>Natural Ordering — Comparable</b>
+<p>For TreeSet to sort elements automatically, the element's class must implement <code>Comparable</code> and define <code>compareTo()</code> — this is how built-in types like Integer, String, etc. already support natural sorting (numeric order, alphabetical order). For custom classes, you must implement this yourself to define what "sorted" means for that type.</p>
+</div>
+
+<div class="card">
+<b>Custom Ordering — Comparator</b>
+<p>If you want a DIFFERENT sort order than the class's natural one (or the class doesn't implement Comparable at all), you can supply a <code>Comparator</code> when creating the TreeSet — a separate object defining the exact comparison logic to use instead.</p>
+</div>
+
+<div class="card">
+<b>TreeSet Does NOT Allow null</b>
+<p>Since TreeSet must be able to COMPARE every element against others to maintain sorted order, adding <code>null</code> throws a <code>NullPointerException</code> — there's no meaningful way to compare null against a real value using compareTo().</p>
+</div>
+
+<div class="card">
+<b>Critical Nuance: TreeSet Uses compareTo() for Duplicates, NOT equals()/hashCode()</b>
+<p>This is a genuinely important distinction from HashSet/LinkedHashSet: TreeSet determines whether two elements are "the same" (duplicate) based on whether <code>compareTo()</code> returns <b>0</b> — <b>NOT</b> based on <code>equals()</code>/<code>hashCode()</code>. This means it's technically possible for <code>compareTo()</code> to return 0 for two objects that <code>equals()</code> would consider different — TreeSet would treat them as duplicates regardless of what equals() says. Always ensure your <code>compareTo()</code> logic is <b>"consistent with equals"</b> (returns 0 exactly when equals() would return true) to avoid confusing, inconsistent behavior across different collection types.</p>
+</div>
+
+<div class="card">
+<b>TreeSet's Time Complexity</b>
+<p>Since TreeSet is backed by a balanced tree (not hashing), operations like <code>add()</code>, <code>remove()</code>, and <code>contains()</code> are <b>O(log N)</b> — slower than HashSet's average O(1), but you gain guaranteed sorted order as a result. This is the classic time-vs-ordering trade-off.</p>
+</div>
+
+<div class="card">
+<b>TreeSet Navigation Methods (NavigableSet)</b>
+<p>Because it's a sorted structure, TreeSet offers powerful navigation methods not available on HashSet/LinkedHashSet:</p>
+<ul>
+<li><code>first()</code> / <code>last()</code> — smallest/largest element</li>
+<li><code>higher(e)</code> / <code>lower(e)</code> — strictly greater/smaller than e</li>
+<li><code>ceiling(e)</code> / <code>floor(e)</code> — greater-or-equal / smaller-or-equal to e</li>
+<li><code>headSet(e)</code> / <code>tailSet(e)</code> — elements before/after a given point</li>
+<li><code>pollFirst()</code> / <code>pollLast()</code> — retrieve and remove the smallest/largest element</li>
+</ul>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>LinkedHashSet — preserves insertion order:</b></p>
+<pre><code class="language-java">import java.util.LinkedHashSet;
+import java.util.Set;
+
+class Driver {
+    public static void main(String[] args) {
+        Set<String> cities = new LinkedHashSet<>();
+
+        cities.add("Mumbai");
+        cities.add("Delhi");
+        cities.add("Bangalore");
+        cities.add("Mumbai"); // duplicate, ignored
+
+        for (String city : cities) {
+            System.out.println(city);
+        }
+        // Output: Mumbai, Delhi, Bangalore
+        // — EXACT insertion order, unlike HashSet
+    }
+}</code></pre>
+
+<p><b>TreeSet — natural (sorted) ordering with built-in types:</b></p>
+<pre><code class="language-java">import java.util.TreeSet;
+import java.util.Set;
+
+class Driver {
+    public static void main(String[] args) {
+        Set<Integer> numbers = new TreeSet<>();
+
+        numbers.add(50);
+        numbers.add(10);
+        numbers.add(30);
+        numbers.add(10); // duplicate, ignored
+
+        for (int n : numbers) {
+            System.out.println(n);
+        }
+        // Output: 10, 20... wait, 10, 30, 50 — always sorted ascending
+    }
+}</code></pre>
+
+<p><b>TreeSet with custom objects — implementing Comparable:</b></p>
+<pre><code class="language-java">class Employee implements Comparable<Employee> {
+    int id;
+    String name;
+
+    public Employee(int id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    @Override
+    public int compareTo(Employee other) {
+        return Integer.compare(this.id, other.id); // sort by id ascending
+    }
+
+    @Override
+    public String toString() {
+        return id + " - " + name;
+    }
+}</code></pre>
+<pre><code class="language-java">Set<Employee> employees = new TreeSet<>();
+employees.add(new Employee(103, "Kodewala"));
+employees.add(new Employee(101, "Devwin"));
+employees.add(new Employee(102, "Anita"));
+
+for (Employee e : employees) {
+    System.out.println(e);
+}
+// Output: 101 - Devwin, 102 - Anita, 103 - Kodewala — sorted by id</code></pre>
+
+<p><b>TreeSet with a custom Comparator (different sort order):</b></p>
+<pre><code class="language-java">import java.util.Comparator;
+import java.util.TreeSet;
+
+Set<Employee> byName = new TreeSet<>(new Comparator<Employee>() {
+    @Override
+    public int compare(Employee a, Employee b) {
+        return a.name.compareTo(b.name); // sort alphabetically by name instead
+    }
+});
+
+byName.add(new Employee(103, "Kodewala"));
+byName.add(new Employee(101, "Devwin"));
+byName.add(new Employee(102, "Anita"));
+// Iteration order now: Anita, Devwin, Kodewala</code></pre>
+
+<p><b>TreeSet navigation methods:</b></p>
+<pre><code class="language-java">TreeSet<Integer> scores = new TreeSet<>();
+scores.add(10); scores.add(25); scores.add(40); scores.add(55);
+
+System.out.println(scores.first());      // 10
+System.out.println(scores.last());       // 55
+System.out.println(scores.higher(25));   // 40 (strictly greater than 25)
+System.out.println(scores.ceiling(30));  // 40 (smallest >= 30)
+System.out.println(scores.floor(30));    // 25 (largest <= 30)</code></pre>
+
+<p><b>The compareTo() vs equals() nuance — a subtle bug source:</b></p>
+<pre><code class="language-java">class Product implements Comparable<Product> {
+    String name;
+    double price;
+
+    public Product(String name, double price) {
+        this.name = name;
+        this.price = price;
+    }
+
+    @Override
+    public int compareTo(Product other) {
+        return Double.compare(this.price, other.price); // sorts by price ONLY
+    }
+    // equals()/hashCode() not overridden — uses default identity-based behavior
+}</code></pre>
+<pre><code class="language-java">Set<Product> products = new TreeSet<>();
+products.add(new Product("Mouse", 500));
+products.add(new Product("Keyboard", 500)); // SAME price -> compareTo() returns 0
+
+System.out.println(products.size());
+// Output: 1 — "Keyboard" was treated as a duplicate of "Mouse" by TreeSet,
+// purely because compareTo() returned 0 (same price), even though
+// they are clearly DIFFERENT products by equals()/name.
+// This is why compareTo() should be "consistent with equals" when possible.</code></pre>
+
+</div>
+
+<div class="section">
+<h2>📊 HashSet vs LinkedHashSet vs TreeSet — Full Comparison</h2>
+<table>
+<tr><th>Aspect</th><th>HashSet</th><th>LinkedHashSet</th><th>TreeSet</th></tr>
+<tr><td>Duplicates allowed</td><td>No</td><td>No</td><td>No</td></tr>
+<tr><td>Order</td><td>Unordered (bucket-based)</td><td>Insertion order preserved</td><td>Sorted order (natural or Comparator)</td></tr>
+<tr><td>Internal structure</td><td>Hash table (buckets)</td><td>Hash table + doubly linked list</td><td>Red-Black Tree</td></tr>
+<tr><td>add() / contains() complexity</td><td>O(1) average</td><td>O(1) average</td><td>O(log N)</td></tr>
+<tr><td>Duplicate detection basis</td><td>hashCode() + equals()</td><td>hashCode() + equals()</td><td>compareTo() (or Comparator)</td></tr>
+<tr><td>Allows null</td><td>Yes (one null)</td><td>Yes (one null)</td><td>No — throws NullPointerException</td></tr>
+<tr><td>Extra navigation methods</td><td>No</td><td>No</td><td>Yes (first/last/higher/lower/ceiling/floor)</td></tr>
+<tr><td>Memory overhead</td><td>Lowest</td><td>Slightly higher (linked list)</td><td>Higher (tree structure)</td></tr>
+<tr><td>Best for</td><td>Pure uniqueness, no order needed</td><td>Uniqueness + insertion order matters</td><td>Uniqueness + sorted order matters</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>❓ Likely Interview Questions</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What's the difference between HashSet and LinkedHashSet?</td><td>Both guarantee uniqueness with similar average performance; LinkedHashSet additionally preserves insertion order via an internal doubly linked list, while HashSet's iteration order is unpredictable (bucket-based).</td></tr>
+<tr><td>Why is TreeSet slower than HashSet for add()/contains()?</td><td>TreeSet is backed by a Red-Black Tree, giving O(log N) operations, since it must maintain sorted order — HashSet's O(1) average comes from hash-based bucket placement with no ordering guarantee.</td></tr>
+<tr><td>Does TreeSet use equals()/hashCode() to detect duplicates?</td><td>No — it uses compareTo() (or a supplied Comparator); if compareTo() returns 0 for two objects, TreeSet treats them as duplicates, regardless of what equals() would say.</td></tr>
+<tr><td>Can you add null to a TreeSet?</td><td>No — attempting this throws a NullPointerException, since TreeSet must compare every element to maintain sorted order, and null has no meaningful comparison.</td></tr>
+<tr><td>How do you sort a TreeSet in a custom (non-natural) order?</td><td>Supply a Comparator when constructing the TreeSet, defining your own comparison logic instead of relying on the class's compareTo().</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>LinkedHashSet trades a small amount of memory/overhead for predictable insertion-order iteration.</li>
+<li>TreeSet is NOT hash-based — it's a Red-Black Tree, giving O(log N) operations instead of O(1) average.</li>
+<li>TreeSet determines uniqueness via compareTo() == 0, not equals()/hashCode() — a subtle but important distinction from HashSet/LinkedHashSet.</li>
+<li>Always aim for compareTo() to be "consistent with equals" to avoid confusing behavior when the same objects are used across different collection types.</li>
+<li>TreeSet does not allow null elements — HashSet and LinkedHashSet do (one null each).</li>
+<li>Choose based on your actual requirement: pure uniqueness (HashSet), uniqueness + insertion order (LinkedHashSet), or uniqueness + sorted order (TreeSet).</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Suggested Practice</h2>
+<ul>
+<li>Build the same dataset (e.g. city names) in a HashSet, LinkedHashSet, and TreeSet side by side, and compare the iteration order of each.</li>
+<li>Implement Comparable on a custom class and confirm TreeSet sorts it correctly.</li>
+<li>Write a Comparator for the same class sorting by a different field, and confirm TreeSet respects it instead.</li>
+<li>Deliberately create the compareTo()-vs-equals() mismatch scenario (like the Product example) and observe the unexpected "duplicate" behavior firsthand.</li>
+<li>Practice using TreeSet's navigation methods (first, last, higher, lower, ceiling, floor) on a sorted set of your own data.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Class:</b> HashSet deep dive — hashCode()/equals() contract, hash collisions, Treeify/Untreeify</li>
+<li><b>Likely Next Topics:</b> The Map interface family (HashMap, LinkedHashMap, TreeMap) — which mirror these same three Set variants but for key-value pairs</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT</h2>
+<div class="extra">
+This entire file is standard supplementary content, since no class transcript covering LinkedHashSet/TreeSet was provided. It is NOT extracted from any of your instructor's actual sessions. Please verify it against your real class whenever you have that transcript, and let me know if anything needs correcting or if the actual class covered different specifics/examples.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Map & HashMap</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:14px 0;font-family:monospace;}
+.flowstep{background:#1e1e2f;color:#7cffb2;padding:8px 14px;border-radius:8px;font-size:13px;text-align:center;}
+.flowarrow{color:#888;font-size:18px;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Map & HashMap — Key-Value Pairs, Internal Working & the HashSet Connection</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: List (ArrayList/LinkedList) and Set (HashSet/LinkedHashSet/TreeSet)</li>
+<li>Why the course moves from Set to Map — Set implementations use Map implementations internally</li>
+<li>What a Map is — unique keys, values can repeat</li>
+<li>HashMap basics — default capacity, unordered, duplicate key behavior</li>
+<li>How HashSet uses HashMap internally — the dummy/placeholder value trick</li>
+<li>HashMap.put() — behavior and return value</li>
+<li>HashMap internal working — hashCode → bucket → equals() flow</li>
+<li>Hash collision vs duplicate key — the critical distinction</li>
+<li>LinkedHashMap and TreeMap — how they parallel LinkedHashSet/TreeSet</li>
+<li>Why Map is NOT part of the Collection interface hierarchy</li>
+<li>Iterating a Map — entrySet(), Map.Entry, getKey()/getValue()</li>
+<li>get() vs contains() — Map vs Set</li>
+<li>Null handling nuances across Map implementations</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Recap: List and Set</b>
+<p><b>ArrayList</b> — dynamically growing, index-based, best for random/index access; not ideal for frequent middle insertion/deletion (shifting required). <b>LinkedList</b> — dynamically growing, good for frequent insertion/deletion, but reading by index requires traversal. <b>Set</b> — used when uniqueness is required: <b>HashSet</b> (unique + unordered), <b>LinkedHashSet</b> (unique + insertion order), <b>TreeSet</b> (unique + sorted order, via Comparable/compareTo(), O(log n) search).</p>
+</div>
+
+<div class="card">
+<b>Why Move From Set to Map?</b>
+<p>The course explicitly connects these topics: <b>HashSet internally uses HashMap</b>. <b>LinkedHashSet internally uses LinkedHashMap</b>. <b>TreeSet internally uses TreeMap</b>. Since every Set implementation is actually built on top of the corresponding Map implementation, truly understanding Set internals requires first understanding how Map works.</p>
+</div>
+
+<div class="card">
+<b>What is a Map?</b>
+<p>A <code>Map</code> stores data as <b>key-value pairs</b>. The <b>key must be unique</b>; <b>values may repeat</b>. Whenever a requirement naturally looks like <b>"unique identifier → associated data,"</b> Map is the right structure. Typical examples: student → marks, product → price, state → capital, country → capital.</p>
+</div>
+
+<div class="card">
+<b>HashMap Basics</b>
+<p><code>HashMap&lt;String, String&gt;</code> stores key-value pairs. Default initial capacity: <b>16</b> (same as HashSet). HashMap is <b>unordered</b> — never assume insertion order will be preserved. <b>Values CAN be duplicated</b> — but <b>keys cannot exist as separate mappings if duplicated</b>. If you insert the <b>same key</b> again, its associated value is simply <b>replaced/overwritten</b>, not added as a new entry.</p>
+</div>
+
+<div class="card">
+<b>Only the Key Matters for Bucket Placement</b>
+<p>Hashing and equality checks are performed on the <b>key</b> — the value has no role in determining which bucket an entry goes to. Two entries with completely different values but the <b>same key</b> are still treated as the <b>same mapping</b> (the newer value simply replaces the older one).</p>
+</div>
+
+<div class="card">
+<b>How HashSet Uses HashMap Internally — The Dummy Value Trick</b>
+<p>HashSet conceptually stores only <b>elements</b> (no key-value concept) — but HashMap requires <b>both</b> a key and a value to function. To bridge this gap: HashSet internally stores each Set <b>element as the HashMap's key</b>, and supplies a <b>constant placeholder/dummy object</b> as the value for every entry. This dummy value has no meaning to the HashSet user — it exists purely so HashMap can be reused as HashSet's backing implementation, without needing a completely separate, duplicate implementation. This connects to the <b>backward compatibility</b> principle covered earlier — changing HOW something is implemented internally shouldn't break the existing public API/behavior.</p>
+</div>
+
+<div class="card">
+<b>HashMap.put() — Behavior and Return Value</b>
+<p><code>put(key, value)</code> adds or updates a mapping. Its return type is <b>V</b> (the value type) — specifically, it returns the <b>PREVIOUS value</b> associated with that key. If the key is <b>new</b>, <code>put()</code> returns <b>null</b> (nothing existed before). If the key <b>already existed</b>, <code>put()</code> returns the <b>old value</b> and stores the new one in its place.</p>
+<p><b>Example:</b> <code>put("Gujarat", "Gandhinagar")</code> → returns <code>null</code> (first time this key is used). <code>put("Gujarat", "Ahmedabad")</code> → returns <code>"Gandhinagar"</code> (the previous value), and now stores <code>"Ahmedabad"</code> for that key.</p>
+</div>
+
+<div class="card">
+<b>Why This Matters — Read the Documentation</b>
+<p>The instructor specifically stressed: don't guess what a method returns — <b>read Java's method documentation/comments</b> to understand return values properly (like put()'s "returns previous value" behavior, which isn't obvious from the method name alone).</p>
+</div>
+
+<div class="card">
+<b>HashMap Internal Working — Full Flow</b>
+<ol style="padding-left:20px;">
+<li>A key is supplied to <code>put()</code>.</li>
+<li>HashMap computes the key's hash via <code>hashCode()</code>.</li>
+<li>That hash is processed to determine the target bucket/index (classically via a bitwise AND with <code>capacity - 1</code>).</li>
+<li>If the bucket is <b>empty</b>, a new entry/node is created there.</li>
+<li>If the bucket already has an entry, HashMap compares keys using <code>equals()</code>.</li>
+<li>If the existing key and new key are <b>equal</b> → the mapping's <b>value is replaced</b>.</li>
+<li>If the keys are <b>NOT equal</b> → this is a <b>hash collision</b>; HashMap finds an appropriate place within that bucket's structure and adds the new mapping alongside the existing one.</li>
+<li><b>Treeification</b> applies here too, once collisions in a bucket become high enough (same threshold/capacity conditions as HashSet).</li>
+</ol>
+</div>
+
+<div class="card">
+<b>Hash Collision vs Duplicate Key — The Critical Distinction</b>
+<p>A hash collision does <b>NOT</b> automatically mean two keys are equal — it just means they landed in the <b>same bucket</b>. HashMap always uses <code>equals()</code> AFTER locating the bucket to determine the TRUE relationship: if <code>equals()</code> returns <b>true</b> → it's the <b>same logical key</b> → value is replaced. If <code>equals()</code> returns <b>false</b> → it's a <b>collision involving a genuinely different key</b> → the new mapping is stored <b>alongside</b> the existing one (not replacing it).</p>
+</div>
+
+<div class="card">
+<b>LinkedHashMap and TreeMap</b>
+<p><b>LinkedHashMap</b> maintains <b>insertion-order</b> behavior via its internal linked structure — mirroring LinkedHashSet. <b>TreeMap</b> keeps mappings <b>sorted according to the key</b> — mirroring TreeSet. <b>Important:</b> TreeMap's sorting is based purely on the <b>key</b>, never the value. Hashing (for HashMap) is likewise applied only to keys — values never participate in bucket selection.</p>
+</div>
+
+<div class="card">
+<b>Map is NOT Part of the Collection Interface</b>
+<p>Map is part of the <b>Java Collections Framework</b> overall, but it is <b>NOT a child of the Collection interface</b>. List and Set are both Collection types (they hold individual elements). Map has a fundamentally different structure — it stores <b>key-value pairs</b>, not standalone elements — so it maintains its <b>own separate interface hierarchy</b> rather than extending Collection.</p>
+</div>
+
+<div class="card">
+<b>Iterating Over a Map — entrySet()</b>
+<p>Since Map doesn't directly provide the same Iterator mechanism that Collection types do, you iterate using <code>entrySet()</code> — which returns a <b>Set of Map.Entry objects</b>. Because the result IS a Set, you can obtain a standard <code>Iterator</code> from it. Each <code>Map.Entry</code> represents <b>one key-value pair</b>, exposing <code>entry.getKey()</code> and <code>entry.getValue()</code>.</p>
+<div class="flowbox">
+<div class="flowstep">map</div><div class="flowarrow">→</div>
+<div class="flowstep">entrySet()</div><div class="flowarrow">→</div>
+<div class="flowstep">Set&lt;Map.Entry&lt;K,V&gt;&gt;</div><div class="flowarrow">→</div>
+<div class="flowstep">iterator()</div><div class="flowarrow">→</div>
+<div class="flowstep">Map.Entry</div><div class="flowarrow">→</div>
+<div class="flowstep">getKey() / getValue()</div>
+</div>
+</div>
+
+<div class="card">
+<b>get() vs contains() — Map vs Set</b>
+<p><code>map.get(key)</code> returns the <b>value</b> associated with that key. For a <code>Set</code>, there's no meaningful "value" to retrieve — its whole purpose is membership/uniqueness checking, so it exposes <code>contains(element)</code> (returning boolean) instead of a get()-style method.</p>
+</div>
+
+<div class="card">
+<b>Null Handling — Don't Generalize</b>
+<p>Null behavior <b>varies</b> across Map implementations, and this must NOT be generalized. Specifically noted: <b>TreeMap does not allow a null key</b> in the relevant comparison-based scenario (since it needs to compare keys to maintain sorted order — same reasoning as TreeSet). Always check the specific implementation and Java version/documentation rather than assuming a blanket rule.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>Basic HashMap usage — put(), duplicate key behavior:</b></p>
+<pre><code class="language-java">import java.util.HashMap;
+import java.util.Map;
+
+class Driver {
+    public static void main(String[] args) {
+        Map<String, String> stateCapitals = new HashMap<>();
+
+        String r1 = stateCapitals.put("Gujarat", "Gandhinagar");
+        System.out.println(r1); // null — key is new
+
+        String r2 = stateCapitals.put("Gujarat", "Ahmedabad"); // same key again
+        System.out.println(r2); // "Gandhinagar" — the PREVIOUS value
+
+        System.out.println(stateCapitals.get("Gujarat")); // "Ahmedabad" — replaced
+        System.out.println(stateCapitals.size()); // 1 — NOT 2, key wasn't duplicated
+    }
+}</code></pre>
+
+<p><b>Values CAN repeat, even though keys can't:</b></p>
+<pre><code class="language-java">Map<String, String> productCategory = new HashMap<>();
+productCategory.put("iPhone", "Electronics");
+productCategory.put("Laptop", "Electronics"); // same VALUE, different key — totally fine
+productCategory.put("Shirt", "Clothing");
+
+System.out.println(productCategory.size()); // 3 — all distinct keys allowed</code></pre>
+
+<p><b>Conceptual illustration — how HashSet uses HashMap with a dummy value internally:</b></p>
+<pre><code class="language-java">// Conceptual illustration of HashSet's internal delegation (not literal JDK source)
+class MyHashSet<E> {
+    private static final Object DUMMY = new Object(); // constant placeholder
+    private HashMap<E, Object> backingMap = new HashMap<>();
+
+    public boolean add(E element) {
+        return backingMap.put(element, DUMMY) == null;
+        // if put() returns null, it was a NEW key -> successfully added
+        // if put() returns the dummy (non-null), it already existed -> duplicate
+    }
+
+    public boolean contains(E element) {
+        return backingMap.containsKey(element);
+    }
+}</code></pre>
+
+<p><b>Iterating a Map using entrySet():</b></p>
+<pre><code class="language-java">Map<String, String> countryCapital = new HashMap<>();
+countryCapital.put("India", "New Delhi");
+countryCapital.put("Japan", "Tokyo");
+countryCapital.put("France", "Paris");
+
+for (Map.Entry<String, String> entry : countryCapital.entrySet()) {
+    String key = entry.getKey();
+    String value = entry.getValue();
+    System.out.println(key + " -> " + value);
+}</code></pre>
+
+<p><b>Manually obtaining an Iterator via entrySet():</b></p>
+<pre><code class="language-java">import java.util.Iterator;
+import java.util.Set;
+
+Set<Map.Entry<String, String>> entries = countryCapital.entrySet();
+Iterator<Map.Entry<String, String>> it = entries.iterator();
+
+while (it.hasNext()) {
+    Map.Entry<String, String> entry = it.next();
+    System.out.println(entry.getKey() + " : " + entry.getValue());
+}</code></pre>
+
+<p><b>get() vs contains() — Map vs Set:</b></p>
+<pre><code class="language-java">Map<String, Integer> marks = new HashMap<>();
+marks.put("Rahul", 85);
+
+int value = marks.get("Rahul");        // 85 — returns the associated VALUE
+boolean exists = marks.containsKey("Rahul"); // true — Map also has containsKey/containsValue
+
+Set<String> names = new HashSet<>();
+names.add("Rahul");
+boolean present = names.contains("Rahul"); // true — Set only checks MEMBERSHIP, no value to fetch</code></pre>
+
+<p><b>TreeMap — sorted by key, not value:</b></p>
+<pre><code class="language-java">import java.util.TreeMap;
+
+Map<String, Integer> scores = new TreeMap<>();
+scores.put("Charlie", 60);
+scores.put("Alice", 95);
+scores.put("Bob", 80);
+
+for (Map.Entry<String, Integer> entry : scores.entrySet()) {
+    System.out.println(entry.getKey() + " -> " + entry.getValue());
+}
+// Output sorted by KEY (alphabetically): Alice, Bob, Charlie
+// — regardless of insertion order or the VALUES</code></pre>
+
+<p><b>LinkedHashMap — preserves insertion order:</b></p>
+<pre><code class="language-java">import java.util.LinkedHashMap;
+
+Map<String, String> visits = new LinkedHashMap<>();
+visits.put("Page3", "10:15");
+visits.put("Page1", "10:10");
+visits.put("Page2", "10:12");
+
+for (String page : visits.keySet()) {
+    System.out.println(page);
+}
+// Output: Page3, Page1, Page2 — exact insertion order preserved</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Interview Questions From This Lecture</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>How does HashMap work internally?</td><td>Compute the key's hashCode → determine the bucket via a formula (e.g. hash & (capacity-1)) → if bucket is empty, add directly; if occupied, compare via equals() → same key means replace value, different key means hash collision (store alongside).</td></tr>
+<tr><td>What does HashMap.put() return?</td><td>The PREVIOUS value associated with that key, or null if the key is new.</td></tr>
+<tr><td>Why does HashSet use HashMap internally?</td><td>To avoid a separate implementation — HashSet stores each element as the HashMap's key with a constant dummy/placeholder value, reusing HashMap's hashing mechanism entirely.</td></tr>
+<tr><td>What is the dummy/placeholder value used by HashSet?</td><td>A constant object with no meaning to the HashSet user — it exists purely because HashMap requires a value for every key, and HashSet only cares about the keys (elements).</td></tr>
+<tr><td>Why is Map not a child of Collection?</td><td>Collection types (List, Set) store individual elements; Map stores key-value pairs — a fundamentally different structure — so Map maintains its own separate interface hierarchy.</td></tr>
+<tr><td>How do you iterate over a Map?</td><td>Use entrySet(), which returns a Set of Map.Entry objects; obtain an Iterator from that Set, and use getKey()/getValue() on each Map.Entry.</td></tr>
+<tr><td>What is the difference between get() and contains()?</td><td>Map's get(key) returns the associated VALUE. Set's contains(element) returns a boolean indicating membership only — Sets have no "value" to retrieve.</td></tr>
+<tr><td>On what is TreeMap sorting performed: key or value?</td><td>Key — always. Values never participate in TreeMap's ordering.</td></tr>
+<tr><td>How does HashMap distinguish a collision from an equal key?</td><td>Via equals() — if the existing key and new key are equal, it's the same logical key (value replaced); if not equal, it's a genuine hash collision (both stored).</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Map keys are unique; values can repeat freely.</li>
+<li>Inserting the same key again REPLACES the value — it does not create a duplicate mapping.</li>
+<li>Only the KEY participates in hashing/bucket placement — the value has no role in this.</li>
+<li>put() returns the PREVIOUS value (or null if new) — not the newly inserted value, and not a boolean.</li>
+<li>HashSet has no independent implementation — it's built entirely on HashMap, using a dummy value trick.</li>
+<li>A hash collision (same bucket) is NOT the same as a duplicate key (same key via equals()) — always distinguish these clearly.</li>
+<li>Map is NOT part of the Collection interface hierarchy — a common point of confusion.</li>
+<li>Use entrySet() (not keySet() alone, unless you only need keys) to iterate both keys and values efficiently together.</li>
+<li>TreeMap sorts by key only, never by value.</li>
+<li>Don't assume null-handling rules apply uniformly across all Map implementations — check the specific type (e.g. TreeMap disallows null keys).</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Suggested Practice</h2>
+<ul>
+<li>Build a HashMap mapping some real-world unique key to a value (e.g. product ID → price), and test put()'s return value for both new and existing keys.</li>
+<li>Insert duplicate VALUES with different keys and confirm this is completely valid.</li>
+<li>Practice iterating a Map using entrySet() and printing both key and value for each entry.</li>
+<li>Build the same dataset in HashMap, LinkedHashMap, and TreeMap, and compare iteration order across all three.</li>
+<li>Attempt to insert a null key into a TreeMap and observe the resulting behavior/exception.</li>
+<li>Write a short explanation (in your own words) of exactly how HashSet uses HashMap internally, including the dummy value.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Topic:</b> HashSet internals — hashCode()/equals() contract, hash collisions, Treeify/Untreeify (the same mechanisms apply here, since HashSet is built on HashMap)</li>
+<li><b>Likely Next Topics:</b> Deeper HashMap internals (treeification specifics for Map), or moving into Queue/Deque, or Java 8 Streams working with Collections</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, the flow diagram, and formatting/styling. Content extracted directly from your uploaded, pre-cleaned study transcript. No new technical content was added beyond what was in the source material.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>
