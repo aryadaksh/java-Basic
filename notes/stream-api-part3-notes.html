@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Stream API Part 3</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff0f0;border-left:6px solid #e05a5a;padding:14px 18px;border-radius:10px;margin:16px 0;font-size:14.5px;}
+.hot b{color:#e05a5a;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Stream API Part 3 — Collectors.groupingBy, partitioningBy & Classic Interview Coding Problems</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: Stream API basics, lazy evaluation, terminal operations</li>
+<li>count() vs Collectors.counting() — when each is used</li>
+<li>Collectors.groupingBy() — grouping elements by a shared property</li>
+<li>Collectors.partitioningBy() — splitting into exactly two groups (true/false)</li>
+<li>Converting a String into a Stream of characters — chars() and mapToObj()</li>
+<li>Counting character occurrences using groupingBy + counting (a classic interview problem)</li>
+<li>Finding the first non-repeating character (another classic interview problem)</li>
+<li>indexOf() vs lastIndexOf() — the trick behind detecting non-repeating elements</li>
+<li>Finding the 2nd highest salary from a list of custom Employee objects</li>
+<li>Homework: fixing duplicate-salary handling (same lesson as the earlier "3rd highest salary" class)</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>count() vs Collectors.counting() — When to Use Each</b>
+<p>Both count elements, but in different contexts. <code>.count()</code> is a terminal operation called directly on a stream to get the total number of elements in it. <code>Collectors.counting()</code> is used specifically as a <b>downstream collector</b> — most commonly inside <code>groupingBy()</code>, where you want to know the count WITHIN each group, not the total across the whole stream.</p>
+</div>
+
+<div class="card">
+<b>Collectors.groupingBy() — Grouping by a Shared Property</b>
+<p><code>groupingBy()</code> takes a <b>classifier function</b> (a way of computing a "key" for each element) and groups elements sharing the same key together. The result is a <code>Map&lt;K, List&lt;T&gt;&gt;</code> — the key type depends on your classifier, and the value is a List of all elements that share that key.</p>
+</div>
+
+<div class="card">
+<b>Example: Grouping City Names by Length</b>
+<p>Given a list of city names, grouping by <code>String::length</code> produces a <code>Map&lt;Integer, List&lt;String&gt;&gt;</code> — e.g. all 5-letter cities together, all 6-letter cities together, and so on. This is described as one of the <b>most heavily used</b> Stream API operations in real interview and practical scenarios.</p>
+</div>
+
+<div class="card">
+<b>Collectors.partitioningBy() — Splitting Into Exactly Two Groups</b>
+<p><code>partitioningBy()</code> is a specialized version of grouping: it takes a <b>boolean condition</b> (a Predicate) and always produces exactly <b>two</b> groups — a <code>Map&lt;Boolean, List&lt;T&gt;&gt;</code>, where <code>true</code> holds elements matching the condition, and <code>false</code> holds everything else.</p>
+</div>
+
+<div class="card">
+<b>Example: Partitioning Numbers into Even and Odd</b>
+<p>Given a list of integers, partitioning by "is this number even" produces: <code>true → [all even numbers]</code>, <code>false → [all odd numbers]</code>. If asked to "filter all the even numbers," <code>partitioningBy()</code> is a clean, direct way to do it — you get both groups in one pass.</p>
+</div>
+
+<div class="card">
+<b>groupingBy() vs partitioningBy() — The Core Distinction</b>
+<p><code>groupingBy()</code> can produce <b>any number</b> of groups, based on however many distinct key values exist. <code>partitioningBy()</code> ALWAYS produces exactly <b>two</b> groups (true/false) — since it's fundamentally based on a yes/no condition.</p>
+</div>
+
+<div class="card">
+<b>Converting a String to a Stream of Characters</b>
+<p>Strings don't have a direct <code>.stream()</code> method that gives characters. The approach: <code>input.chars()</code> gives an <code>IntStream</code> of the ASCII (numeric) codes of each character — NOT the characters themselves. To get actual <code>Character</code> objects, apply <code>.mapToObj(c -> (char) c)</code>, which converts each int back into a Character object.</p>
+</div>
+
+<div class="card">
+<b>Counting Character Occurrences — A Classic Interview Problem</b>
+<p>Flagged as extremely likely to come up: <em>"Count how many times each character appears in a string."</em> The approach combines everything above: convert the string to a character stream, then use <code>groupingBy()</code> with <code>Collectors.counting()</code> as the downstream collector — grouping by the character itself, counting how many times each group's key appears.</p>
+</div>
+
+<div class="card">
+<b>Finding the First Non-Repeating Character — Another Classic</b>
+<p>The problem: given a string, find the first character that appears <b>exactly once</b>. Example: in "SWISS", walking through — S appears multiple times, W appears once. The first character that's NOT repeated is the answer.</p>
+</div>
+
+<div class="card">
+<b>The indexOf() / lastIndexOf() Trick</b>
+<p>The elegant approach demonstrated: for a given character, <code>input.indexOf(c)</code> gives its FIRST position; <code>input.lastIndexOf(c)</code> gives its LAST position. If a character appears <b>only once</b>, these two positions are <b>identical</b>. If a character repeats, the first and last positions will differ. So: <code>filter(c -> input.indexOf(c) == input.lastIndexOf(c))</code> keeps only non-repeating characters, and <code>findFirst()</code> gives you the very first one among them.</p>
+</div>
+
+<div class="card">
+<b>Why This is Considered "The Easiest" Approach</b>
+<p>The instructor explicitly noted that searching this problem online (e.g. via ChatGPT) would surface 5-6 different possible approaches — but the indexOf/lastIndexOf comparison was highlighted as the one most people find easiest to understand and remember, since it reuses two very familiar String methods in a clever way.</p>
+</div>
+
+<div class="card">
+<b>Finding the 2nd Highest Salary — Custom Objects</b>
+<p>Same overall pattern as the earlier "3rd highest salary" exercise (with plain integers), but now applied to a list of custom <code>Employee</code> objects with <code>name</code> and <code>salary</code> attributes. Approach: <b>sort</b> employees by salary in <b>descending</b> order (using a comparator comparing salary), then <b>skip(1)</b> (skipping the highest), then <code>findFirst()</code> to get the employee with the 2nd highest salary.</p>
+</div>
+
+<div class="card">
+<b>The Homework — Same Duplicate Lesson, Reapplied</b>
+<p>Deliberately assigned as homework: this initial solution <b>breaks</b> if two employees share the same (highest) salary — the exact same duplicate-handling issue covered in the earlier "3rd highest salary" class. The task: apply the same fix (<code>distinct()</code> based on salary, before sorting) so the logic correctly finds the 2nd highest DISTINCT salary, regardless of duplicates.</p>
+</div>
+
+<div class="hot">
+<b>🔥 Flagged as Guaranteed Interview Questions (Instructor's Own Words: "101%")</b>
+<ul style="margin-top:8px;">
+<li>Count the frequency/occurrence of each character in a string</li>
+<li>Find the first non-repeating character in a string</li>
+<li>Find the 2nd (or Nth) highest salary/number in a collection</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Broader Advice — Practice Over Theory</b>
+<p>The instructor was explicit: Stream API isn't a heavily theoretical topic — mastery comes almost entirely from <b>practice</b>. Recommended habit: solve 5-6 Stream API problems every week (e.g. every Friday/Saturday) WITHOUT referring to any external resource — being able to solve them independently is the actual marker of readiness, not passive familiarity from having seen solutions before.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>count() vs Collectors.counting():</b></p>
+<pre><code class="language-java">List<String> cities = Arrays.asList("Delhi", "Mumbai", "Bangalore", "Chennai", "Pune", "Kochi");
+
+long total = cities.stream().count(); // simple terminal count — total elements in the stream
+System.out.println(total); // 6</code></pre>
+
+<p><b>Collectors.groupingBy() — group cities by name length:</b></p>
+<pre><code class="language-java">import java.util.*;
+import java.util.stream.*;
+
+List<String> cities = Arrays.asList("Delhi", "Mumbai", "Bangalore", "Chennai", "Pune", "Kochi");
+
+Map<Integer, List<String>> groupedByLength = cities.stream()
+        .collect(Collectors.groupingBy(String::length));
+
+System.out.println(groupedByLength);
+// {4=[Pune], 5=[Delhi, Kochi], 6=[Mumbai], 7=[Chennai], 9=[Bangalore]}</code></pre>
+
+<p><b>groupingBy() combined with counting() — count elements PER group:</b></p>
+<pre><code class="language-java">Map<Integer, Long> countPerLength = cities.stream()
+        .collect(Collectors.groupingBy(String::length, Collectors.counting()));
+
+System.out.println(countPerLength);
+// {4=1, 5=2, 6=1, 7=1, 9=1}</code></pre>
+
+<p><b>Collectors.partitioningBy() — split numbers into even and odd:</b></p>
+<pre><code class="language-java">List<Integer> numbers = Arrays.asList(10, 15, 22, 33, 40, 51, 60);
+
+Map<Boolean, List<Integer>> partitioned = numbers.stream()
+        .collect(Collectors.partitioningBy(n -> n % 2 == 0));
+
+System.out.println(partitioned);
+// {false=[15, 33, 51], true=[10, 22, 40, 60]}
+
+List<Integer> evenNumbers = partitioned.get(true);
+System.out.println(evenNumbers); // [10, 22, 40, 60]</code></pre>
+
+<p><b>Converting a String into a stream of characters:</b></p>
+<pre><code class="language-java">String input = "Hello";
+
+// input.chars() gives an IntStream of ASCII codes: 72, 101, 108, 108, 111
+Stream<Character> characterStream = input.chars()
+        .mapToObj(c -> (char) c); // converts each int back into a Character object
+
+characterStream.forEach(System.out::println); // H, e, l, l, o</code></pre>
+
+<p><b>Counting character occurrences — classic interview problem:</b></p>
+<pre><code class="language-java">String input = "MISSISSIPPI";
+
+Map<Character, Long> charCounts = input.chars()
+        .mapToObj(c -> (char) c)
+        .collect(Collectors.groupingBy(
+            Function.identity(),   // group by the character itself
+            Collectors.counting()  // count occurrences within each group
+        ));
+
+System.out.println(charCounts);
+// {M=1, S=4, I=4, P=2}</code></pre>
+
+<p><b>Finding the first non-repeating character — classic interview problem:</b></p>
+<pre><code class="language-java">String input = "SWISS";
+
+Optional<Character> firstNonRepeating = input.chars()
+        .mapToObj(c -> (char) c)
+        .filter(c -> input.indexOf(c) == input.lastIndexOf(c)) // occurs exactly once
+        .findFirst();
+
+System.out.println(firstNonRepeating.get()); // W</code></pre>
+
+<p><b>Handling case-insensitivity (mentioned as an easy extension):</b></p>
+<pre><code class="language-java">// You can adjust the filter condition to add case-insensitive comparison logic
+// if the requirement calls for treating 'S' and 's' as the same character</code></pre>
+
+<p><b>Finding the 2nd highest salary — custom Employee objects:</b></p>
+<pre><code class="language-java">class Employee {
+    String name;
+    int salary;
+
+    public Employee(String name, int salary) {
+        this.name = name;
+        this.salary = salary;
+    }
+
+    public String getName() { return name; }
+    public int getSalary() { return salary; }
+}</code></pre>
+<pre><code class="language-java">List<Employee> employees = new ArrayList<>();
+employees.add(new Employee("Ravi", 45000));
+employees.add(new Employee("Priya", 60000));
+employees.add(new Employee("Rajat", 54000));
+employees.add(new Employee("Kiran", 38000));
+
+Employee secondHighest = employees.stream()
+        .sorted((e1, e2) -> Integer.compare(e2.getSalary(), e1.getSalary())) // descending
+        .skip(1) // skip the highest
+        .findFirst()
+        .get();
+
+System.out.println(secondHighest.getSalary()); // 54000 (Rajat)</code></pre>
+
+<p><b>Homework fix — handling duplicate salaries correctly:</b></p>
+<pre><code class="language-java">List<Employee> employees = new ArrayList<>();
+employees.add(new Employee("Ravi", 60000));
+employees.add(new Employee("Priya", 60000)); // duplicate highest salary
+employees.add(new Employee("Rajat", 54000));
+employees.add(new Employee("Kiran", 38000));
+
+// FIX: distinct by salary value BEFORE sorting/skipping
+Employee secondHighestFixed = employees.stream()
+        .map(Employee::getSalary)
+        .distinct()                          // remove duplicate salary VALUES first
+        .sorted(Comparator.reverseOrder())    // descending
+        .skip(1)
+        .findFirst()
+        .get();
+
+System.out.println(secondHighestFixed); // 54000 — correctly the 2nd DISTINCT highest salary
+// (Note: this version returns just the salary value; adapt further if you need
+// the full Employee object with a distinct-by-salary-value guarantee.)</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Interview Questions From This Lecture</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What's the difference between .count() and Collectors.counting()?</td><td>.count() is a terminal operation giving the total count of a stream. Collectors.counting() is a downstream collector, typically used inside groupingBy() to count elements WITHIN each group.</td></tr>
+<tr><td>What does Collectors.groupingBy() return?</td><td>A Map where the key is determined by your classifier function, and the value is a List of all elements sharing that key.</td></tr>
+<tr><td>What's the difference between groupingBy() and partitioningBy()?</td><td>groupingBy() can produce any number of groups based on distinct key values. partitioningBy() always produces exactly TWO groups (true/false), based on a boolean condition.</td></tr>
+<tr><td>How do you convert a String into a stream of its individual characters?</td><td>Use input.chars() to get an IntStream of ASCII codes, then .mapToObj(c -> (char) c) to convert each int into an actual Character object.</td></tr>
+<tr><td>How do you count how many times each character appears in a string?</td><td>Convert to a character stream, then collect using groupingBy(Function.identity(), Collectors.counting()) — grouping each character with itself as the key, counting occurrences.</td></tr>
+<tr><td>How do you find the first non-repeating character in a string?</td><td>Filter the character stream to keep only characters where indexOf() equals lastIndexOf() (meaning it appears exactly once), then call findFirst().</td></tr>
+<tr><td>Why does indexOf() == lastIndexOf() indicate a character appears only once?</td><td>indexOf() gives the FIRST occurrence's position; lastIndexOf() gives the LAST occurrence's position. If a character occurs only once, these positions are identical by definition.</td></tr>
+<tr><td>How do you find the 2nd highest value in a list of custom objects?</td><td>Sort descending by the relevant field (using a comparator), skip(1) to skip the highest, then findFirst() to get the next one.</td></tr>
+<tr><td>Why does the "2nd highest salary" solution need to handle duplicates carefully?</td><td>If the top salary value is shared by multiple employees, a purely position-based skip() can give a misleading result — you likely want the 2nd DISTINCT salary value, requiring distinct() before sorting/skipping.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Use .count() for a simple total; use Collectors.counting() specifically as a downstream collector inside groupingBy().</li>
+<li>groupingBy() → any number of groups; partitioningBy() → always exactly 2 groups (true/false).</li>
+<li>String.chars() gives ASCII int codes, NOT characters — always follow with .mapToObj(c -> (char) c) to get actual Character objects.</li>
+<li>groupingBy(Function.identity(), Collectors.counting()) is the standard pattern for frequency-counting problems.</li>
+<li>indexOf() == lastIndexOf() is a clean, memorable trick for detecting elements that occur exactly once.</li>
+<li>Always account for duplicate values when solving "Nth highest" problems — apply distinct() before sorting/skipping.</li>
+<li>These three problem types (character frequency, first non-repeating character, Nth highest value) are considered near-certain interview questions — practice them until they're automatic.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Suggested Practice</h2>
+<ul>
+<li>Practice groupingBy() on a dataset of your choice, grouping by at least 2 different classifier functions.</li>
+<li>Practice partitioningBy() with a different boolean condition (e.g. splitting strings by length above/below a threshold).</li>
+<li>Solve the character-frequency-counting problem on 3-4 different strings, including ones with repeated characters and mixed case.</li>
+<li>Solve the first-non-repeating-character problem, then extend it to also handle case-insensitivity.</li>
+<li>Complete the homework: fix the 2nd highest salary solution to correctly handle duplicate salary values using distinct().</li>
+<li>Following the instructor's advice: solve 5-6 fresh Stream API problems this week, without referring to any solutions, notes, or AI tools.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Class:</b> Stream API Part 2 — lazy evaluation, distinct/limit/skip/sorted/findFirst, Nth highest salary (primitives), finding duplicates</li>
+<li><b>Upcoming Topics:</b> Explicitly flagged — "one more session" to close out Stream API, with continued emphasis on practical problem-solving over theory</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, and formatting/styling. Content extracted directly from your uploaded transcript, including all three flagged "guaranteed interview question" problems. Some ASR-garbled phrasing (e.g. "the file length is only for Delhi" meaning "the 5-length group only has Delhi") was interpreted based on surrounding context. No new technical content was added beyond what the instructor taught.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>
