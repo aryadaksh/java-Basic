@@ -1,7 +1,9 @@
 package com.streamapi3;
 
 import java.util.Arrays;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 class Empolyee{
 	String name;
@@ -18,6 +20,9 @@ class Empolyee{
 		return salary;
 	}
 	
+	public String toString() {
+		return name +" "+salary;
+	}
 	
 }
 public class SecondHighestSalaryOfEmployee {
@@ -44,9 +49,27 @@ public class SecondHighestSalaryOfEmployee {
 	            new Empolyee("Shivani", 12000),
 	            new Empolyee("Varun", 15000));
 		
-		Empolyee result = employees.stream().sorted((e1,e2) -> Integer.compare(e2.getSalary(), e1.getSalary())).skip(1).findFirst().get();
-	
-		System.out.println(result.getName() +" "+result.getSalary());
+		/*
+		 * Empolyee result = employees.stream().sorted((e1,e2) ->
+		 * Integer.compare(e2.getSalary(), e1.getSalary())).skip(1).findFirst().get();
+		 * 
+		 * System.out.println(result.getName() +" "+result.getSalary());
+		 */
+		
+		Optional<Empolyee> secoHigh = employees.stream()
+			    .sorted(Comparator.comparing(Empolyee::getSalary).reversed())
+			    .map(Empolyee::getSalary)              // focus only on salary values
+			    .distinct()                            // remove duplicate salaries
+			    .skip(1)                               // skip the highest
+			    .findFirst()                           // get the second highest salary
+			    .flatMap(sal -> employees.stream()
+			        .filter(e -> e.getSalary() == sal) // find employee(s) with that salary
+			        .findFirst());                     // pick one employee
+
+		
+		if(secoHigh.isPresent()) {
+			System.out.println(secoHigh.get());
+		}
 	}
 
 }

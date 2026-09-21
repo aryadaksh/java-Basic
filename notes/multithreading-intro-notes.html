@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Multithreading Introduction</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hierarchy{background:#1e1e2f;color:#d4d4f7;padding:18px 24px;border-radius:10px;font-family:monospace;line-height:2;}
+.hierarchy b{color:#7cffb2;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Multithreading Introduction — Process, Thread, Task & Your First Custom Thread</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>What is multi-threading — the "moving chairs" analogy</li>
+<li>Process vs Thread vs Task — the core hierarchy</li>
+<li>Even "Hello World" requires a thread — the main thread</li>
+<li>Thread.currentThread().getName() — finding which thread runs your code</li>
+<li>How a Java class actually starts executing (class loading + main thread creation)</li>
+<li>Creating a custom thread using the Thread class (extends Thread, override run())</li>
+<li>start() vs calling run() directly</li>
+<li>The golden rule: you CANNOT predict thread execution order</li>
+<li>Thread Scheduler — negotiating with the CPU</li>
+<li>CPU context switching — why parallelism often "looks" real but isn't (on a single core)</li>
+<li>The "Janta Darbar" analogy for CPU scheduling priorities</li>
+<li>Parent thread / independently-running threads clarified</li>
+<li>Preview: synchronization and controlling execution order (next class)</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>What is Multi-threading?</b>
+<p>Multi-threading means a piece of work is done by <b>multiple threads</b> at the same time, instead of one. <b>Analogy:</b> 50 chairs need to be moved out of a classroom. <b>Scenario 1 (single-threaded):</b> one person moves all 50 chairs alone. <b>Scenario 2 (multi-threaded):</b> 10 students each move a portion of the chairs simultaneously — roughly 5 chairs each, though the exact split varies (someone faster might do 6, someone slower does 4). The second approach is <b>faster</b> — that's the core advantage of multi-threading.</p>
+</div>
+
+<div class="card">
+<b>The Immediate Catch: You Cannot Predict Completion Order</b>
+<p>With 10 people moving chairs, you cannot know in advance <b>who finishes first</b>. One student might be moving fast, then get an emergency phone call and pause for 20 seconds. The same happens with threads — a thread's execution can be paused/delayed unpredictably. <b>Core rule introduced here, repeated throughout the entire class: in multithreading, you cannot predict the order of execution.</b> Even if you observe the same order many times in a row, that does NOT mean it's guaranteed or fixed.</p>
+</div>
+
+<div class="card">
+<b>Process — A Running Application With Its Own Memory</b>
+<p>A <b>process</b> is any running application that has been allocated its <b>own memory</b>. Examples: the JVM itself is a process; your web browser is a process; Eclipse is a process. Opening Task Manager (Ctrl+Shift+Delete on Windows) and viewing the process list shows exactly these — independent running applications, each with dedicated memory.</p>
+</div>
+
+<div class="card">
+<b>Thread — The Unit of Execution Inside a Process</b>
+<p>A <b>thread</b> is the unit that actually <b>performs work</b> within a process. A process does not directly "do" anything by itself — the actual work is carried out by threads running inside it.</p>
+</div>
+
+<div class="card">
+<b>Task — The Actual Work Being Done</b>
+<p>Whatever work a thread performs is called a <b>task</b>. Real-world example: a Payment process might need to (1) process the transaction, (2) update the account balance, (3) send a notification/SMS. Each of these is a <b>task</b>, and each task is carried out by a <b>thread</b>.</p>
+</div>
+
+<div class="card">
+<b>The Full Hierarchy</b>
+<div class="hierarchy">
+<b>Process</b> (e.g. JVM) — has its own memory<br>
+&nbsp;&nbsp;&nbsp;&nbsp;└── <b>Thread</b> — unit of execution, does the work<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;└── <b>Task</b> — the actual work performed
+</div>
+</div>
+
+<div class="card">
+<b>Even "Hello World" Requires a Thread</b>
+<p>A direct, important point: <b>without a thread, Java cannot function at all</b> — not even printing "Hello World." When you run any Java program, the JVM (the process) automatically creates a thread to actually execute your code. There's no such thing as code running with "zero threads" in Java.</p>
+</div>
+
+<div class="card">
+<b>The Main Thread — Created Automatically by JVM</b>
+<p>When you run a Java class, the JVM: (1) loads the class's bytecode into memory, (2) creates <b>one thread</b>, conventionally named <b>"main."</b> (3) That main thread's ONLY job is to execute the <code>main()</code> method. This happens automatically — you never explicitly create this thread yourself.</p>
+</div>
+
+<div class="card">
+<b>Finding Out Which Thread Executes Your Code</b>
+<p><code>Thread.currentThread().getName()</code> returns the name of whichever thread is currently executing that line of code. Running this inside a plain <code>main()</code> method (with no custom threads created) will always print <code>"main"</code> — confirming that even basic, single-threaded-looking code is still being run BY a thread.</p>
+</div>
+
+<div class="card">
+<b>Class Loading + Main Thread Creation — The Full Startup Sequence</b>
+<p>When you tell Java to execute a class: the class's bytecode is loaded into memory (method area) → JVM creates a thread → that thread calls <code>ClassName.main()</code> as its assigned task. If no <code>main()</code> method exists, Java complains that the entry point is missing — because the automatically-created main thread has nothing to execute.</p>
+</div>
+
+<div class="card">
+<b>"Basics" in Software Includes Threads Too</b>
+<p>A philosophical aside worth remembering: there's no clean separation between "basic" and "advanced" topics in software — if you claim your Java fundamentals are solid, that should include understanding threads too, since even the simplest program relies on one.</p>
+</div>
+
+<div class="card">
+<b>Two Ways to Create a Custom Thread</b>
+<p>Java offers two approaches: (1) <b>extending the Thread class</b> (covered in this session), or (2) <b>implementing the Runnable interface</b> (mentioned as a separate topic for later). Today's focus is exclusively the Thread class approach.</p>
+</div>
+
+<div class="card">
+<b>Steps to Create a Custom Thread (Thread Class Approach)</b>
+<ol style="padding-left:20px;">
+<li>Create a class that <b>extends Thread</b>.</li>
+<li><b>Override the run() method</b> — standard signature: <code>public void run()</code>, no parameters. This is fixed syntax that "hasn't changed in 30 years and won't change in the next 30."</li>
+<li>Write whatever logic/task you want the thread to perform <b>inside run()</b>.</li>
+<li>Create an <b>object</b> of your custom thread class.</li>
+<li>Call <b>.start()</b> on that object — NOT .run() directly.</li>
+</ol>
+</div>
+
+<div class="card">
+<b>Why .start() and Not .run() Directly?</b>
+<p>Calling <code>.run()</code> directly would just execute that method like any normal method call — on the SAME thread that called it (e.g. the main thread), with no actual new thread involved. Calling <code>.start()</code> is what actually creates a genuinely new thread of execution, which then internally invokes <code>run()</code> on ITS OWN separate execution path — going through the thread scheduler and CPU negotiation process.</p>
+</div>
+
+<div class="card">
+<b>Multiple Custom Threads — Demonstrating Unpredictable Order</b>
+<p>Creating multiple thread objects (T1, T2, T3) from the same custom class and starting all of them live in class produced <b>different output orderings on different runs</b> — sometimes 0-1-2, sometimes 1-0-2, sometimes 2-0-1, and so on. This directly demonstrated, hands-on, that <b>execution order is genuinely not fixed or predictable</b>, even for the exact same code run repeatedly.</p>
+</div>
+
+<div class="card">
+<b>Why Order is Unpredictable — Thread Scheduler and CPU</b>
+<p>Each thread, once started, must request permission from the CPU (via a JVM component called the <b>Thread Scheduler</b>) before it can actually run. The Thread Scheduler negotiates with the CPU on the thread's behalf. <b>The CPU decides</b> which thread gets to run and when — this decision is <b>not</b> first-come-first-served. A thread that requests first may still be denied if the CPU is currently busy with something else (even unrelated system-level work), while a thread that requests later might get approved sooner.</p>
+</div>
+
+<div class="card">
+<b>The Thread Scheduler Only Manages YOUR Threads</b>
+<p>Clarified explicitly: the Thread Scheduler (part of the JVM) only negotiates for the small number of threads belonging to YOUR Java program — it has no involvement with threads from unrelated processes like your browser, YouTube, or Eclipse. Those are managed independently by the operating system/CPU alongside everything else.</p>
+</div>
+
+<div class="card">
+<b>CPU Context Switching — Why Things "Feel" Parallel</b>
+<p>Even a <b>single-core</b> CPU can only genuinely execute <b>one thread at a time</b> — true simultaneous execution requires multiple cores. However, the CPU switches between different threads/tasks so <b>incredibly fast</b> (fractions of a nanosecond) that humans cannot perceive the switching at all — it FEELS like everything (music, browser, typing) is happening in parallel, even though, strictly at the CPU level, it's actually rapid switching between one task at a time.</p>
+</div>
+
+<div class="card">
+<b>When Context Switching Becomes Visible — Heavy Software</b>
+<p>Real-world evidence of this switching: running a heavy game can cause background music or YouTube to visibly stutter/lag. This happens because the CPU must dedicate MORE time to the demanding software, leaving less switching capacity for everything else — you start to actually notice the previously-invisible switching overhead. Modern high-end, multi-core CPUs reduce (but don't eliminate) this effect by genuinely running more threads in true parallel.</p>
+</div>
+
+<div class="card">
+<b>The "Janta Darbar" Analogy for CPU Scheduling Priority</b>
+<p>A vivid analogy for how the CPU decides thread order: in a "Janta Darbar" (a public grievance-hearing session held by a Chief Minister), people register in a queue with sequence numbers. But when an <b>emergency</b> arises (e.g. a flood requiring urgent resource deployment), the CM (playing the role of the CPU) <b>skips ahead</b> to handle that higher-priority matter — regardless of registration order. Similarly, requesting CPU time first (starting a thread first) does <b>NOT</b> guarantee getting executed first — <b>the CPU is the central authority</b>, weighing its own priorities (which may include totally unrelated system tasks) before deciding what runs next.</p>
+</div>
+
+<div class="card">
+<b>Parent Thread / Independently Running Threads</b>
+<p>Clarified in response to a student question: the <b>main thread's</b> only responsibility is executing the <code>main()</code> method. Any custom thread YOU create and start from inside <code>main()</code> then runs <b>independently</b> — there's no enforced "parent-child" relationship controlling their execution relative to each other. Once started, a custom thread follows its own separate execution path, unrelated to whether the main thread has finished or not.</p>
+</div>
+
+<div class="card">
+<b>Threading Requires Practice, Not Just Theory</b>
+<p>Directly emphasized: mastering multithreading requires <b>a lot of hands-on practice</b> PLUS a degree of "out-of-the-box" thinking — it's fundamentally different from most topics covered so far, precisely because the usual assumption of predictable, top-to-bottom code execution no longer fully holds.</p>
+</div>
+
+<div class="card">
+<b>Preview: Controlling Execution Order (Coming Next)</b>
+<p>Foreshadowed for the next session: while default thread order is unpredictable, Java DOES provide <b>synchronization mechanisms</b> to control/fix the order when your application genuinely requires it. Example teased: a restaurant with 3 threads — one taking orders, one cooking, one serving — where the natural/default behavior might have the server thread trying to serve BEFORE the order is even taken or the food is cooked; proper coordination mechanisms are needed to enforce the correct real-world sequence (order → cook → serve).</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>Finding which thread executes your code:</b></p>
+<pre><code class="language-java">public class Driver {
+    public static void main(String[] args) {
+        System.out.println(Thread.currentThread().getName());
+        // Output: main
+    }
+}</code></pre>
+
+<p><b>Creating a custom thread by extending the Thread class:</b></p>
+<pre><code class="language-java">class MyThread extends Thread {
+
+    @Override
+    public void run() {
+        System.out.println(Thread.currentThread().getName() + " is executing");
+    }
+
+}</code></pre>
+
+<p><b>Starting the custom thread:</b></p>
+<pre><code class="language-java">public class Driver {
+    public static void main(String[] args) {
+        System.out.println(Thread.currentThread().getName()); // main
+
+        MyThread t1 = new MyThread();
+        t1.start(); // launches a NEW thread — do NOT call t1.run() directly
+
+        System.out.println(Thread.currentThread().getName()); // main (again)
+    }
+}
+// Output order between the two "main" prints and the new thread's print
+// is NOT guaranteed — could vary between runs</code></pre>
+
+<p><b>Multiple custom threads — demonstrating unpredictable order:</b></p>
+<pre><code class="language-java">class NumberThread extends Thread {
+    int id;
+
+    public NumberThread(int id) {
+        this.id = id;
+    }
+
+    @Override
+    public void run() {
+        System.out.println(id);
+    }
+}</code></pre>
+<pre><code class="language-java">public class Driver {
+    public static void main(String[] args) {
+        NumberThread t0 = new NumberThread(0);
+        NumberThread t1 = new NumberThread(1);
+        NumberThread t2 = new NumberThread(2);
+
+        t0.start();
+        t1.start();
+        t2.start();
+
+        // Possible outputs across different runs: 0 1 2 | 1 0 2 | 2 0 1 | 1 2 0 | ...
+        // Order is genuinely NOT guaranteed — this is expected, not a bug
+    }
+}</code></pre>
+
+<p><b>Calling run() directly — the WRONG way (no actual new thread):</b></p>
+<pre><code class="language-java">MyThread t1 = new MyThread();
+t1.run(); // WRONG — just a normal method call on the CURRENT thread (e.g. main)
+          // No new thread is actually created; defeats the purpose entirely
+
+t1.start(); // RIGHT — actually creates and launches a new thread</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>When exactly does class loading and thread creation happen when you run a Java program?</td><td>The class's bytecode is loaded into memory first (method area); then the JVM creates a thread (the main thread), which then calls the class's main() method as its assigned task.</td></tr>
+<tr><td>If a thread requests CPU time first, will it definitely execute first?</td><td>No — the CPU makes its own decisions based on its current workload and priorities; requesting first is not a guarantee of executing first.</td></tr>
+<tr><td>Does the Thread Scheduler manage threads from OTHER applications too (browser, YouTube, etc.)?</td><td>No — it only negotiates on behalf of your own Java program's threads; other processes' threads are handled independently at the OS/CPU level.</td></tr>
+<tr><td>What is a "parent thread" / "child thread" in this context?</td><td>Not a formally taught relationship in this session — clarified that the main thread executes main(), and any custom thread started from within main() runs independently, with no enforced dependency between them.</td></tr>
+<tr><td>If code runs in the SAME observed order 10 times in a row, does that mean the order is fixed?</td><td>No — repeated observation of the same order is coincidental, not a guarantee; the underlying execution order remains genuinely unpredictable.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>A process has its own memory (JVM, browser, Eclipse); a thread is the unit of execution INSIDE a process; a task is the actual work a thread performs.</li>
+<li>Even the simplest Java program requires a thread (the automatically-created "main" thread) — there's no such thing as threadless Java execution.</li>
+<li>Always call .start() to launch a new thread — calling .run() directly just executes it as a normal method on the current thread, with no actual concurrency.</li>
+<li>Thread execution order can NEVER be reliably predicted by default — don't design logic that assumes a specific order without proper synchronization.</li>
+<li>Observing the same order repeatedly does NOT mean the order is guaranteed or fixed.</li>
+<li>The CPU (not the order requests arrive in) has final authority over which thread executes when.</li>
+<li>On a single core, true parallelism doesn't exist — extremely fast context switching just makes it appear that way to humans.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Create your own custom thread class extending Thread, override run() with a simple print statement, and start it alongside the main thread.</li>
+<li>Create 4-5 custom threads and run the program multiple times, recording the different output orderings you observe.</li>
+<li>Deliberately call .run() directly instead of .start() on one of your thread objects, and observe that it behaves like a normal method call (same thread, no concurrency).</li>
+<li>Use Thread.currentThread().getName() inside both your main method and your custom thread's run() method to confirm which thread executes which code.</li>
+<li>Reflect on and be ready to explain, in your own words, why CPU-level execution isn't truly parallel on a single core, using the context-switching explanation.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Topic:</b> Stream API (now closed) — Sequential vs Parallel Streams, which relates conceptually to this session's CPU/thread discussion</li>
+<li><b>Upcoming Topics:</b> Explicitly previewed — synchronization mechanisms to control/fix thread execution order (the restaurant order/cook/serve example); described as moving into "advanced level" multithreading starting the next session. A class test was also announced for the following day.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, the process/thread/task hierarchy diagram, and formatting/styling. Content extracted directly from your uploaded transcript, including the classroom chair-moving analogy, the Janta Darbar CPU-scheduling analogy, and the restaurant preview example. Some heavily garbled ASR text (e.g. "Bela" and other unclear fragments during the CPU/context-switching discussion) was interpreted based on clear surrounding context. No new technical content was added beyond what the instructor taught.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>

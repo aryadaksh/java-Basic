@@ -5,9 +5,11 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class Driver {
+public class Driver
+{
 	
-	public static void main(String[] args) {
+	public static void main(String[] args)
+	{
 		//Storing the data
 		List<String> citiesName = Arrays.asList("BLR","AHM","AJM","PAT","HYD");
 		

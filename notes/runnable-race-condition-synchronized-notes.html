@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Runnable, Thread.sleep(), Race Conditions & synchronized</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.scenario{background:#fff0f0;border-left:6px solid #e05a5a;padding:18px 22px;border-radius:10px;margin:16px 0;}
+.scenario b{color:#e05a5a;}
+.timeline{background:#1e1e2f;color:#d4d4f7;padding:18px 22px;border-radius:10px;font-family:monospace;font-size:13.5px;line-height:2;}
+.timeline .t{color:#7cffb2;}
+.timeline .bad{color:#ff9a76;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Runnable Interface, Thread.sleep(), Race Conditions & Introduction to synchronized</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: creating threads via the Thread class</li>
+<li>Second way to create a thread — implementing the Runnable interface</li>
+<li>Why Runnable is generally considered "better" than extending Thread</li>
+<li>Thread.sleep() — pausing a thread, and why run() can't throw checked exceptions</li>
+<li>Real-world use case for sleep()</li>
+<li>Demonstrating mixed/interleaved output from multiple threads on shared logic</li>
+<li>The requirement: sometimes one thread must fully finish before another starts</li>
+<li>The core real-world problem — a detailed bank account race condition scenario</li>
+<li>What a race condition actually is</li>
+<li>Introducing the synchronized keyword as the fix</li>
+<li>Critical misconception corrected: synchronized locks per OBJECT, not globally</li>
+<li>The "do you need a locker at home?" analogy for when synchronization is actually needed</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Recap: Two Ways to Create a Thread</b>
+<p>(1) <b>Extending the Thread class</b> — covered previously. (2) <b>Implementing the Runnable interface</b> — the new approach covered in this session.</p>
+</div>
+
+<div class="card">
+<b>Runnable — A Functional Interface</b>
+<p><code>Runnable</code> is a <b>functional interface</b> (exactly one abstract method): <code>public void run()</code>. To use it: your class <b>implements Runnable</b> and overrides <code>run()</code> with your desired logic — this is where your business logic goes, exactly like before.</p>
+</div>
+
+<div class="card">
+<b>Creating a Thread via Runnable — The Steps</b>
+<ol style="padding-left:20px;">
+<li>Create a class that <b>implements Runnable</b>.</li>
+<li>Override <code>public void run()</code> with your task's logic.</li>
+<li>Create an <b>object</b> of your Runnable-implementing class.</li>
+<li>Pass that object into a <code>Thread</code> constructor: <code>new Thread(yourRunnableObject)</code>.</li>
+<li>Call <code>.start()</code> on the resulting Thread object.</li>
+</ol>
+</div>
+
+<div class="card">
+<b>Why the run() Return Type Question is a Guaranteed Interview Trap</b>
+<p>Explicitly flagged: interviewers WILL ask "what does <code>run()</code> return?" If you answer correctly (<code>void</code>), they move to the next question. If you get this wrong, it signals you don't genuinely understand threading — described as an immediate red flag with essentially "no chance" of passing that line of questioning.</p>
+</div>
+
+<div class="card">
+<b>Thread vs Runnable — Functionally Identical, Structurally Different</b>
+<p>The actual LOGIC inside <code>run()</code> doesn't change between the two approaches — only HOW you set up the class changes. With Thread, you <b>extend</b> the Thread class. With Runnable, you <b>implement</b> an interface instead.</p>
+</div>
+
+<div class="card">
+<b>Why Runnable is Considered "Better" — The Key Interview Answer</b>
+<p>Java does <b>not support extending multiple classes</b> (no multiple inheritance via classes). If your class <b>extends Thread</b>, it has already "used up" its one allowed superclass — it <b>cannot</b> also extend any other class it might need. If your class instead <b>implements Runnable</b>, it remains free to <b>also extend a different class</b> if your design requires it — giving you strictly more flexibility. <b>This is exactly the answer expected when asked "which is better, and why?" in an interview.</b></p>
+</div>
+
+<div class="card">
+<b>Thread.sleep() — Pausing a Thread for a Specified Time</b>
+<p>Calling <code>Thread.sleep(milliseconds)</code> puts the <b>currently executing thread</b> into a temporary paused state for that duration. This moves the thread into the <b>TIMED_WAITING</b> state (from the thread lifecycle covered previously) — it does nothing at all during that time, then automatically becomes eligible to run again once the CPU picks it up.</p>
+</div>
+
+<div class="card">
+<b>Why sleep() Requires a try-catch Inside run()</b>
+<p><code>Thread.sleep()</code> throws a <b>checked exception</b> (<code>InterruptedException</code>). But since <code>Runnable</code>'s <code>run()</code> method signature does <b>NOT</b> declare any <code>throws</code> clause, you <b>cannot</b> let that exception propagate out of <code>run()</code> — it must be caught and handled with a try-catch block directly inside <code>run()</code> itself.</p>
+</div>
+
+<div class="card">
+<b>Real-World Use Case for Thread.sleep()</b>
+<p>Example given: a process is sending an email that needs a file attachment, but that file is being generated by another process which takes a couple of seconds to complete. Rather than the thread busy-waiting (wasting CPU), it can <code>sleep()</code> for the expected duration, then wake up, fetch the now-available file, attach it, and send the email. The instructor noted: "there will be thousands of examples" depending on the specific real-world requirement.</p>
+</div>
+
+<div class="card">
+<b>Demonstrating Mixed/Interleaved Output</b>
+<p>When two threads (T1, T2) are both started and both call the SAME task's logic (e.g. both incrementing/printing numbers), the printed output comes out <b>interleaved/mixed</b> — direct, visible proof that both threads are genuinely executing concurrently, with the CPU switching between them mid-task.</p>
+</div>
+
+<div class="card">
+<b>The New Requirement: Sometimes You Need NO Interleaving</b>
+<p>Some real requirements demand the opposite: <em>"once a thread starts this task, let it FULLY complete before any other thread is allowed to start the same task."</em> Without any special handling, Java does NOT guarantee this — threads run concurrently by default, and their outputs can freely mix. Achieving strict "one-at-a-time, fully complete" behavior requires an explicit mechanism: <b>synchronized</b>.</p>
+</div>
+
+<div class="card">
+<b>Observed Behavior With synchronized Added</b>
+<p>Live demonstration: the SAME program, once <code>synchronized</code> is added to the shared method, changes behavior — instead of mixed/interleaved output, one thread now runs to <b>full completion</b> before the second thread is even allowed to begin. Which thread goes first is still not guaranteed (that's still up to the CPU) — but <b>once a thread starts, it's guaranteed to finish uninterrupted</b> before another thread can enter that same synchronized method on the same object.</p>
+</div>
+
+<div class="card">
+<b>Is Synchronization Always "Good Practice"? — It Depends</b>
+<p>Analogy: <em>"Do you need a locker at home?"</em> The honest answer isn't yes or no — it depends entirely on whether you actually have something valuable worth protecting. Similarly: <em>"Is synchronization good practice?"</em> — depends on context. For a <b>financial transaction</b>, yes, absolutely. For something like simply <b>sending an email</b> (where mixed/interleaved execution causes no real harm), forcing synchronization may be unnecessary overhead, not a benefit.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💳 The Core Problem: A Detailed Race Condition Walkthrough</h2>
+
+<div class="scenario">
+<b>Setup:</b> You have an SBI bank account with a balance of <b>₹1,000</b>. Multiple apps/methods are all linked to this SAME account: Google Pay, PhonePe, ATM card, and Cred. You give your ATM card to your brother (who's living with you, preparing for UPSC) so he can use it whenever needed.
+</div>
+
+<div class="scenario">
+<b>The Coincidence:</b> At the exact same moment (nanosecond-level precision) — you initiate a Google Pay transaction sending <b>₹600</b> to a friend (for a haircut), while <b>simultaneously</b>, your brother uses the ATM card to withdraw <b>₹700</b> (to buy a book). Neither of you knows the other is transacting at that exact instant — this is a genuine coincidence, but at the scale of <b>billions of transactions happening every second</b> across a real banking system, this exact kind of collision <b>will</b> happen to some small percentage of transactions. <b>"Don't assume this never happens."</b>
+</div>
+
+<div class="timeline">
+<span class="t">T1 (Google Pay thread):</span> reads balance → sees <span class="t">₹1,000</span><br>
+<span class="t">T2 (ATM thread):</span> reads balance → ALSO sees <span class="t">₹1,000</span> (T1 hasn't updated it yet!)<br>
+<span class="t">T1:</span> checks: is ₹600 ≤ ₹1,000? YES → proceeds with withdrawal<br>
+<span class="t">T2:</span> checks: is ₹700 ≤ ₹1,000? YES → proceeds with withdrawal (using the SAME stale ₹1,000!)<br>
+<span class="t">T1:</span> completes — withdraws ₹600<br>
+<span class="t">T2:</span> completes — withdraws ₹700<br>
+<span class="bad">TOTAL withdrawn: ₹1,300 — from an account that only had ₹1,000!</span>
+</div>
+
+<div class="card">
+<b>What Just Happened — This is a Race Condition</b>
+<p>Both threads read the SAME initial balance <b>before either one had a chance to update it</b>. Because their validation checks happened against the same stale value, BOTH withdrawals were incorrectly approved. <b>A race condition occurs when two or more threads access and modify the same shared resource (the same method/object's data) at nearly the same instant, and the final result becomes incorrect because neither thread was aware of the other's in-progress change.</b></p>
+</div>
+
+<div class="card">
+<b>Is This a "Scam"? — A Direct Clarification</b>
+<p>The instructor noted that people frequently ask whether this kind of banking glitch counts as a "scam." Answer: <b>no</b> — it's not intentional fraud on anyone's part; it's a genuine <b>software bug</b> resulting from unsynchronized concurrent access to shared data. That said, it's noted that some people have actually exploited this exact vulnerability in real life — using two phones and attempting simultaneous withdrawals, hoping to hit this race condition (succeeding maybe 1 out of 10 attempts) to withdraw more money than their actual balance allows.</p>
+</div>
+
+<div class="card">
+<b>The Fix Java Provides: One Thread At a Time, On the Relevant Method</b>
+<p>Java's answer to this problem: ensure that <b>only one thread at a time</b> can access the critical method (e.g. the withdrawal logic) <b>for a given shared object</b>. Whichever thread gets there first completes its ENTIRE operation (check balance → withdraw → update balance) before the second thread is even allowed to begin checking the balance — eliminating the stale-read problem entirely.</p>
+</div>
+
+<div class="card">
+<b>Walking Through the FIXED Sequence</b>
+<p>Thread 1 (GPay) starts: checks balance (₹1,000) → withdraws ₹600 → updates balance to <b>₹400</b> — all while Thread 2 (ATM) is forced to WAIT. This wait is typically just a few <b>milliseconds</b> — imperceptible to the user. THEN Thread 2 starts: checks balance — now correctly sees <b>₹400</b> → tries to withdraw ₹700 → <b>correctly rejected</b> as insufficient balance. The system now behaves correctly.</p>
+</div>
+
+<div class="hot">
+<b>⚠️ Critical Misconception, Explicitly Corrected in Class</b>
+<p style="margin-top:6px;"><code>synchronized</code> does <b>NOT</b> mean "only ONE thread in the ENTIRE WORLD/SYSTEM can execute this method at a time." If that were true, while YOU are doing a Google Pay transaction, <b>literally nobody else on Earth</b> could use Google Pay simultaneously — which is obviously absurd and untrue (millions of people use these apps concurrently, constantly).</p>
+<p style="margin-top:10px;"><b>The correct understanding:</b> <code>synchronized</code> enforces one-thread-at-a-time <b>PER OBJECT</b> (per shared resource instance) — NOT globally across the whole application. If your account is represented by ONE shared object, only ONE thread can execute the synchronized method ON THAT SPECIFIC OBJECT at a time. A completely different account (a different object) with its own synchronized method call is entirely <b>unaffected</b> and can execute at the exact same time, in full parallel, with zero conflict — because it's not sharing any data with the first account.</p>
+</div>
+
+<div class="card">
+<b>Multiple Objects, Same Class — No Conflict</b>
+<p>Example: if your account has THREE separate linked objects internally (say, one for Google Pay, one for PhonePe, one for ATM) rather than genuinely sharing ONE underlying account object, calling a synchronized method through each of those three DIFFERENT objects could still run in <b>parallel</b> — and could STILL result in a race condition, because synchronization only protects against concurrent access <b>on the same object</b>. This reinforces why the underlying system design (how many objects actually represent your one real account) matters enormously for correctness.</p>
+</div>
+
+<div class="card">
+<b>Pedagogical Approach — Problem First, Solution Second</b>
+<p>Explicitly stated teaching philosophy for this topic: understand the REAL problem (race conditions) deeply and intuitively FIRST — before jumping to "just add the synchronized keyword and move on." The instructor noted that even many industry professionals don't truly understand synchronization deeply, specifically because they skipped understanding the underlying problem it solves.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>Creating a thread via Runnable:</b></p>
+<pre><code class="language-java">class NumberPrinter implements Runnable {
+
+    @Override
+    public void run() {
+        for (int i = 1; i <= 10; i++) {
+            System.out.println(i);
+        }
+    }
+}</code></pre>
+<pre><code class="language-java">class Driver {
+    public static void main(String[] args) {
+        NumberPrinter task = new NumberPrinter();  // create the Runnable object
+        Thread t1 = new Thread(task);              // pass it into a Thread
+        t1.start();                                // start it, same as before
+    }
+}</code></pre>
+
+<p><b>Why Runnable is more flexible — can still extend another class:</b></p>
+<pre><code class="language-java">// NOT possible with the Thread-extending approach:
+// class NumberPrinter extends Thread, extends SomeOtherClass { } // ILLEGAL — no multiple inheritance
+
+// POSSIBLE with Runnable:
+class NumberPrinter extends SomeOtherClass implements Runnable {
+    @Override
+    public void run() {
+        // task logic here
+    }
+    // ... can still use everything inherited from SomeOtherClass too
+}</code></pre>
+
+<p><b>Thread.sleep() — pausing a thread, with required try-catch:</b></p>
+<pre><code class="language-java">class EmailTask implements Runnable {
+
+    @Override
+    public void run() {
+        System.out.println("Preparing to send email...");
+
+        try {
+            Thread.sleep(5000); // pause for 5 seconds — moves to TIMED_WAITING
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        // run() has no "throws" clause, so InterruptedException MUST be caught here
+
+        System.out.println("File ready — sending email now.");
+    }
+}</code></pre>
+
+<p><b>Demonstrating mixed output — two threads, no synchronization:</b></p>
+<pre><code class="language-java">class Counter implements Runnable {
+    @Override
+    public void run() {
+        for (int i = 1; i <= 5; i++) {
+            System.out.println(Thread.currentThread().getName() + " - " + i);
+        }
+    }
+}</code></pre>
+<pre><code class="language-java">Counter task = new Counter();
+Thread t1 = new Thread(task, "Thread-1");
+Thread t2 = new Thread(task, "Thread-2");
+
+t1.start();
+t2.start();
+// Output is MIXED/interleaved — e.g.:
+// Thread-1 - 1
+// Thread-2 - 1
+// Thread-1 - 2
+// Thread-2 - 2
+// ... unpredictable interleaving</code></pre>
+
+<p><b>Adding synchronized — forces sequential completion:</b></p>
+<pre><code class="language-java">class Counter implements Runnable {
+
+    public synchronized void printNumbers() { // synchronized method
+        for (int i = 1; i <= 5; i++) {
+            System.out.println(Thread.currentThread().getName() + " - " + i);
+        }
+    }
+
+    @Override
+    public void run() {
+        printNumbers();
+    }
+}</code></pre>
+<pre><code class="language-java">Counter task = new Counter();
+Thread t1 = new Thread(task, "Thread-1");
+Thread t2 = new Thread(task, "Thread-2");
+
+t1.start();
+t2.start();
+// Output is now SEQUENTIAL — one thread fully completes before the other starts:
+// Thread-1 - 1
+// Thread-1 - 2
+// Thread-1 - 3
+// Thread-1 - 4
+// Thread-1 - 5
+// Thread-2 - 1
+// Thread-2 - 2
+// ...
+// (Which thread goes FIRST is still not guaranteed — but no more MIXING once started)</code></pre>
+
+<p><b>Conceptual illustration of the bank account race condition:</b></p>
+<pre><code class="language-java">class Account {
+    int balance = 1000;
+
+    // WITHOUT synchronized — vulnerable to race conditions
+    public void withdraw(int amount) {
+        if (amount <= balance) {          // both threads may read balance=1000 here
+            // ... simulate processing delay ...
+            balance = balance - amount;    // both threads then subtract independently
+            System.out.println("Withdrew: " + amount + ", Balance: " + balance);
+        } else {
+            System.out.println("Insufficient balance");
+        }
+    }
+}</code></pre>
+<pre><code class="language-java">Account account = new Account();
+
+Thread gpayThread = new Thread(() -> account.withdraw(600));
+Thread atmThread = new Thread(() -> account.withdraw(700));
+
+gpayThread.start();
+atmThread.start();
+// Without synchronized, BOTH may see balance=1000 before either updates it,
+// potentially allowing BOTH withdrawals to succeed -> balance goes to -300 (a bug!)</code></pre>
+
+<p><b>The fix — synchronized on the shared method:</b></p>
+<pre><code class="language-java">class Account {
+    int balance = 1000;
+
+    public synchronized void withdraw(int amount) { // NOW only one thread at a time on THIS object
+        if (amount <= balance) {
+            balance = balance - amount;
+            System.out.println("Withdrew: " + amount + ", Balance: " + balance);
+        } else {
+            System.out.println("Insufficient balance");
+        }
+    }
+}
+// Now: one thread fully completes its check-and-update before the other can even begin —
+// the stale-read race condition is eliminated for THIS shared account object</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>Why is Runnable considered better than extending Thread?</td><td>A class extending Thread cannot also extend any other class (Java has no multiple class inheritance); a class implementing Runnable remains free to extend a different class if needed — more design flexibility.</td></tr>
+<tr><td>Why must Thread.sleep()'s exception be caught inside run()?</td><td>run() has no "throws" clause in its signature, so the checked InterruptedException thrown by sleep() cannot propagate out — it must be handled with try-catch directly inside run().</td></tr>
+<tr><td>Is using synchronized always good practice?</td><td>No — it depends on context. Critical shared-data operations (like financial transactions) benefit greatly; low-stakes operations (like sending an email) may not need it and could suffer unnecessary overhead.</td></tr>
+<tr><td>Does synchronized mean only ONE thread globally can run that method across the entire application?</td><td>No — this is a common and serious misconception. synchronized enforces one-thread-at-a-time PER OBJECT, not globally. Different objects can still execute the same synchronized method in full parallel with no conflict.</td></tr>
+<tr><td>Once synchronized is added, does it guarantee which thread runs FIRST?</td><td>No — which thread starts first is still determined by the CPU, same as always. What synchronized guarantees is that once a thread DOES start, it will fully complete before another thread can enter that same method on the same object.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Runnable's run() method must return void and cannot declare checked exceptions — handle them internally.</li>
+<li>Runnable is generally preferred over extending Thread specifically because it preserves the ability to extend another class.</li>
+<li>Thread.sleep() moves a thread to TIMED_WAITING — it does nothing productive during that time, then becomes eligible to run again.</li>
+<li>Without synchronization, multiple threads accessing shared logic produce unpredictable, potentially interleaved/mixed results.</li>
+<li>A race condition occurs when concurrent threads read/modify the same shared data based on stale values, producing an incorrect final result.</li>
+<li>synchronized fixes this by allowing only one thread at a time to execute the protected method — but ONLY for a given shared object, never globally across the whole system.</li>
+<li>Don't assume rare-seeming timing coincidences "never happen" — at very large scale (billions of operations), even tiny-probability race conditions occur regularly.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Rewrite one of your earlier Thread-class examples using the Runnable interface instead, and confirm identical behavior.</li>
+<li>Write a small program using Thread.sleep() to simulate waiting for a resource, handling InterruptedException properly.</li>
+<li>Reproduce the mixed-output demonstration: two threads calling the same unsynchronized method, observe interleaving.</li>
+<li>Add the synchronized keyword to that same method and confirm the behavior changes to full sequential completion per thread.</li>
+<li>Write your own version of the bank account race condition example (unsynchronized), and then fix it using synchronized — confirm the balance stays correct under simulated concurrent withdrawals.</li>
+<li>Be ready to explain, without hesitation, why "synchronized = only one thread in the world" is WRONG, and state the correct per-object understanding instead.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Classes:</b> Multithreading Introduction, Thread Lifecycle</li>
+<li><b>Upcoming Topics:</b> Explicitly deferred to the next session — the full technical/internal explanation of exactly HOW synchronized works under the hood</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, the race-condition timeline visual, and formatting/styling. Content extracted directly from your uploaded transcript, including the full bank account/GPay/ATM race condition narrative and the "locker at home" analogy. Some heavily garbled ASR fragments in the transcript were interpreted based on clear surrounding context. No new technical content was added beyond what the instructor taught.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>
