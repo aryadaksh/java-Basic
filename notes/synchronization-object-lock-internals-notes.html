@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Synchronization Internals: Object Locks</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.lockbox{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:16px 0;font-family:monospace;font-size:13px;}
+.lstep{background:#1e1e2f;color:#7cffb2;padding:10px 16px;border-radius:8px;text-align:center;}
+.lstep.locked{background:#3a2a2a;color:#ff9a76;}
+.larrow{color:#888;font-size:18px;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Synchronization Internals — How the Object Lock Actually Works</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: the race condition problem and why synchronized is needed</li>
+<li>The internal mechanism behind synchronized — the Object Lock</li>
+<li>Every Java object has exactly ONE object lock</li>
+<li>How a thread acquires, holds, and releases an object lock</li>
+<li>Why only ONE thread can be inside a synchronized method per object, at a time</li>
+<li>Demonstrating that DIFFERENT objects still allow parallel (mixed) execution, even with synchronized methods</li>
+<li>Thread.join() — making the main thread wait for other threads to finish</li>
+<li>Full live demo: FundTransfer class — race condition observed, then fixed</li>
+<li>Reinforcing: race conditions only happen on a SHARED object, not across independent objects</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Recap: The Race Condition Problem</b>
+<p>When two threads try to modify the <b>same data of the same object</b> at nearly the same instant (e.g. both reading a balance of ₹1,000 before either updates it), both may proceed based on stale data — resulting in an incorrect final value. This is a <b>race condition</b>.</p>
+</div>
+
+<div class="card">
+<b>Recap: What synchronized Guarantees</b>
+<p><code>synchronized</code> ensures that <b>only one thread</b> can execute a given method <b>on a particular shared object</b> at a time — NOT globally across the entire system, only for that specific object.</p>
+</div>
+
+<div class="card">
+<b>The Internal Mechanism: Object Lock</b>
+<p>Every single object in Java automatically comes with <b>exactly ONE object lock</b> (also commonly called a <b>monitor lock</b>). This is what actually enforces the "one thread at a time per object" rule that <code>synchronized</code> provides.</p>
+</div>
+
+<div class="card">
+<b>How a Thread Acquires the Lock</b>
+<p>When a thread reaches a call to a <code>synchronized</code> method, it recognizes: <em>"this method is synchronized — I need to acquire this object's lock before I can enter."</em> The thread effectively <b>requests</b> the lock from the object. If the lock is currently <b>available</b> (nobody else is holding it), the object hands it over, and the thread proceeds into the method.</p>
+</div>
+
+<div class="card">
+<b>Holding the Lock for the Full Duration</b>
+<p>Once a thread acquires the object's lock, it <b>holds onto it for the entire time</b> it's executing that synchronized method — even if that takes several milliseconds. No other thread can acquire that SAME object's lock during this window.</p>
+</div>
+
+<div class="card">
+<b>What Happens to a Second Thread Trying to Enter</b>
+<p>If a second thread reaches the same synchronized method (on the SAME object) while the lock is already held, it <b>cannot proceed</b>. The object effectively tells it: <em>"I don't have my lock right now — I gave it to someone else. Wait until they return it, and I'll give it to you."</em> This second thread enters a <b>waiting state</b> until the lock becomes available.</p>
+</div>
+
+<div class="card">
+<b>Releasing the Lock</b>
+<p>Once the first thread <b>finishes</b> executing the synchronized method, it <b>releases</b> the object's lock back to the object. The lock is now available again — whichever thread was waiting for it (if any) can now acquire it and proceed into the method itself.</p>
+</div>
+
+<div class="card">
+<b>This is THE Answer to "How Does Synchronization Work Internally?"</b>
+<p>Explicitly flagged: if asked in an interview <em>"how does synchronization actually work?"</em> — the correct, complete answer is built entirely around this <b>object lock</b> mechanism: one lock per object, acquired before entering, held during execution, released after completion, and handed to the next waiting thread.</p>
+</div>
+
+<div class="card">
+<b>One Object = One Lock, Always</b>
+<p>If you have <b>10 different objects</b>, you have <b>10 separate, independent locks</b> — one per object. A lock is always tied to a <b>specific object instance</b>, never shared across different objects, even if they're instances of the exact same class.</p>
+</div>
+
+<div class="card">
+<b>The Critical Follow-Up Demonstration: Using a DIFFERENT Object</b>
+<p>To reinforce the "per object, not global" rule, a second task object was created (a separate instance, same class, same synchronized method). Result: <b>mixed/interleaved output returned</b> — even though the method itself is still marked <code>synchronized</code>. Why? Because each thread was now acquiring the lock of a <b>DIFFERENT</b> object — since the two objects' locks are entirely independent of each other, there's nothing preventing both threads from running concurrently, each holding its OWN object's separate lock at the same time.</p>
+</div>
+
+<div class="hot">
+<b>⚠️ The Single Most Important Takeaway From This Session</b>
+<p style="margin-top:6px;">Synchronization ONLY prevents concurrent execution when threads are competing for the <b>SAME object's lock</b>. The moment you introduce a second, independent object, synchronized provides <b>zero</b> protection between operations on the FIRST object and operations on the SECOND — they can run fully in parallel, mixed output and all. <b>Whether a race condition can even occur depends entirely on whether the threads are genuinely sharing the same underlying object.</b></p>
+</div>
+
+<div class="card">
+<b>Thread.join() — Making main Wait</b>
+<p><code>t1.join()</code> tells whichever thread calls it (typically <b>main</b>) to <b>pause and wait</b> until thread <code>t1</code> has fully completed, before continuing further. Used with multiple threads (<code>t1.join(); t2.join();</code>), this ensures BOTH have finished before execution continues past that point.</p>
+</div>
+
+<div class="card">
+<b>Why join() Was Needed in the Demo</b>
+<p>Without <code>join()</code>, the main thread might reach a <code>System.out.println(balance)</code> statement <b>before</b> the transaction threads have actually finished their work — printing an incomplete/incorrect intermediate balance. Calling <code>.join()</code> on both worker threads ensures the final balance is only printed <b>after</b> both transactions have genuinely completed, giving an accurate result to observe.</p>
+</div>
+
+<div class="card">
+<b>Live Demo: FundTransfer Class — The Race Condition, Reproduced</b>
+<p>Setup: a <code>FundTransfer</code> class with a shared sender account (balance ₹1,000), and two separate Thread classes simulating two different payment methods (e.g. PhonePe and Google Pay) both calling <code>transfer()</code> on the SAME sender object — one transferring ₹800, the other also attempting a transfer. <b>Without synchronization:</b> both threads read the balance as ₹1,000 before either updated it, both transfers were incorrectly approved, and the final balance became <b>mathematically incorrect</b> (reflecting an over-withdrawal that should have been rejected).</p>
+</div>
+
+<div class="card">
+<b>Live Demo: FundTransfer Class — Fixed With synchronized</b>
+<p>Adding <code>synchronized</code> to the <code>transfer()</code> method fixed it: whichever thread arrived first (e.g. PhonePe) acquired the sender object's lock, fully completed its check-and-update sequence (balance correctly dropped from ₹1,000 to ₹200), and only THEN released the lock. The second thread (GPay), which had been waiting, then acquired the lock, checked the balance — now correctly seeing ₹200 — attempted its transfer, and was <b>correctly rejected</b> as insufficient funds.</p>
+</div>
+
+<div class="card">
+<b>Reinforced: The Problem Only Exists on a SHARED Object</b>
+<p>Directly restated: the race condition specifically arises when multiple threads act concurrently on the <b>SAME sender's account object</b>. If a completely <b>different</b> sender (a different account object) is transacting at the exact same time, there's no conflict at all — that thread works with its own independent data. <b>The problem is fundamentally about object sharing, not about threads or synchronized in isolation.</b></p>
+</div>
+
+<div class="card">
+<b>Threads Maintain Their Own Copy When Objects Are Separate</b>
+<p>Clarified: if each thread genuinely operates on its <b>own separate object</b> (e.g. your own account object vs. your friend's own account object), each thread's changes only affect its OWN object's data — there's no interference between them whatsoever, since nothing is being shared.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>🖼️ Visualizing the Object Lock Mechanism</h2>
+<div class="lockbox">
+<div class="lstep">Object Lock<br><small>AVAILABLE (count=1)</small></div>
+<div class="larrow">→ T1 requests →</div>
+<div class="lstep locked">T1 holds lock<br><small>(count=0)</small></div>
+<div class="larrow">→ executing... →</div>
+<div class="lstep locked">T2 WAITS<br><small>(lock unavailable)</small></div>
+</div>
+<div class="lockbox">
+<div class="lstep locked">T1 finishes<br><small>releases lock</small></div>
+<div class="larrow">→</div>
+<div class="lstep">Object Lock<br><small>AVAILABLE again (count=1)</small></div>
+<div class="larrow">→ T2 acquires →</div>
+<div class="lstep locked">T2 holds lock<br><small>executes safely</small></div>
+</div>
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<p><b>Same object, synchronized method — sequential execution (no mixing):</b></p>
+<pre><code class="language-java">class Task {
+    public synchronized void printNumbers() {
+        for (int i = 1; i <= 5; i++) {
+            System.out.println(Thread.currentThread().getName() + " - " + i);
+        }
+    }
+}</code></pre>
+<pre><code class="language-java">Task sharedTask = new Task(); // ONE shared object
+
+Thread t1 = new Thread(() -> sharedTask.printNumbers(), "T1");
+Thread t2 = new Thread(() -> sharedTask.printNumbers(), "T2");
+
+t1.start();
+t2.start();
+// Output: T1 fully completes (1-5), THEN T2 fully completes (1-5) — no mixing,
+// because both threads compete for the SAME object's lock</code></pre>
+
+<p><b>DIFFERENT objects, same synchronized method — mixing STILL happens:</b></p>
+<pre><code class="language-java">Task task1 = new Task(); // object #1 — its own separate lock
+Task task2 = new Task(); // object #2 — a DIFFERENT, independent lock
+
+Thread t1 = new Thread(() -> task1.printNumbers(), "T1");
+Thread t2 = new Thread(() -> task2.printNumbers(), "T2");
+
+t1.start();
+t2.start();
+// Output is MIXED/interleaved again! Even though printNumbers() is synchronized,
+// t1 and t2 are acquiring DIFFERENT objects' locks — no conflict between them at all</code></pre>
+
+<p><b>Thread.join() — waiting for threads to finish before continuing:</b></p>
+<pre><code class="language-java">Thread t1 = new Thread(() -> sharedTask.printNumbers());
+Thread t2 = new Thread(() -> sharedTask.printNumbers());
+
+t1.start();
+t2.start();
+
+t1.join(); // main thread PAUSES here until t1 fully completes
+t2.join(); // then pauses until t2 fully completes too
+
+System.out.println("Both threads are done now."); // guaranteed to print AFTER both finish</code></pre>
+
+<p><b>Full demo — FundTransfer class, race condition reproduced (no synchronized):</b></p>
+<pre><code class="language-java">class FundTransfer {
+    int balance = 1000;
+
+    public void transfer(int amount) { // NOT synchronized — vulnerable
+        if (amount <= balance) {
+            balance = balance - amount;
+            System.out.println("Transferred: " + amount + ", Balance: " + balance);
+        } else {
+            System.out.println("Insufficient funds");
+        }
+    }
+}</code></pre>
+<pre><code class="language-java">class PhonePeThread extends Thread {
+    FundTransfer account;
+    public PhonePeThread(FundTransfer account) { this.account = account; }
+    public void run() { account.transfer(800); }
+}
+
+class GooglePayThread extends Thread {
+    FundTransfer account;
+    public GooglePayThread(FundTransfer account) { this.account = account; }
+    public void run() { account.transfer(800); }
+}</code></pre>
+<pre><code class="language-java">class Driver {
+    public static void main(String[] args) throws InterruptedException {
+        FundTransfer sharedAccount = new FundTransfer(); // ONE shared account, balance 1000
+
+        Thread t1 = new PhonePeThread(sharedAccount);
+        Thread t2 = new GooglePayThread(sharedAccount);
+
+        t1.start();
+        t2.start();
+
+        t1.join();
+        t2.join();
+
+        System.out.println("Final balance: " + sharedAccount.balance);
+        // WITHOUT synchronized: both threads may read balance=1000 before either updates it,
+        // BOTH transfers of 800 could incorrectly succeed -> balance becomes WRONG (e.g. -600)
+    }
+}</code></pre>
+
+<p><b>The fix — adding synchronized to transfer():</b></p>
+<pre><code class="language-java">class FundTransfer {
+    int balance = 1000;
+
+    public synchronized void transfer(int amount) { // NOW protected by the object lock
+        if (amount <= balance) {
+            balance = balance - amount;
+            System.out.println("Transferred: " + amount + ", Balance: " + balance);
+        } else {
+            System.out.println("Insufficient funds");
+        }
+    }
+}
+// Now: one thread (e.g. PhonePe) fully completes its check-and-update (balance -> 200)
+// before the second thread (GooglePay) can even check the balance.
+// GooglePay correctly sees 200, tries to transfer 800, and is correctly REJECTED.</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>How does synchronized actually work internally?</td><td>Every object has exactly one object lock. A thread must acquire that lock before entering a synchronized method on that object, holds it for the method's full duration, and releases it upon completion — allowing the next waiting thread to acquire it.</td></tr>
+<tr><td>If a method is synchronized, does that guarantee no mixing EVER, regardless of which objects are involved?</td><td>No — mixing can still occur if threads are operating on DIFFERENT objects, since each object has its own independent lock. Synchronization only serializes access for threads competing on the SAME object.</td></tr>
+<tr><td>What does Thread.join() do?</td><td>It makes the calling thread (often main) wait/pause until the joined thread has fully completed execution, before continuing further.</td></tr>
+<tr><td>Why was join() needed in the fund transfer demo?</td><td>To ensure the final balance was printed only AFTER both transaction threads had genuinely finished, rather than printing prematurely mid-transaction.</td></tr>
+<tr><td>Does a race condition ever occur between two completely different, unrelated accounts transacting simultaneously?</td><td>No — race conditions specifically require shared, concurrently-accessed data on the SAME object. Different accounts (different objects) transacting simultaneously have no conflict at all.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Every Java object has exactly ONE object lock (also called a monitor lock) — this is the actual mechanism behind synchronized.</li>
+<li>A thread must acquire an object's lock before entering any synchronized method called on that object, and holds it for the method's entire execution.</li>
+<li>Synchronized only prevents concurrent access for threads competing on the SAME object — different objects have entirely independent locks and can run in full parallel, mixed output included.</li>
+<li>Don't assume "the method is synchronized" alone guarantees no interleaving — it depends entirely on whether the competing threads share the same object instance.</li>
+<li>Thread.join() pauses the calling thread until the joined thread finishes — commonly used to ensure accurate final-state reporting after concurrent work completes.</li>
+<li>Race conditions are fundamentally about shared object access, not about threads or synchronized in isolation — always ask "are these threads touching the SAME object's data?"</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Reproduce the "different objects, same synchronized method" demo yourself and confirm mixed output still occurs.</li>
+<li>Build the full FundTransfer demo: reproduce the race condition without synchronized, observe the incorrect balance, then fix it with synchronized and confirm correct rejection of the second (now-insufficient) transfer.</li>
+<li>Practice using Thread.join() and observe the difference in output reliability with and without it.</li>
+<li>Be ready to explain, unprompted and in full technical detail, exactly how the object lock mechanism enables synchronized to work — this is the complete, expected interview answer for "how does synchronization work internally?"</li>
+<li>As instructed: dedicate focused practice time specifically to synchronization today, relating each example back to a real-world scenario (banking, payments) to solidify intuition.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Classes:</b> Multithreading Introduction, Thread Lifecycle, Runnable interface & the race condition problem (introduction to synchronized)</li>
+<li><b>Upcoming Topics:</b> Not explicitly specified — likely continued multithreading topics such as static synchronization, synchronized blocks (vs. entire methods), or deadlocks</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, the object lock visual, and formatting/styling. Content extracted directly from your uploaded transcript, including the full FundTransfer live-coding demonstration (race condition reproduced, then fixed) and the object lock mechanism explanation. Some heavily garbled ASR fragments were interpreted based on clear surrounding context. No new technical content was added beyond what the instructor taught.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism-java.min.js"></script>
+</body>
+</html>
