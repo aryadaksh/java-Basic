@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Software Engineer Workflow & Project Demo Review</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:32px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul,ol{padding-left:22px;}
+li{margin-bottom:8px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:14px;}
+code{font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:14px;}
+th{background:#0077ff;color:white;padding:10px;text-align:left;}
+td{padding:10px;border:1px solid #ddd;vertical-align:top;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:16px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.career{background:#f3eeff;border-left:6px solid #7c5cff;padding:18px;border-radius:10px;margin:18px 0;}
+.career b{color:#7c5cff;}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:14px 0;font-family:monospace;font-size:12.5px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:8px 12px;border-radius:8px;text-align:center;}
+.fstep.qa{background:#2f2a1a;color:#ffdd88;}
+.fstep.prod{background:#3a2a2a;color:#ff9a76;}
+.farrow{color:#888;font-size:16px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>How a Software Engineer Actually Works in a Company + E-Commerce Mini Project Demo Review</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li><b>Part 1 — The workflow:</b> service-based vs product-based companies, who gives the requirement, the Product Owner role</li>
+<li>Sprints — why a 6-month requirement is delivered in 1–3 week chunks</li>
+<li>The full path from requirement to production: development, unit tests, Git, build, QA, Jira bugs, environments</li>
+<li>What joining a company is really like (onboarding, support, pace)</li>
+<li><b>Part 2 — AI usage in industry:</b> what the instructor said and how interviewers ask about it</li>
+<li><b>Part 3 — The E-Commerce mini project demos:</b> what ten students presented, what the instructor probed, and what was learned</li>
+<li>Design takeaways: layering, constructor injection, input validation util, validate-before-mutate, static-block seed data</li>
+<li>Code-review habit: Eclipse "References" to find where something is used</li>
+<li>The instructor's roadmap: more projects — JDBC, Maven, Spring — each building on this one</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🏢 Part 1 — The Software Engineer Workflow</h2>
+
+<div class="card">
+<b>Where Does the Work Come From?</b>
+<p>The instructor opened with a question: you join a company (TCS was the example) as a developer — <em>who gives you the work?</em> His explanation: TCS is a <b>service-based</b> company (Tata Consultancy Services — a consultancy), so it doesn't originate the work itself. The work comes from another company. He described <b>product-based companies (PBC)</b> as ones that hire relatively few, highly paid people — his example: a need for 10,000 employees but hiring only ~500 — who take the decisions and oversee the work, then hand work to service companies. In the industry that company is called the <b>client</b>.</p>
+</div>
+
+<div class="flag">
+<b>⚠️ Take This as a Simplified Picture</b>
+<p style="margin-top:6px;">The service-vs-product split was explained informally (and the audio around it is garbled). Real companies are more mixed — product companies also hire many engineers, and service companies also build products. Use it as the instructor's mental model, not a precise definition.</p>
+</div>
+
+<div class="card">
+<b>The Product Owner</b>
+<p>The person who gives you the requirement is the <b>Product Owner</b> — the owner of the requirement document (like the e-commerce project PDF). He described this person as a mix of technical and non-technical, very good at communication. They <b>meet the client</b>, understand the need, and <b>draft the requirement</b>. When developers finish work, they <b>present it to the Product Owner</b>, who checks with the client whether it's as expected. <b>For an engineer, the client is the Product Owner.</b></p>
+<p style="margin-top:8px;">In Q&A he clarified: both the vendor side and the client side can have product owners. <b>"Product owner" doesn't mean owner of the company</b> — it's whoever is responsible for that particular product or requirement, including for work on an existing product that your team enhances.</p>
+</div>
+
+<div class="card">
+<b>Requirements Come in Slices — Sprints</b>
+<p>A requirement might be six months of work, but you never take it all at once. You ask the Product Owner: <em>"Out of this, what's the highest-priority work you want to see in the next 15 days?"</em> The whole team builds that slice, shows it to the Product Owner (and possibly the client). If it's fine, the next slice begins; if there's feedback, you fix it. In Agile, this cycle is called a <b>sprint</b>.</p>
+<table>
+<tr><th>Sprint length</th><th>Instructor's note</th></tr>
+<tr><td>~1 week (5 days)</td><td>Common in startups — requirement Monday, result Friday</td></tr>
+<tr><td>2 weeks</td><td>Most common for intermediate-pace companies</td></tr>
+<tr><td>3 weeks</td><td>"Little chill" environments — e.g. Monday start, ending the Friday of the third week</td></tr>
+</table>
+<p style="margin-top:8px;">In industry, <b>Monday–Friday counts as one week</b>, not seven days — a "2-week sprint" means <b>10 working days</b>. He had worked in companies with both one-week and two-week sprints.</p>
+</div>
+
+<div class="card">
+<b>The Journey From Requirement to Production</b>
+<div class="flow">
+<div class="fstep">Requirement doc</div><div class="farrow">→</div>
+<div class="fstep">Clarify doubts with PO / team</div><div class="farrow">→</div>
+<div class="fstep">Develop</div><div class="farrow">→</div>
+<div class="fstep">Unit tests</div><div class="farrow">→</div>
+<div class="fstep">Check in (Git / Bitbucket)</div><div class="farrow">→</div>
+<div class="fstep">Build (compile → JAR)</div><div class="farrow">→</div>
+<div class="fstep qa">Release to QA</div>
+</div>
+<div class="flow">
+<div class="fstep qa">QA executes test cases</div><div class="farrow">→</div>
+<div class="fstep qa">Bugs logged in Jira</div><div class="farrow">→</div>
+<div class="fstep">Dev fixes → new build</div><div class="farrow">→</div>
+<div class="fstep qa">QA certifies</div><div class="farrow">→</div>
+<div class="fstep">SIT</div><div class="farrow">→</div>
+<div class="fstep">Pre-prod</div><div class="farrow">→</div>
+<div class="fstep prod">Prod</div>
+</div>
+<ol style="margin-top:10px;">
+<li><b>Requirement is the input.</b> A developer doesn't just start coding — he'll have <b>hundreds of questions</b>, discussed with the Product Owner and team <b>before</b> development starts. Once the doubts are cleared, development begins.</li>
+<li><b>Unit test cases.</b> After development you verify your own work before handing it over (JUnit — "we'll understand later"). Your immediate customer is <b>QA</b> (the testing team).</li>
+<li><b>Check in to a repository</b> (Git or Bitbucket) — you can't rely on your own machine, so code is checked in continuously.</li>
+<li><b>Build.</b> Compile the source code and create a <b>JAR</b> so it can run on the QA machine — QA won't have Eclipse, and often uses <b>Linux boxes</b>. They run the JAR with a command, giving the JAR name and the input. Maven (coming later) will explain "build" properly.</li>
+<li><b>QA works in parallel.</b> Their input is also the requirement: while you develop, they write test cases — e.g. for a banking app: payee name must not contain alphanumeric characters; minimum/maximum limits must be enforced; an added payee should appear in the drop-down; selecting it leads to the amount screen and the fund transfer. They then execute these one by one on your build.</li>
+<li><b>Bugs.</b> "We are not perfect" — QA reports issues (the example: "I observed 20 issues") through <b>Jira</b>.</li>
+<li><b>Fix → rebuild → retest</b> — multiple iterations between developer and QA until QA certifies the build.</li>
+<li><b>Environments:</b> certified work moves on to SIT, then pre-prod, then prod.</li>
+</ol>
+</div>
+
+<div class="flag">
+<b>Added detail (standard, not stated in class):</b> the JAR is typically run as <code>java -jar &lt;name&gt;.jar</code>. The instructor only said "JAR command, give the JAR name, give the input" and deferred details to Maven.
+</div>
+
+<div class="card">
+<b>Jira — Why Bugs Are Recorded, Not Spoken</b>
+<p>Testing and development teams are often in different cities — and even if they sit next to each other, <b>nobody trusts spoken words</b>. His example: a tester tells Ayush "AirPay is not working"; Ayush is on leave for three days; when the team later asks about it, "I told Ayush" doesn't count. So the bug is <b>properly recorded</b>: a subject line, details, which data fails, a screenshot — and <b>assigned</b> to a person. If that person is absent, it can be reassigned to someone else. Now it's a tracked responsibility, and each morning the team can see how many issues are open.</p>
+<ul>
+<li>Jira is a <b>task/bug/project tracking web tool</b>. Tickets have an ID and sit on a <b>board</b> (To Do → In Progress → In Review → Done), with the assignee's photo, the reporter's name, filters, and more.</li>
+<li>When an issue is assigned to you, you get an <b>email notification</b>, and <b>you're now the owner</b>.</li>
+<li>You must <b>write a comment</b> even if the bug is wrong: if valid — "I've started work, will keep you posted"; if you need more information — say so and offer to connect on a call; if invalid — explain that the functionality is implemented as designed and mark it <b>"Invalid and closed."</b></li>
+<li>Requirements themselves also get converted into Jira tickets (stories/tasks).</li>
+</ul>
+</div>
+
+<div class="card">
+<b>"I'll Just Pick Work From Jira" Is Not the Day-to-Day</b>
+<p>Many freshers describe their day as "go to the office and pick a task from Jira." The instructor corrected this: you were <b>present when the requirement was converted into tickets</b>, so you already understand the whole scope. The next 10–15 days of tasks are "running in your brain," and you pick the high-priority ones to start. It's not like checking a flight status and boarding.</p>
+</div>
+
+<div class="card">
+<b>The Environments</b>
+<div class="flow">
+<div class="fstep">Local (your computer)</div><div class="farrow">→</div>
+<div class="fstep">Dev</div><div class="farrow">→</div>
+<div class="fstep qa">QA</div><div class="farrow">→</div>
+<div class="fstep qa">SIT</div><div class="farrow">→</div>
+<div class="fstep qa">UAT</div><div class="farrow">→</div>
+<div class="fstep">Pre-prod</div><div class="farrow">→</div>
+<div class="fstep prod">Prod</div>
+</div>
+<ul>
+<li><b>Local</b> = your own computer. <b>Dev</b> = a shared environment all developers use — before giving code to testing, you deploy to Dev and check that it works there.</li>
+<li><b>SIT</b> = system integration testing. <b>UAT</b> = user acceptance testing. Some companies have 2–3 environments, some have 10; not everyone has SIT or UAT.</li>
+<li>Problems at any stage flow <b>back to Dev</b> — fix, then go through the stages again.</li>
+<li>"You don't have to remember anything" — he was giving an early overview, with a fuller session promised later.</li>
+</ul>
+</div>
+
+<div class="career">
+<b>What Joining a Company Is Really Like</b>
+<ul>
+<li>You're <b>not</b> asked to write "an Amazon system" on day one — work is divided into small requirements.</li>
+<li>There will be <b>people ready to support you</b>. His reasoning: a teammate doing five tasks a day and overloaded is exactly why you were hired; if they help you for one or two months, you'll take on tasks (e.g. they hand you two of their three).</li>
+<li>You'll be given <b>a lot of time</b> — get friendly and <b>ask questions</b>. <em>"Build a habit of asking questions, be it right or wrong."</em></li>
+<li>Learn the <b>process</b>. The actual work can be tiny — sometimes one line — but that one line can be critical: <em>"out of 20,000 Java files, where to change that one line?"</em> That takes real understanding.</li>
+<li>He used a deliberately exaggerated line — that in a year you might write only ~100 lines of code — to stress that <b>understanding the process matters as much as typing code</b>. Treat the number as emphasis, not a statistic.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>🤖 Part 2 — AI Usage in the Industry (Instructor's Account)</h2>
+
+<div class="career">
+<b>The Interview Question: "How Much of Your Code Is Written With AI?"</b>
+<p>During the code reviews the instructor asked students whether their code was AI-written, then said an interviewer will ask exactly this. His account: companies (he said in India, and "my company") ask engineers to maintain roughly <b>30% of code written using AI</b>; usage is <b>tracked through Git commits</b> (you indicate which code was AI-generated) and reported <b>weekly</b>. His suggested interview answer: <em>"My company asks us to maintain about 30% — we follow that."</em></p>
+<ul>
+<li>He cautioned against treating casual claims like <b>"100% AI"</b> or "everyone will get 50 lakh" as company policy: <em>"People talk casually over chai. I'm talking about the policy."</em> Nobody says 100% as official policy.</li>
+<li>He also mentioned that some people, to meet such quotas, report code they wrote themselves as AI-written.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>⚠️ Verify Before Repeating This</b>
+<ul style="margin-top:8px;">
+<li>The 30% figure and Git-based tracking are the instructor's account from his own experience — policies differ widely between companies, and some forbid or restrict AI tools entirely. Don't quote "30%" as an industry standard.</li>
+<li>The lines about layoffs ("they plan to remove 30–40% of people") were garbled in the audio and aren't reliably captured here.</li>
+<li>Reporting your real AI usage accurately is the safer professional habit than adjusting numbers to hit a target.</li>
+</ul>
+</div>
+
+<div class="career">
+<b>Why This Matters for Your Own Practice</b>
+<p>In the reviews he repeatedly asked students to explain AI-assisted code line by line — and several couldn't. Being able to explain your own project (what a repository does, where an exception is thrown, why a loop is used) is what the interview will test, whatever tools you used to write it.</p>
+</div>
+</div>
+
+<div class="section">
+<h2>🛒 Part 3 — The E-Commerce Mini Project Demos</h2>
+
+<div class="card">
+<b>The Format</b>
+<p>Ten students volunteered; the target was about <b>3 minutes each</b>, running until the 11 o'clock cutoff. Each student demoed the running app, then showed the <b>package structure</b>, then <b>concluded their learning</b>. The instructor interrupted with questions during the code walkthroughs, interview-style.</p>
+</div>
+
+<div class="card">
+<b>What the Demos Had in Common</b>
+<ul>
+<li>Packages: <b>model</b>, <b>repository</b>, <b>service</b>, <b>exception</b>, <b>main</b> (some added <b>util</b> or a test package).</li>
+<li>Admin and Customer menus; a "guest/explore" mode where you can view and search products and add to a cart, but must <b>register or log in to place an order</b>.</li>
+<li>Product search by name (partial text like "AXY" finding "Galaxy"), ID, category, brand, and price range; place order, cancel order, view my orders, update my address.</li>
+<li>Pre-loaded sample data so nothing has to be re-entered each run.</li>
+</ul>
+</div>
+
+<div class="hot">
+<b>🔥 Instructor's Observations</b>
+<p style="margin-top:6px;">He noticed <b>everyone ended up with exactly 5 exception classes</b> ("not 3, not 6") and that <b>~99% of the code was very similar</b> across students. Since the requirement PDF specified the five exceptions and the layout, similarity is partly expected — but it's the cue that interviewers will probe your <i>understanding</i> rather than your output.</p>
+</div>
+
+<div class="card">
+<b>The Questions He Asked — and What They Test</b>
+<table>
+<tr><th>Question</th><th>What it tests / the point made</th></tr>
+<tr><td>"What is the repository doing?"</td><td>Normally it interacts with the <b>database</b> and provides data. Here there's no DB, so it's an <b>in-memory store inside collections</b>. He called this the major benefit of the exercise: you see the role of collections — temporary storage. Later: <b>database → collection → process it</b>.</td></tr>
+<tr><td>"Give an example of a custom exception you developed and used in your project."</td><td>An interview question — be ready to name <i>your project's</i> exceptions and say <b>when each is thrown</b>.</td></tr>
+<tr><td>"Difference between InvalidOrderException and InvalidQuantityException — when does each occur?"</td><td>A student first said "when I add more than the stock." The instructor traced the code: in that project <b>InvalidOrderException was thrown from place-order when the cart is empty</b>. Know exactly where <i>your</i> exceptions fire.</td></tr>
+<tr><td>"What is this loop at line 39? Why a for-each? What's the advantage over a normal for loop?"</td><td>The student gave a loose answer; the instructor told them to <b>find out the answer themselves</b> and didn't give one. See the flagged note below.</td></tr>
+<tr><td>"Did you use static methods/blocks? try-with-resources?"</td><td>He wants you to <b>use the concepts you've learned wherever they fit</b>, not just complete the work. Seed initial products and a guest user in a <b>static block</b>; use Comparator/Comparable where sorting is needed. Nobody used try-with-resources (nothing in the project needed a resource).</td></tr>
+</table>
+</div>
+
+<div class="flag">
+<b>Added (not stated in class) — the for-each question:</b> a for-each loop removes index bookkeeping and cuts boilerplate and off-by-one mistakes, and it's the natural fit when you only read every element. A traditional indexed loop is better when you need the index, need to loop in reverse, or need to skip/modify by position. (Removing elements from a collection mid-for-each triggers <code>ConcurrentModificationException</code> — covered in the fail-fast class.) This is my summary of standard points, not the instructor's answer.
+</div>
+
+<div class="flag">
+<b>My inference:</b> the transcript doesn't state what InvalidQuantityException meant in that student's project. Per the project PDF it's the natural choice for a bad quantity value (zero/negative), while "more than available stock" maps to InsufficientStockException — confirm against your own design.
+</div>
+
+<div class="career">
+<b>Code-Review Habit: Right-Click → References</b>
+<p>When he wanted to know where an exception is used, he had the student <b>right-click the class → References → Workspace</b> in Eclipse; it lists every place it's called. His advice: <em>"When code review happens, never get stuck."</em> Writing ~20 classes a day, you won't remember after 10 days where a method or exception is used — use this to navigate your own code quickly.</p>
+</div>
+
+<div class="card">
+<b>Vikas's Design Walkthrough — Four Good Practices</b>
+<ol>
+<li><b>Validate everything, then mutate.</b> In place-order he first <b>validated all the cart items</b>; only after validation passed did he <b>reduce inventory</b>, and then finalized the order status. (This is the "validate-all-first" rule — never half-update stock.)</li>
+<li><b>Test the service layer before wiring the menu.</b> He kept a separate test package: whenever he wrote part of OrderService, he tested it first, and only then connected it to the console menu in the main application.</li>
+<li><b>Input validation utility.</b> Rather than repeating checks, he wrote a static <b>InputUtil</b> class (validate product ID — must be greater than zero, no negatives; validate price; stock quantity; customer/cart ID) and called it from the main menu code, instead of repeating Scanner checks everywhere.</li>
+<li><b>Constructor injection.</b> Services receive their repositories <b>from outside</b> instead of creating them inside. Creating a dependency inside the class (e.g. <code>new</code> inside OrderService) is <b>tightly coupled</b>; supplying it from outside is <b>loosely coupled</b>. He mentioned constructor injection is what most people use in industry; setter injection also exists. The instructor added: <b>this concept is what the Spring Framework is built around.</b></li>
+</ol>
+<p style="margin-top:8px;">His learning summary: separate the layers — <b>repository</b> for data management (a Map keyed by ID with model objects as values), <b>services</b> for business logic — and use model objects to carry attributes like name, ID, email.</p>
+</div>
+
+<div class="flag">
+<b>Illustrative code (reconstructed from the explanation, not shown in the transcript):</b>
+<pre><code class="language-java">// Tightly coupled — the class creates its own dependencies
+class OrderService {
+    private ProductRepository productRepository = new ProductRepository();
+    private CustomerRepository customerRepository = new CustomerRepository();
+}
+
+// Loosely coupled — constructor injection: dependencies supplied from outside
+class OrderService {
+    private final ProductRepository productRepository;
+    private final CustomerRepository customerRepository;
+
+    OrderService(ProductRepository productRepository, CustomerRepository customerRepository) {
+        this.productRepository = productRepository;
+        this.customerRepository = customerRepository;
+    }
+}
+
+// In main — you decide which repositories to create and pass them in
+ProductRepository productRepo = new ProductRepository();
+CustomerRepository customerRepo = new CustomerRepository();
+OrderService orderService = new OrderService(productRepo, customerRepo);</code></pre>
+<pre><code class="language-java">// Static block seeding sample data so you don't re-enter products every run
+class ProductRepository {
+    private static final Map&lt;Integer, Product&gt; products = new HashMap&lt;&gt;();
+
+    static {
+        products.put(101, new Product(101, "iPhone 16", "Mobiles", 79999, 10, "Apple"));
+        products.put(102, new Product(102, "Galaxy S24", "Mobiles", 69999, 15, "Samsung"));
+    }
+}</code></pre>
+</div>
+
+<div class="card">
+<b>What the Students Said They Learned</b>
+<ul>
+<li>How different classes connect and communicate — and, for non-technical growth, handling <b>time pressure</b>.</li>
+<li>Five-package separation: main (user interface calling services), service (business logic), repository (storage area), model (data), exception.</li>
+<li>The hardest part: <b>passing objects between classes</b> — one student had only built projects of 5–10 classes before; this one had packages with 20–30 classes.</li>
+<li>Practicing concepts individually is different from <b>making them all work in a single project</b>.</li>
+<li>Several asked for help from AI or peers on the cart flow; the instructor's repeated feedback was to <b>improve communication</b> while presenting.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>🗺️ The Instructor's Roadmap — Baby Steps</h2>
+
+<div class="career">
+<b>Each Project Extends the Last</b>
+<p>He framed this project as a "baby step" — <b>the next project will be an extension of this one</b>, and whether you do it is up to you, but if you skip it you won't understand the next one, and the final project even less. Coming up: <b>JDBC → another project; Maven → another project; Spring Framework → another project</b> — "every day you'll have to do that"; by the end, more than 25 projects like this. You can't escape practice "till complete Java."</p>
+</div>
+
+<div class="card">
+<b>The Thought Process This Project Builds</b>
+<ul>
+<li>A real project has <b>50+ classes</b> and <b>10–20 exception classes</b>.</li>
+<li>Classes <b>interact</b> with each other — designing those interactions is the job.</li>
+<li>Thinking about <b>static blocks</b> for startup data.</li>
+<li>The <b>role of collections</b> — how intermediate data is stored. Today you put data into collections and read it back; later, data comes <b>from the database into collections</b>, and you process it from there.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>💼 Likely Interview Questions From This Session</h2>
+<table>
+<tr><th>Question</th><th>Answer (as taught)</th></tr>
+<tr><td>What is a Product Owner?</td><td>The person responsible for a product's requirements — talks to the client, drafts the requirement document, and reviews the team's work. Not the owner of the company.</td></tr>
+<tr><td>What is a sprint?</td><td>A fixed, short Agile work cycle (commonly 1–3 weeks) in which the team delivers a prioritized slice of the requirement. A 2-week sprint = 10 working days.</td></tr>
+<tr><td>Walk me through how a feature goes from requirement to production.</td><td>Requirement → clarify doubts → develop → unit tests → check in to Git → build (JAR) → QA test (bugs via Jira) → fix/retest loop → QA certified → SIT → pre-prod → prod.</td></tr>
+<tr><td>What is Jira and why use it?</td><td>A task/bug tracking tool. It records issues formally (subject, details, screenshot, assignee) so responsibility is clear and trackable; you comment on assigned tickets, even invalid ones.</td></tr>
+<tr><td>What are the environments you've worked with?</td><td>Local, Dev, QA, SIT/UAT, Pre-prod, Prod — varies by company.</td></tr>
+<tr><td>What does the repository layer do in your project?</td><td>Manages data storage. In production it talks to a database; in this project it's an in-memory collection (Map/List).</td></tr>
+<tr><td>Which custom exceptions did you create, and where are they thrown?</td><td>Name your own: ProductNotFound, CustomerNotFound, InsufficientStock, InvalidQuantity, InvalidOrder — and the specific condition for each (e.g. InvalidOrder when the cart is empty).</td></tr>
+<tr><td>Tight vs loose coupling / what is constructor injection?</td><td>Tight: a class creates its own dependencies. Loose: dependencies are supplied from outside (constructor injection) — the idea Spring is built on.</td></tr>
+<tr><td>How much of your code is written with AI?</td><td>Answer truthfully based on your company's policy and your own usage; the instructor's example answer: "my company asks us to maintain about 30%." Be ready to explain any code you commit.</td></tr>
+<tr><td>How do you find where a method/exception is used?</td><td>Right-click → References → Workspace in Eclipse.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points</h2>
+<ul>
+<li>The requirement document is the input to everything — developers clarify doubts <b>before</b> coding.</li>
+<li>Work arrives in sprints of prioritized slices, not as a six-month block.</li>
+<li>Your immediate customer is QA; bugs are tracked in Jira and every assigned ticket needs a comment from you.</li>
+<li>Code flows Local → Dev → QA → SIT/UAT → Pre-prod → Prod, and problems always loop back to Dev.</li>
+<li>Understand the <b>process</b>, ask questions freely, and expect small-but-critical tasks at first.</li>
+<li>Be able to explain every line of your project, whatever tools helped write it.</li>
+<li>Validate everything before mutating state (place-order); test the service layer before the menu.</li>
+<li>Prefer constructor injection over creating dependencies inside a class.</li>
+<li>Use the concepts you've learned (static block, Comparator, exceptions) wherever they genuinely fit.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items</h2>
+<ul>
+<li>Prepare a one-page answer to "walk me through the software development lifecycle at a company" using the flow above.</li>
+<li>In <i>your</i> project, list each custom exception with the exact condition that throws it — verify using Eclipse's References.</li>
+<li>Be ready to explain: what each layer does, why you used each collection, and what every loop and method does.</li>
+<li>Find out the answer to the instructor's for-each-vs-traditional-loop question yourself, and write it in your own words.</li>
+<li>Refactor your services to constructor injection if they create repositories internally.</li>
+<li>Add a static-block seed-data loader and an InputUtil validation class if you don't have them.</li>
+<li>Practice presenting your project in 3 minutes with a clear "what I learned" conclusion — work on communication.</li>
+<li>Keep the project clean: the next project (JDBC) will extend it.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous:</b> The E-Commerce mini project requirements (Collections, Stream API, custom exceptions, layering) and your build guide</li>
+<li><b>Earlier classes it draws on:</b> custom exceptions, Collections, Stream API, static blocks, Comparable/Comparator, fail-fast iteration, and the validate-before-mutate idea behind synchronization</li>
+<li><b>Upcoming:</b> a follow-up session on the workflow (promised "later"), then JDBC (database projects), Maven (builds/JARs), JUnit, and Spring (dependency injection)</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Headings, grouping into cards, the flow diagrams, and formatting were added. Content comes from your uploaded transcript. The audio was heavily garbled in places (mixed-language asides, student voices, projector/mic chatter), so student demo details are summarized at the level the transcript supports. Yellow dashed boxes mark everything I added or inferred: the java -jar form, the for-each answer, the InvalidQuantity inference, the illustrative injection/static-block code, and cautions about the AI-percentage claims. Housekeeping chatter (attendance, mic and projector issues, names being called) was omitted.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>

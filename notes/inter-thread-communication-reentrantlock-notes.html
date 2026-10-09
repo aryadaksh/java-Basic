@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Inter-Thread Communication, Producer-Consumer & ReentrantLock</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Inter-Thread Communication (wait/notify), Producer–Consumer & ReentrantLock</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: the versions of wait() — with time vs without time</li>
+<li>How a waiting thread comes back to RUNNABLE (timeout vs notify)</li>
+<li>notify() and notifyAll()</li>
+<li>Inter-thread communication (ITC) — what it means</li>
+<li>The classic Producer–Consumer example, step by step</li>
+<li>Why all of this happens on a shared object inside synchronized code</li>
+<li>Recap of synchronized — its advantage and its limitations</li>
+<li>ReentrantLock (Java 5) — manual locking and unlocking</li>
+<li>tryLock() and tryLock(time) — not waiting forever</li>
+<li>The native keyword</li>
+<li>Why wait() and notify() live in the Object class</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Recap: wait() Has Multiple Versions</b>
+<p><code>wait()</code> is defined in the <b>Object</b> class and comes in several overloaded versions (visible by opening the Object class in Eclipse). They fall into two categories: <b>wait without time</b> and <b>wait with time</b>.</p>
+</div>
+
+<div class="card">
+<b>wait() With Time — Comes Back on Its Own</b>
+<p>A thread that calls <code>wait(time)</code> goes into a waiting state for that specific duration. <b>Once the time is over, it automatically comes back to RUNNABLE.</b> Analogy: <em>"Go get coffee — wait one minute; if it's ready, bring it."</em></p>
+</div>
+
+<div class="card">
+<b>wait() Without Time — Comes Back Only If Somebody Notifies</b>
+<p>A thread that calls plain <code>wait()</code> also goes to the waiting state — but there is <b>no timer</b>. It moves from waiting back to RUNNABLE <b>only if somebody calls notify</b>. Analogy: <em>"Wait there — I'll call you later."</em> You might wait an hour; the call from the other person is the <b>notification</b>.</p>
+</div>
+
+<div class="card">
+<b>notify() and notifyAll()</b>
+<p>These are the methods that send the notification. If a thread is in the waiting state on a particular object, <code>notify()</code> tells it: <em>"Hey, wake up — you need to do your work."</em> The woken thread moves back to <b>RUNNABLE</b>, then gets CPU time again like any other RUNNABLE thread. (<code>notifyAll()</code> is the variant that notifies all the threads waiting on that object.)</p>
+</div>
+
+<div class="card">
+<b>Inter-Thread Communication (ITC)</b>
+<p>A thread goes to the waiting state (<code>wait</code>), and there is a mechanism to call it back to RUNNABLE (<code>notify</code>), after which it gets CPU time and continues. Whenever the situation demands, it can be told to wait again and be notified when required. This <b>wait + notify mechanism is what we call inter-thread communication</b> — two threads talking to each other.</p>
+</div>
+
+<div class="hot">
+<b>🔥 Interview Alert — Three Questions, One Answer (Instructor's Words)</b>
+<p style="margin-top:6px;">Interviewers commonly ask: <em>"Can you write code to establish inter-thread communication?"</em>, <em>"What is ITC / IPC?"</em>, or <em>"How do you use wait and notify?"</em> The instructor stressed these <b>all get the same answer</b> — the producer–consumer example below. His advice: even if it takes <b>one or two days</b> to get this topic right, <b>it is worth investing</b>.</p>
+</div>
+
+<div class="card">
+<b>The Producer–Consumer Example (The Classic)</b>
+<p>One thread <b>produces</b> data; another thread <b>consumes</b> it. Once the producer produces, it sends a message to the consumer (who is waiting for data) — the consumer consumes, then sends a message back to the producer: <em>"please produce more."</em> Both threads work on the <b>same shared object</b>.</p>
+</div>
+
+<div class="card">
+<b>The Protocol, Step by Step</b>
+<ol style="padding-left:20px;">
+<li>A shared <b>Task</b> object holds a boolean flag, <code>dataAvailable</code>, which is <b>false</b> by default.</li>
+<li><b>produce():</b> if data is already available (not yet consumed) → <b>wait</b>. Otherwise → produce the data, set <code>dataAvailable = true</code>, and <b>notify</b> the consumer.</li>
+<li><b>consume():</b> if data is not available → <b>wait</b>. Otherwise → consume the data, set <code>dataAvailable = false</code>, and <b>notify</b> the producer.</li>
+<li>Both methods are <b>synchronized</b>, and both threads use the <b>same Task object</b>.</li>
+</ol>
+</div>
+
+<div class="card">
+<b>Reading the Output</b>
+<p>With thread names printed, the picture becomes clear: <em>Producer produced 1 → Consumer consumed 1 → Consumer goes to waiting until the Producer produces again → Producer produced 2 → Consumer consumed 2 → ...</em> Who <b>starts</b> first doesn't matter (the CPU decides that, as always) — if the consumer runs first, it simply finds no data and waits. The mechanism guarantees the <b>alternation</b> even though the start order is unpredictable.</p>
+</div>
+
+<div class="card">
+<b>Why the Shared Object and synchronized Matter Here</b>
+<p>All the waiting and notifying happens on the <b>shared object</b>. Since wait() and notify() need the object's lock (covered last class), the produce/consume methods are synchronized — and both threads must be using the <b>same</b> Task object for the communication to work at all.</p>
+</div>
+
+<div class="card">
+<b>When the Program Seems Not to Finish</b>
+<p>A student's run kept waiting at the end instead of shutting down. Instructor's explanation: there is <b>no technical failure</b> — a thread in the waiting state is simply <b>waiting for a notification that nobody is going to send anymore</b> (its partner has nothing left to do). It can be ended with a stop/interrupt signal. Analogy: if one person has 10 books and you take 5, the remaining 5 don't vanish — the other side just isn't producing/consuming any further.</p>
+</div>
+
+<div class="card">
+<b>Recap: synchronized — Advantage and Limitations</b>
+<p><b>What it does:</b> allows one thread at a time to access a particular method on a shared object. <b>Advantage:</b> lock acquisition and lock release are both handled by the <b>JVM</b> — the developer just writes <code>synchronized</code> and it works. <b>Disadvantage:</b> chances of <b>deadlock</b> — if a thread gets stuck, it stays stuck; and if T1 gets stuck holding the lock, T2 waits outside <b>forever</b>, because there is no timeout mechanism with synchronized.</p>
+</div>
+
+<div class="card">
+<b>ReentrantLock — The Manual Alternative (Java 5)</b>
+<p>Introduced in <b>Java 1.5 (Java 5)</b>, <code>ReentrantLock</code> is the <b>manual way of locking and unlocking</b>: the developer writes code to <code>lock()</code> and <code>unlock()</code> wherever needed. The end result is the same — <b>thread safety</b> — but the developer is in control instead of the JVM. As taught in class, it also lets you <b>acquire the lock multiple times</b> on the same object (for example, across two loops), whereas synchronized was described as acquiring the lock only once, JVM-controlled.</p>
+</div>
+
+<div class="card">
+<b>tryLock() — Don't Wait Forever</b>
+<p>The big fix ReentrantLock brings: <code>tryLock()</code> (attempt to get the lock) and the timed version <code>tryLock(time)</code>. Example: <em>"I'll try to get the lock for 5 milliseconds. If I get it within 5 ms, I execute; otherwise I don't hang around — I do my other work and come back later."</em> With plain synchronized there is <b>no such timeout</b>: if the other thread never releases the lock, you wait indefinitely.</p>
+</div>
+
+<div class="card">
+<b>The Price of Manual Control</b>
+<p>If the developer <b>forgets to unlock</b>, the lock is never released — and other threads get stuck forever. The instructor's summary: <em>the advantage of manual locking is flexibility; the disadvantage is that forgetting to unlock causes a problem.</em></p>
+</div>
+
+<div class="card">
+<b>A Small Lesson From the Live Demo: Use sleep(), Not wait(), to Simulate a Stuck Thread</b>
+<p>To create a "thread stuck inside a synchronized method" situation, the instructor first tried <code>wait()</code> — and <b>both threads entered</b> the method. He then corrected himself: <em>wait() releases the lock</em>, so to simulate a thread that gets stuck <b>while still holding</b> the lock, he switched to <code>sleep()</code>. This directly reinforces last class's wait-vs-sleep distinction.</p>
+</div>
+
+<div class="card">
+<b>synchronized vs ReentrantLock</b>
+<table>
+<tr><th>Aspect</th><th>synchronized</th><th>ReentrantLock</th></tr>
+<tr><td>Locking</td><td>Automatic — JVM acquires and releases</td><td>Manual — developer calls lock() / unlock()</td></tr>
+<tr><td>Introduced</td><td>Original Java</td><td>Java 5 (1.5)</td></tr>
+<tr><td>Timeout</td><td>None — waits indefinitely</td><td>tryLock() / tryLock(time) — give up after a set time</td></tr>
+<tr><td>Flexibility</td><td>Less — JVM-controlled</td><td>More — lock/unlock wherever you want, acquire multiple times (as taught)</td></tr>
+<tr><td>Main risk</td><td>Deadlock chances; a stuck thread blocks others</td><td>Forgetting to unlock → threads stuck forever</td></tr>
+<tr><td>End result</td><td>Thread safety</td><td>Thread safety (same)</td></tr>
+</table>
+</div>
+
+<div class="card">
+<b>The native Keyword</b>
+<p><code>native</code> means the method is <b>not written in Java</b> — it's implemented in another language (such as C/C++), and Java lets you use it. Example: <code>hashCode()</code> in the Object class is native — open the Object class and you won't find a Java implementation. Java supports this for cases where efficient code already exists in another language and there is <b>no alternative</b>. The instructor was clear that <b>ordinary developers never write native code</b> (Java's own developers may, when introducing features), and he personally doesn't advise going down that path — though you can explore it if you're curious. Native methods are loaded into the <b>native area</b> of memory, alongside heap and stack.</p>
+</div>
+
+<div class="card">
+<b>Why Are wait() and notify() in the Object Class?</b>
+<p>Because they are <b>called on an object</b> — the shared object whose lock is involved. Inside a synchronized method, a plain <code>wait()</code> is really "wait on the current object." If these methods lived in the Thread class, you'd need a thread object to call them — but the coordination here happens on the <b>shared task object</b>, not on a thread. So <b>by design</b> they sit in the Object class, making them available on every object.</p>
+</div>
+
+<div class="flag">
+<b>⚠️ Technical Nuances Worth Verifying (Not Stated This Way in Class)</b>
+<ul style="margin-top:8px;">
+<li><b>Reentrancy:</b> the class contrasted ReentrantLock ("acquire multiple times") with synchronized ("only once"). In standard Java, <code>synchronized</code> is <em>also</em> reentrant — a thread already holding an object's lock can re-enter another synchronized method on that same object. The practical differences taught here are manual control and tryLock timeouts. Please confirm the exact framing with your instructor before using it in an interview.</li>
+<li><b>"Deadlock":</b> in class this word was used loosely for "a thread stuck waiting forever." Formally, deadlock means two or more threads waiting on each other in a cycle. Both usages appear in interviews — know the formal definition too.</li>
+<li><b>ITC vs IPC:</b> the instructor grouped "inter-thread communication" and "inter-process communication" as one interview answer (wait/notify). Formally, IPC usually refers to communication between separate <em>processes</em>. Give the wait/notify answer as taught, but be aware of the distinction.</li>
+<li><b>if vs while, and finally:</b> the wait condition was described verbally as an "if" check; the standard, safer practice is a <code>while</code> loop (the code below uses it). Likewise, <code>unlock()</code> is normally placed in a <code>finally</code> block so it always runs.</li>
+</ul>
+</div>
+
+</div>
+
+<div class="section">
+<h2>🖼️ Producer–Consumer Flow</h2>
+
+<div class="lane">
+<div class="label">Producer thread — produce()</div>
+<div class="flowbox">
+<div class="fstep">dataAvailable == true?</div>
+<div class="farrow">→ yes →</div>
+<div class="fstep wait">wait()</div>
+<div class="farrow">|| no →</div>
+<div class="fstep">produce data</div>
+<div class="farrow">→</div>
+<div class="fstep">dataAvailable = true</div>
+<div class="farrow">→</div>
+<div class="fstep notify">notify() consumer</div>
+</div>
+</div>
+
+<div class="lane">
+<div class="label">Consumer thread — consume()</div>
+<div class="flowbox">
+<div class="fstep">dataAvailable == false?</div>
+<div class="farrow">→ yes →</div>
+<div class="fstep wait">wait()</div>
+<div class="farrow">|| no →</div>
+<div class="fstep">consume data</div>
+<div class="farrow">→</div>
+<div class="fstep">dataAvailable = false</div>
+<div class="farrow">→</div>
+<div class="fstep notify">notify() producer</div>
+</div>
+</div>
+<p style="font-size:13px;color:#777;">Both lanes operate on the same shared Task object, inside synchronized methods.</p>
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the instructor wrote the full producer–consumer program live and shared it on GitHub (the code was too long to type in class). It is not visible in the transcript, so the code below is <b>reconstructed from his verbal walkthrough</b> — compare it with the GitHub version.
+</div>
+
+<p><b>wait() with and without time:</b></p>
+<pre><code class="language-java">synchronized (task) {
+    task.wait(5000);  // waits up to 5 seconds, then returns to RUNNABLE on its own
+}
+
+synchronized (task) {
+    task.wait();      // waits until someone calls notify() on the same object
+}</code></pre>
+
+<p><b>Producer–Consumer — the shared Task object:</b></p>
+<pre><code class="language-java">class Task {
+    private boolean dataAvailable = false; // false by default
+    private int data = 0;
+
+    public synchronized void produce() {
+        while (dataAvailable) {                 // previous data not consumed yet
+            try {
+                wait();                         // release the lock, go to waiting state
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        data++;                                 // produce the data
+        System.out.println(Thread.currentThread().getName() + " produced: " + data);
+        dataAvailable = true;                   // data is now available
+        notify();                               // wake up the waiting consumer
+    }
+
+    public synchronized void consume() {
+        while (!dataAvailable) {                // nothing to consume yet
+            try {
+                wait();
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
+        System.out.println(Thread.currentThread().getName() + " consumed: " + data);
+        dataAvailable = false;                  // data consumed
+        notify();                               // wake up the waiting producer
+    }
+}</code></pre>
+
+<p><b>The two threads (both use the SAME Task object):</b></p>
+<pre><code class="language-java">class ProducerThread extends Thread {
+    Task task;
+
+    ProducerThread(Task task) {
+        super("Producer");
+        this.task = task;
+    }
+
+    @Override
+    public void run() {
+        for (int i = 0; i &lt; 10; i++) {
+            task.produce();
+        }
+    }
+}
+
+class ConsumerThread extends Thread {
+    Task task;
+
+    ConsumerThread(Task task) {
+        super("Consumer");
+        this.task = task;
+    }
+
+    @Override
+    public void run() {
+        for (int i = 0; i &lt; 10; i++) {
+            task.consume();
+        }
+    }
+}</code></pre>
+
+<pre><code class="language-java">class Driver {
+    public static void main(String[] args) {
+        Task task = new Task();                 // ONE shared object
+
+        new ProducerThread(task).start();
+        new ConsumerThread(task).start();
+        // Output alternates:
+        // Producer produced: 1
+        // Consumer consumed: 1
+        // Producer produced: 2
+        // Consumer consumed: 2
+        // ...
+    }
+}</code></pre>
+
+<p><b>Simulating a stuck thread under synchronized — use sleep(), not wait():</b></p>
+<pre><code class="language-java">class SlowTask {
+    public synchronized void doWork() {
+        System.out.println(Thread.currentThread().getName() + " entered");
+        try {
+            Thread.sleep(5000);  // holds the lock the whole time — the other thread must wait
+            // (wait() here would RELEASE the lock, and the second thread would walk in)
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        System.out.println(Thread.currentThread().getName() + " leaving");
+    }
+}</code></pre>
+
+<p><b>ReentrantLock — manual lock and unlock:</b></p>
+<pre><code class="language-java">import java.util.concurrent.locks.ReentrantLock;
+
+class Task {
+    private final ReentrantLock lock = new ReentrantLock();
+
+    public void doWork() {
+        lock.lock();                   // manual acquire
+        try {
+            System.out.println(Thread.currentThread().getName() + " has the lock");
+            // critical work here
+        } finally {
+            lock.unlock();             // manual release — forget this and other threads hang forever
+        }
+    }
+}</code></pre>
+
+<p><b>tryLock with a timeout — don't wait forever:</b></p>
+<pre><code class="language-java">import java.util.concurrent.TimeUnit;
+
+public void doWork() throws InterruptedException {
+    if (lock.tryLock(5, TimeUnit.MILLISECONDS)) {   // try for 5 ms
+        try {
+            // got the lock in time — do the critical work
+        } finally {
+            lock.unlock();
+        }
+    } else {
+        // did NOT get the lock within 5 ms — do other work and come back later
+    }
+}</code></pre>
+
+<p><b>native — a method with no Java implementation (from the Object class):</b></p>
+<pre><code class="language-java">public native int hashCode();   // implemented in another language, not visible in Java</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>Why are wait() and notify() in the Object class and not in Thread?</td><td>They are called on an object (the shared one whose lock is involved), not on a thread. By design they're in Object so every object can be used for this coordination.</td></tr>
+<tr><td>What is the native keyword?</td><td>It marks a method implemented in another language (like C/C++) that Java can use — e.g. hashCode() in Object. Developers normally never write native code.</td></tr>
+<tr><td>Can you write native code yourself in C/C++?</td><td>Yes, if you want to learn — but the instructor personally doesn't advise it, and normal developers never need to.</td></tr>
+<tr><td>Why did a student's producer–consumer program keep waiting at the end?</td><td>No technical failure — a thread was waiting for a notification that no other thread would send anymore; it can be ended with a stop/interrupt signal.</td></tr>
+<tr><td>If a thread gets stuck holding a synchronized lock, what happens to the others?</td><td>They wait outside indefinitely — synchronized has no timeout. ReentrantLock's tryLock(time) fixes this.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>💼 Likely Interview Questions From This Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What are the versions of wait(), and how does each return?</td><td>With time — returns to RUNNABLE automatically when the time is over. Without time — stays waiting until another thread calls notify().</td></tr>
+<tr><td>What is inter-thread communication?</td><td>Two threads coordinating via wait() and notify() on a shared object — one waits, the other notifies it to resume.</td></tr>
+<tr><td>Write code to establish inter-thread communication / how do you use wait and notify?</td><td>The producer–consumer example: a shared object with a dataAvailable flag; producer waits if data is unconsumed, else produces and notifies; consumer waits if no data, else consumes and notifies.</td></tr>
+<tr><td>When a waiting thread is notified, does it run immediately?</td><td>No — it moves to RUNNABLE and must get CPU time again like any other RUNNABLE thread.</td></tr>
+<tr><td>What are the advantage and disadvantage of synchronized?</td><td>Advantage: JVM handles lock acquire/release automatically. Disadvantage: deadlock chances, and a stuck thread blocks others indefinitely (no timeout).</td></tr>
+<tr><td>What is ReentrantLock, and since when?</td><td>A manual locking class introduced in Java 5 — the developer calls lock()/unlock(); same thread-safety result, more flexibility, plus tryLock with timeout.</td></tr>
+<tr><td>What is tryLock()?</td><td>An attempt to acquire the lock without waiting forever — tryLock(time) gives up if the lock isn't obtained within the specified time, so the thread can do other work and retry later.</td></tr>
+<tr><td>What is the disadvantage of ReentrantLock?</td><td>It's manual — if the developer forgets to unlock, other threads get stuck forever.</td></tr>
+<tr><td>Why are wait/notify in the Object class?</td><td>They operate on the shared object being used for coordination — not on a thread — so by design they belong to Object.</td></tr>
+<tr><td>What is the native keyword?</td><td>A method implemented in another language, usable from Java (e.g. Object.hashCode()); not something normal developers write.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>wait(time) returns to RUNNABLE automatically; plain wait() returns only when notified.</li>
+<li>notify() doesn't make the thread run instantly — it moves it to RUNNABLE, and it still needs CPU time.</li>
+<li>Producer–consumer needs a shared object, a flag, synchronized methods, and wait/notify used together — it's the standard answer for ITC questions.</li>
+<li>Who starts first is still up to the CPU — the wait/notify protocol is what enforces the produce-then-consume alternation.</li>
+<li>To simulate a thread stuck holding a lock, use sleep() — wait() would release the lock.</li>
+<li>ReentrantLock gives manual control and tryLock timeouts, but forgetting unlock() leaves other threads stuck forever.</li>
+<li>Native methods (like hashCode()) are implemented outside Java; you'll use them constantly but should never need to write one.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Write the producer–consumer program yourself (refer to the instructor's GitHub code if needed) and run it until the alternating output makes sense.</li>
+<li>Add thread names to your output so you can see exactly who is waiting and who is notifying.</li>
+<li>Explore ReentrantLock — explicitly assigned for today: lock(), unlock(), and tryLock() with a timeout.</li>
+<li>Recreate the stuck-thread demo with synchronized (using sleep) and observe the second thread waiting; then repeat with tryLock(time) and observe it giving up instead.</li>
+<li>Deliberately forget an unlock() once and watch the other threads hang — so the danger is real to you, not just theoretical.</li>
+<li>Practice explaining producer–consumer out loud — the instructor flagged this as worth investing a day or two.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Classes:</b> join(), wait() vs sleep(), yield() (where wait/notify were first introduced); synchronization, object locks, and race conditions</li>
+<li><b>Connecting observation:</b> wait() vs wait(time) corresponds to the WAITING vs TIMED_WAITING states mentioned in the Thread Lifecycle class (that distinction was earlier flagged "for later") — this connection is my own, not stated in the transcript</li>
+<li><b>Upcoming Topics:</b> Not specified — the class ended with "see you tomorrow, keep practicing"</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Only section headings, grouping under labeled cards, the producer–consumer flow diagram, the synchronized-vs-ReentrantLock table, and formatting/styling. Content extracted from your uploaded transcript. Because the auto-transcription was heavily garbled in places (and the live code was shared via GitHub rather than shown in text), the code samples are reconstructed from the instructor's spoken walkthrough, and the yellow dashed boxes flag every place where I added a clarification the transcript didn't state. A short reference to your course-wide interview-preparation advice at the end of class was not repeated here.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Callable, Future.get() Blocking & Thread Pool Types</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;}
+td{padding:12px;border:1px solid #ddd;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.career{background:#f3eeff;border-left:6px solid #7c5cff;padding:18px;border-radius:10px;margin:18px 0;}
+.career b{color:#7c5cff;}
+.timeline{background:#1e1e2f;color:#d4d4f7;padding:18px 22px;border-radius:10px;font-family:monospace;font-size:13.5px;line-height:2;margin:14px 0;}
+.timeline .g{color:#7cffb2;}
+.timeline .o{color:#ff9a76;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Callable & Future in Action, Why Future.get() Blocks, and the Three Thread Pool Types</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: why Callable exists (Runnable gives nothing back to the caller)</li>
+<li>Live demo: a Callable&lt;Boolean&gt; that sends an email and returns success/failure</li>
+<li>Submitting 10 email tasks to a 2-thread pool and reading each Future</li>
+<li>What "blocking" actually means — seen through the demo</li>
+<li>The cost of Future.get(): you get the result, but it can be slow</li>
+<li>Preview: CompletableFuture solves the blocking problem (next topic)</li>
+<li>The three famous thread pools: Fixed, Cached ("dynamic"), Single</li>
+<li>Cached pool experiments: 10 → 200 → 1,000+ tasks, and what sleep() changes</li>
+<li>When each pool is the right choice</li>
+<li>"How many threads do I need?" — the chairs analogy, a worked estimate, and the tiny-vs-fat approach</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Recap: Why Callable Was Introduced</b>
+<p><code>Runnable</code> doesn't give anything back to the caller. When a Runnable launches a new thread, the caller has no idea when it will get CPU time or what happened to its work. <code>Callable</code> fixes this: its <code>call()</code> method returns a value, wrapped in a <b>Future</b> object — <em>Future of String, Future of Integer, Future of Person, Future of Account</em> — and once <code>call()</code> has executed, the caller can read the result and find out whether the work went as expected.</p>
+</div>
+
+<div class="card">
+<b>The Live Demo: Sending Emails With a Callable</b>
+<p>The instructor wrote a class implementing <code>Callable&lt;Boolean&gt;</code>. Its <code>call()</code> uses an <code>EmailSender</code> to send an email and returns <b>true</b> (only the positive case was handled). In the driver: create an <code>ExecutorService</code> from the <code>Executors</code> class (fixed thread pool), call <code>submit(...)</code> with the task (<code>submit</code> accepts both Runnable and Callable; <code>execute</code> accepts only Runnable), and receive a <code>Future&lt;Boolean&gt;</code>. Then the task is repeated for <b>10 different email addresses</b> (in real life these would come from customers; in the demo the ID is appended to build different addresses).</p>
+</div>
+
+<div class="card">
+<b>Reading the Status</b>
+<p>Printing <code>future.get()</code> for each task shows the status — <b>that means we are getting the result</b>. To make the timing visible, the instructor added a <code>sleep</code> of <b>2 seconds</b> inside the email sending (assuming each email takes 2 seconds). Tip from class: <em>whenever you're understanding a concept, put maximum print statements — you understand the flow.</em></p>
+</div>
+
+<div class="hot">
+<b>🔥 The Key Observation: Future.get() Is a Blocking Call</b>
+<p style="margin-top:6px;">With 10 tasks performed by 2 threads, calling <code>future.get()</code> made the calling thread (main) <b>wait until that task's result arrived</b> before it moved on. A "Main started" / "Main ended" print confirmed it: <b>"Main ended" only appeared after all the results were read</b> — main was stuck waiting the whole time. That is the meaning of <b>blocking</b>: <em>future.get() blocks your current thread until it gets the response from the other thread.</em> The instructor noted it's "the current thread" — here it's main, but it could be <b>any thread</b> that executes this call.</p>
+</div>
+
+<div class="card">
+<b>The Contrast: Without get(), Main Is Free</b>
+<p>When the instructor <b>commented out the status reading</b> (no <code>future.get()</code>), <b>"Main ended" printed immediately</b> — main was not blocked at all, even though the email tasks were still running in the background. Reading the result is the thing that makes the caller wait.</p>
+</div>
+
+<div class="card">
+<b>Runnable vs Callable — The Trade-Off in One Line</b>
+<p><b>Runnable</b> doesn't give you a result. <b>Callable</b> gives you a result via <code>future.get()</code> — <em>"but all beautiful features come with some problem."</em> The problem: it is <b>blocking</b>. You get the result, but if you're waiting for it, your other work is held up — it's slow. Java introduced another feature, <b>CompletableFuture</b>, to solve this — covered next. The instructor's advice: <b>first understand Future properly before learning CompletableFuture.</b></p>
+</div>
+
+<div class="hot">
+<b>🔥 Interview Alert</b>
+<p style="margin-top:6px;">"What is Future?" is a definite interview question — the instructor said your answer to it can decide how the interview goes. A strong answer covers: Future represents the result of an asynchronous task submitted to an executor; it's what <code>submit()</code> returns; you read it with <code>get()</code>; and <code>get()</code> blocks the calling thread until the result is ready — which is exactly the limitation CompletableFuture addresses.</p>
+</div>
+
+<div class="flag">
+<b>⚠️ Clarification Added (Not Stated in Class)</b>
+<ul style="margin-top:8px;">
+<li>In the demo, <code>get()</code> was called <b>inside the submission loop</b> — i.e. submit task 1, wait for its result, then submit task 2. That's why the 2-thread pool couldn't overlap the work. A common improvement is to <b>submit all tasks first, store the Futures in a list, and only then call get()</b> on each — the tasks then run concurrently and you only wait for whatever hasn't finished yet. This wasn't shown in class; it's offered as a standard technique.</li>
+<li><code>Future</code> also has a timed overload, <code>get(timeout, unit)</code>, which gives up waiting after a limit. Not covered in this class.</li>
+<li><code>shutdown()</code> is described in class as needed so the service doesn't stay "up and running." In standard Java it stops accepting new tasks but lets already-submitted tasks finish.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Three Famous Thread Pools</b>
+<p>All created through the <code>Executors</code> class. As summarized in class: <b>Fixed, Single, and Cached (dynamic)</b> — "these three are very famous."</p>
+<table>
+<tr><th>Pool</th><th>Factory method</th><th>Behavior (as taught)</th></tr>
+<tr><td><b>Fixed</b></td><td><code>Executors.newFixedThreadPool(n)</code></td><td>You decide the number of worker threads. With 5 workers and 10 tasks, each worker averages 2 tasks — workers are reused.</td></tr>
+<tr><td><b>Cached ("dynamic")</b></td><td><code>Executors.newCachedThreadPool()</code></td><td>Based on the work, it decides how many threads to launch. If load is more, it keeps creating new threads.</td></tr>
+<tr><td><b>Single</b></td><td><code>Executors.newSingleThreadExecutor()</code></td><td>Only <b>one</b> thread is created, and that one thread does all the work.</td></tr>
+</table>
+</div>
+
+<div class="card">
+<b>Cached Pool Experiments — What the Instructor Observed</b>
+<p>He submitted increasing numbers of tasks to a cached pool and counted the distinct thread IDs:</p>
+<ul>
+<li><b>10 tasks</b> → 10 threads launched.</li>
+<li><b>100 / 200 / 500 / 1,000+ tasks</b> → it kept creating new threads; the IDs climbed into the thousands. His first reaction: <em>"it should reuse threads — it's always creating new ones."</em></li>
+<li>Then the realization: the demo tasks contained <code>sleep</code>. A <b>sleeping thread is busy</b>, so it can't be reused — the pool has no choice but to launch another thread for each new task that arrives while the others are still sleeping.</li>
+<li>With the sleep removed (tiny tasks that finish almost instantly), the thread count dropped sharply — idle threads were reused instead.</li>
+</ul>
+<p style="margin-top:8px;">Lesson (instructor's words): <em>"It's creating threads based on the work. If the first thread is taking time, we cannot reuse it, so it definitely creates another."</em> With sleep, the work effectively became <b>heavy work</b>, and the pool launched more threads than necessary.</p>
+</div>
+
+<div class="card">
+<b>When the Cached Pool Fits</b>
+<p>It suits <b>small work in large volume</b> — each task is quick, but there are lots of them and you don't know how many threads you'd need. Example: sending an email takes very little time, but you're sending it to <b>10,000 customers</b> (or one lakh, or 5 million). You can't pre-decide the thread count, so you let the pool decide dynamically. With a Fixed pool, <em>you</em> decide the number — "similar to you creating threads yourself."</p>
+</div>
+
+<div class="card">
+<b>When the Single Thread Pool Fits</b>
+<p>When you need only one thread — sometimes that's exactly the requirement. One worker thread does all the submitted work.</p>
+</div>
+
+<div class="flag">
+<b>⚠️ Technical Nuances Worth Knowing (Not Stated This Way in Class)</b>
+<ul style="margin-top:8px;">
+<li>The cached pool is <b>unbounded</b> in standard Java: if tasks are slow and arrive faster than they finish, it can keep creating threads without limit — which is the real-world risk behind what the instructor's sleep experiment showed. Idle cached threads are also removed after a period of inactivity (60 seconds by default). Neither detail was mentioned in class.</li>
+<li>A single-thread executor also guarantees tasks run <b>one after another in submission order</b> — a useful property when order matters. Not mentioned in class.</li>
+<li>Printing thread names (e.g. <code>pool-1-thread-3</code>) is the easiest way to see which worker ran which task — the instructor's counting method was essentially this.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>"How Do I Decide the Number of Threads in a Fixed Pool?"</b>
+<p>A student asked this; the instructor called it a valid question. His answer: <b>there is no fixed formula</b> — you have to do an effort estimate using logic. Factors he listed:</p>
+<ol style="padding-left:20px;">
+<li><b>Limits of your system</b> — current CPU requirement, how many cores are available, how many threads are allowed.</li>
+<li><b>Criticality of the task.</b></li>
+<li><b>How soon you need it done</b> — "quickly, or are 2–3 minutes okay?"</li>
+</ol>
+</div>
+
+<div class="card">
+<b>The Chairs Analogy</b>
+<p>Task: move 20 chairs out of the classroom. How many people do you need? You factor in the situation — only so many people can physically work in the room at once (<b>limitation</b>), and whether you need it done quickly or can take a few minutes (<b>urgency</b>). Thread-pool sizing works the same way.</p>
+</div>
+
+<div class="card">
+<b>A Worked Estimate From Class</b>
+<p>Suppose <b>1,000 customers place orders every second</b>, and each order needs an email. Assume <b>one thread takes 100 ms per email</b> — so one thread can send roughly <b>10 emails per second</b>. "Roughly, you calculate" — the instructor stopped here and moved on to the approach below.</p>
+<div class="flag" style="margin-top:10px;">
+<b>Added arithmetic:</b> 1,000 emails/sec ÷ 10 emails/sec per thread ≈ <b>100 threads</b> in theory, if the work were purely waiting on email sending and your system could support that many. The instructor did not state this final number, and he stressed the figure is a starting estimate, not a formula.
+</div>
+</div>
+
+<div class="card">
+<b>Tiny Approach vs Fat Approach</b>
+<ul>
+<li><b>Tiny approach:</b> start with a small number (e.g. 100 threads), observe system behavior; if emails are still delayed, fine-tune and increase (say, to 150); if some threads sit idle, reduce the count. You converge on an average number that works.</li>
+<li><b>Fat approach:</b> blindly give a big number (e.g. 1,000). It may work — but if only ~150 threads were really needed, then <b>~850 threads are running idle</b> and "not contributing much."</li>
+</ul>
+<p style="margin-top:8px;"><em>"Whenever you're deciding any resource, start with the basics. Start small, observe, then increase or decrease."</em></p>
+</div>
+
+<div class="career">
+<b>Instructor's Aside: Learn Fundamentals Before Leaning on AI</b>
+<p>During the Callable/Future practice, the instructor made a point he returned to several times: when you get stuck, don't instinctively reach for ChatGPT or another AI. He compared it to training your brain — <em>"you trained your brain that if I get stuck, AI is the option; that is the biggest problem."</em> His position: he isn't against AI, but while learning fundamentals, <b>write the code yourself first</b>; once you're about 50% confident, use AI to learn more. Reading a line from an AI tool "doesn't give you confidence." (He also noted that writing this out unaided would make a candidate stand out in interviews.)</p>
+</div>
+
+<div class="career">
+<b>Instructor's Opening Message (Condensed)</b>
+<p>The class began with a long talk about attendance and commitment — roughly 150 consecutive working days of regular attendance, the idea that irregular attendance is the main reason profiles don't convert, and that dedication matters more than year of passing out. It was motivational rather than technical, so it isn't expanded here.</p>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the instructor typed the demo live, and the audio transcript is heavily garbled in places. The code below is <b>reconstructed from his spoken walkthrough</b> — the structure and behavior match what he described, but exact names are mine. Compare with your own class code.
+</div>
+
+<p><b>The email Callable — returns true when the email is sent:</b></p>
+<pre><code class="language-java">import java.util.concurrent.Callable;
+
+class EmailSender {
+    public boolean sendEmail(String to) {
+        System.out.println(Thread.currentThread().getName() + " sending email to " + to);
+        try {
+            Thread.sleep(2000); // assume each email takes 2 seconds
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return true; // positive case only, as in class
+    }
+}
+
+class EmailTask implements Callable&lt;Boolean&gt; {
+    private final String to;
+
+    EmailTask(String to) {
+        this.to = to;
+    }
+
+    @Override
+    public Boolean call() {
+        return new EmailSender().sendEmail(to);
+    }
+}</code></pre>
+
+<p><b>The blocking version — get() inside the loop (what the demo showed):</b></p>
+<pre><code class="language-java">import java.util.concurrent.*;
+
+public class Driver {
+    public static void main(String[] args) throws Exception {
+        System.out.println("Main started");
+        ExecutorService executor = Executors.newFixedThreadPool(2);
+
+        for (int i = 1; i &lt;= 10; i++) {
+            Future&lt;Boolean&gt; future = executor.submit(new EmailTask("user_" + i + "@example.com"));
+            System.out.println("Status: " + future.get()); // BLOCKS main until this email is done
+        }
+
+        System.out.println("Main ended"); // only prints after ALL results have been read
+        executor.shutdown();
+    }
+}</code></pre>
+
+<p><b>Without reading the status — main is NOT blocked:</b></p>
+<pre><code class="language-java">for (int i = 1; i &lt;= 10; i++) {
+    executor.submit(new EmailTask("user_" + i + "@example.com")); // no future.get()
+}
+System.out.println("Main ended"); // prints immediately; emails keep running in the background
+executor.shutdown();</code></pre>
+
+<p><b>Added improvement — submit everything first, then collect (not shown in class):</b></p>
+<pre><code class="language-java">import java.util.ArrayList;
+import java.util.List;
+
+List&lt;Future&lt;Boolean&gt;&gt; futures = new ArrayList&lt;&gt;();
+
+for (int i = 1; i &lt;= 10; i++) {
+    futures.add(executor.submit(new EmailTask("user_" + i + "@example.com")));
+}
+// All 10 tasks are now queued/running across the 2 workers.
+
+for (Future&lt;Boolean&gt; f : futures) {
+    System.out.println("Status: " + f.get()); // main only waits for whatever isn't finished yet
+}
+executor.shutdown();</code></pre>
+
+<p><b>The three pools side by side:</b></p>
+<pre><code class="language-java">ExecutorService fixed  = Executors.newFixedThreadPool(5);   // you choose 5 workers
+ExecutorService cached = Executors.newCachedThreadPool();   // grows with the load ("dynamic")
+ExecutorService single = Executors.newSingleThreadExecutor(); // exactly one worker</code></pre>
+
+<p><b>Reproducing the cached-pool experiment (count distinct thread names):</b></p>
+<pre><code class="language-java">ExecutorService cached = Executors.newCachedThreadPool();
+
+for (int i = 1; i &lt;= 200; i++) {
+    cached.execute(() -&gt; {
+        System.out.println(Thread.currentThread().getName());
+        try {
+            Thread.sleep(2000);   // WITH sleep: threads stay busy -&gt; many new threads
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+    });
+}
+cached.shutdown();
+// Remove the sleep and run again: tiny tasks finish instantly,
+// so idle threads get reused and the distinct-thread count drops sharply.</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>How do we know how many threads a fixed pool needs?</td><td>No fixed formula. Estimate using your system's limits (cores, allowed threads), the criticality of the task, and how soon you need it; start small, observe, then tune (tiny approach).</td></tr>
+<tr><td>Why did the cached pool create so many threads in the demo?</td><td>The tasks contained sleep(), so threads stayed busy and couldn't be reused — each new task arriving meanwhile forced a new thread. Without the sleep, far fewer threads were created.</td></tr>
+<tr><td>What does "blocking" mean for Future.get()?</td><td>The calling thread waits at that line until the other thread's result is available — it can't move forward until then.</td></tr>
+<tr><td>Does main get blocked if we never call get()?</td><td>No — "Main ended" printed immediately in the demo; the tasks ran in the background.</td></tr>
+<tr><td>What fixes the blocking problem of Future?</td><td>CompletableFuture — introduced by Java for exactly this reason; covered in an upcoming class.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>💼 Likely Interview Questions From This Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What is Future?</td><td>A handle to the result of an asynchronous task submitted via submit(); you read it with get(), which blocks the calling thread until the result is ready.</td></tr>
+<tr><td>What does it mean that Future.get() is blocking?</td><td>The thread that calls get() is paused until the task finishes and returns a result, so it can't do other work in the meantime.</td></tr>
+<tr><td>Why was CompletableFuture introduced?</td><td>Because Future gives the result but blocks while waiting for it — CompletableFuture addresses that limitation.</td></tr>
+<tr><td>Name the three common thread pools and when to use each.</td><td>Fixed (you decide the thread count), Cached/dynamic (pool decides based on load — good for many small, quick tasks), Single (exactly one thread does all the work).</td></tr>
+<tr><td>When is a cached thread pool suitable?</td><td>Small, quick tasks in large volume where you can't predict how many threads you need — e.g. emailing 10,000+ customers.</td></tr>
+<tr><td>What goes wrong with a cached pool and slow tasks?</td><td>Busy threads can't be reused, so it keeps launching new threads for each arriving task — more threads than necessary.</td></tr>
+<tr><td>How do you decide the size of a fixed pool?</td><td>No fixed formula — consider CPU/system limits, task criticality, and required speed; start small and tune based on observed behavior.</td></tr>
+<tr><td>Tiny approach vs fat approach?</td><td>Tiny: start small, observe, adjust. Fat: blindly assign a large number — leaves many threads idle and wasteful.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Callable returns a result (via Future); Runnable doesn't give the caller anything.</li>
+<li>Future.get() blocks the calling thread until the result arrives — getting a result isn't free.</li>
+<li>Reading the result is what blocks; submitting alone does not (main ended immediately without get()).</li>
+<li>Calling get() inside the submission loop serializes your work — consider submitting everything first, then collecting results.</li>
+<li>Fixed = you pick the count; Cached = dynamic, grows with load; Single = exactly one thread.</li>
+<li>A cached pool reuses idle threads; busy (e.g. sleeping) threads can't be reused, so it launches more.</li>
+<li>Sizing a pool is an estimate-and-observe exercise, not a formula — start tiny, don't go fat.</li>
+<li>Print thread names and put plenty of print statements when learning concurrency — it makes the flow visible.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Write the email Callable yourself (without AI), submit it, and read the Future — instructor's explicit homework: "Callable, Future — understand the blocking."</li>
+<li>Run it twice: once with future.get() in the loop and once without, and compare when "Main ended" prints.</li>
+<li>Try the improved version (collect Futures in a list, then call get()) and compare total run time.</li>
+<li>Play with the different pools — second part of the homework. Reproduce the cached-pool experiment with and without sleep and compare the number of distinct threads.</li>
+<li>Try the single-thread pool and confirm one thread does all the work.</li>
+<li>Be ready to explain "What is Future?" out loud.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Class:</b> Executor Framework, ExecutorService, Callable vs Runnable, execute() vs submit(), the task queue and thread reuse</li>
+<li><b>Upcoming Topics:</b> CompletableFuture (to solve Future's blocking problem), and — per an earlier remark — Maven and other tools after threads</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Section headings, grouping under labeled cards, the pool comparison table, and formatting/styling. Content comes from your uploaded transcript; because the audio transcript was garbled and the instructor's live code isn't visible, the code samples are reconstructed from his spoken explanation. Every place where I added something the class didn't say is marked with a yellow dashed box (the submit-first-then-collect improvement, get(timeout), cached-pool unboundedness and the 60-second idle timeout, single-thread ordering, and the ≈100-thread arithmetic). The long attendance/motivation talk at the start was condensed to one card.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - JAR Files, Dependencies & Why Maven</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:32px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul,ol{padding-left:22px;}
+li{margin-bottom:8px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:14.5px;}
+code{font-size:14.5px;}
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:14px;}
+th{background:#0077ff;color:white;padding:10px;text-align:left;}
+td{padding:10px;border:1px solid #ddd;vertical-align:top;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:16px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.problem{background:#fff0f0;border-left:6px solid #e05a5a;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.problem b{color:#e05a5a;}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:14px 0;font-family:monospace;font-size:12.5px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:8px 12px;border-radius:8px;text-align:center;}
+.fstep.jar{background:#1f2f4a;color:#8fc4ff;}
+.fstep.warn{background:#3a2a2a;color:#ff9a76;}
+.farrow{color:#888;font-size:16px;}
+.tree{background:#1e1e2f;color:#d4d4f7;padding:16px 22px;border-radius:10px;font-family:monospace;font-size:13.5px;line-height:1.9;margin:14px 0;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>JAR Files, Dependencies &amp; Why We Need Maven</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Why JAR files exist — bundling compiled classes</li>
+<li>The ZIP analogy; JAR vs WAR</li>
+<li>Normal JAR vs Runnable JAR</li>
+<li>JAR versioning (clothing-1.0.jar, payment-1.2.jar)</li>
+<li>Inspecting a JAR from the command line: <code>jar -tvf</code> and <code>jar -xvf</code></li>
+<li>The class-not-found problem and how to troubleshoot it</li>
+<li>A JAR as a dependency — the Order Management + Payment Service example</li>
+<li>Creating the Payment JAR and adding it in Eclipse (Build Path)</li>
+<li>Add JAR vs Add External JAR</li>
+<li>Real-world dependencies — email, JSON, logging, database libraries</li>
+<li>The problem with manually managed local JAR paths</li>
+<li>When a service changes: a new JAR version and updating the consumer</li>
+<li>Introducing Maven as the solution — and the install-and-build exercise</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>The Starting Point: Source Code → .class Files</b>
+<p>As developers we write code to requirements, and the source is kept in a repository (GitHub, Bitbucket, CVS, SVN, or another source-control system). After development the source is <b>compiled into .class files</b>. A real application, module, or service can have <b>hundreds or even thousands</b> of compiled class files.</p>
+</div>
+
+<div class="card">
+<b>The Need: Services Depend on Each Other</b>
+<p>The class discussed an architecture with an <b>Order Service</b>, a <b>Payment Service</b>, and a <b>Delivery Service</b> — developed by different developers or teams, but interconnected. The Order Service places an order, the Payment Service confirms payment, the Delivery Service handles delivery, and the Order Service may need functionality from the other two.</p>
+<p style="margin-top:8px;">A service <b>cannot simply ask another developer for the entire source code and copy everything into its project.</b> Instead, the service compiles its code and <b>bundles the compiled classes into a JAR</b>.</p>
+</div>
+
+<div class="card">
+<b>What Is a JAR?</b>
+<p><b>JAR = Java Archive</b> — a bundle containing compiled Java classes plus related metadata/resources. If a module has 1,000 class files, managing 1,000 separate files is inconvenient; bundle them into one JAR and hand over that single file.</p>
+</div>
+
+<div class="card">
+<b>The ZIP Analogy</b>
+<p>If you need to send 20–25 documents, you don't send each separately — you put them in one ZIP file. Likewise: <b>compile the source → bundle the classes into a JAR → distribute the JAR</b>. The consumer uses the single JAR and accesses the classes inside it. A JAR can hold a few classes, hundreds, or thousands.</p>
+<div class="flow">
+<div class="fstep">Source code</div><div class="farrow">→</div>
+<div class="fstep">Compile (.class files)</div><div class="farrow">→</div>
+<div class="fstep jar">Bundle into a JAR</div><div class="farrow">→</div>
+<div class="fstep">Distribute / deploy the JAR</div>
+</div>
+</div>
+
+<div class="card">
+<b>JAR vs WAR</b>
+<table>
+<tr><th>JAR</th><th>WAR</th></tr>
+<tr><td>Java Archive</td><td>Web Application Archive</td></tr>
+<tr><td>The focus of this session — libraries and dependencies</td><td>Mentioned for web applications; not covered further in this class</td></tr>
+</table>
+</div>
+
+<div class="card">
+<b>Normal JAR vs Runnable JAR</b>
+<table>
+<tr><th>Normal JAR</th><th>Runnable JAR</th></tr>
+<tr><td>Not every JAR has to be executable; used mainly as a <b>library/dependency</b></td><td>A JAR from which the application can be <b>started</b> — it has an application entry point, such as a <b>main method</b></td></tr>
+</table>
+<p style="margin-top:8px;">The instructor created a JAR from Eclipse: <b>Export → JAR / Runnable JAR → choose the output location → give it a name/version.</b></p>
+</div>
+
+<div class="card">
+<b>Versioning JAR Files</b>
+<p>Version numbers track changes to the packaged code: <code>clothing-1.0.jar</code>; after a code change, <code>clothing-1.1.jar</code>. The same idea applies to services: <code>payment-1.2.jar</code>, <code>payment-1.3.jar</code>. When a service's implementation changes, a new JAR version is generated and the consuming project updates its dependency.</p>
+</div>
+
+<div class="card">
+<b>Looking Inside a JAR From the Command Line</b>
+<table>
+<tr><th>Command</th><th>What it does</th></tr>
+<tr><td><code>jar -tvf &lt;file&gt;.jar</code></td><td>Lists the files/classes inside the JAR — use it to verify what is actually packaged</td></tr>
+<tr><td><code>jar -xvf &lt;file&gt;.jar</code></td><td>Extracts the JAR's contents so the packaged classes/resources can be inspected</td></tr>
+</table>
+<p style="margin-top:8px;">Handy for checking whether a particular class is really present in a JAR.</p>
+</div>
+
+<div class="problem">
+<b>The Class-Not-Found Problem</b>
+<p style="margin-top:6px;">A common failure, including <b>NoClassDefFoundError</b>. Example: a project tries to use an Employee Management class, but that class isn't in the JAR being used — the application fails with a class-not-found-related error. <b>The key lesson: a dependency JAR must actually contain the classes the consuming application needs.</b></p>
+<p style="margin-top:8px;"><b>Troubleshooting approach from class:</b></p>
+<ol>
+<li>Check which JAR is being used.</li>
+<li>Inspect the JAR's contents.</li>
+<li>Use <code>jar -tvf</code> to see whether the required class is present.</li>
+<li>Check whether it's the latest version of the JAR.</li>
+<li>Check with the developer/team that supplied the JAR.</li>
+<li>Verify whether the class was removed, renamed, or changed between versions.</li>
+</ol>
+</div>
+
+<div class="card">
+<b>A JAR as a Dependency — the Payment Service Example</b>
+<div class="flow">
+<div class="fstep">Payment Service</div><div class="farrow">creates →</div>
+<div class="fstep jar">payment-1.2.jar</div><div class="farrow">used as a dependency by →</div>
+<div class="fstep">Order Management</div>
+</div>
+<p>Order Management needs Payment Service functionality. Instead of copying Payment Service's source into Order Management, Payment Service is packaged as a JAR and the JAR is added as a <b>dependency</b>. Order Management can then create Payment Service objects and call its methods. Because Payment Service is a separate project, its classes are <b>not automatically visible</b> inside Order Management.</p>
+<ol>
+<li>Customer places an order.</li>
+<li>Order Management processes it.</li>
+<li>Order Management needs to confirm payment.</li>
+<li>Payment Service provides the payment functionality.</li>
+<li>Order Management calls Payment Service.</li>
+</ol>
+<p style="margin-top:8px;">The Payment Service class in the demo was deliberately simple — the goal was to show JAR creation and dependency management, not real payment logic.</p>
+</div>
+
+<div class="card">
+<b>Adding the JAR in Eclipse</b>
+<p>A possible structure:</p>
+<div class="tree">
+Order Management<br>
+├── src<br>
+└── lib<br>
+&nbsp;&nbsp;&nbsp;&nbsp;└── payment-1.2.jar
+</div>
+<div class="hot">
+<b>⚠️ Putting a JAR in lib is not enough.</b> Simply dropping it into a lib folder does <b>not</b> mean the project uses it. It must be added to the project's <b>build path / classpath</b> as a dependency.
+</div>
+<div class="flow">
+<div class="fstep">Order Management</div><div class="farrow">→</div>
+<div class="fstep">Right-click / Properties</div><div class="farrow">→</div>
+<div class="fstep">Build Path</div><div class="farrow">→</div>
+<div class="fstep">Libraries</div><div class="farrow">→</div>
+<div class="fstep jar">Add JAR / Add External JAR</div>
+</div>
+<p>After this, Order Management can use classes from Payment Service.</p>
+</div>
+
+<div class="card">
+<b>Add JAR vs Add External JAR</b>
+<table>
+<tr><th>Add JAR</th><th>Add External JAR</th></tr>
+<tr><td>The JAR is located <b>inside the project</b> (e.g. in its lib folder)</td><td>The JAR is stored <b>outside the project</b> — elsewhere on the computer / hard drive</td></tr>
+</table>
+<p style="margin-top:8px;">The point either way: the IDE must know the JAR is a dependency and include it in the build path/classpath.</p>
+</div>
+
+<div class="card">
+<b>Real-World Dependencies</b>
+<p>Developers don't implement every feature from scratch: sending email, JSON parsing, converting objects to JSON and back, other reusable functionality. Someone has probably already built it and packaged it as a library/JAR — so you use it as a dependency instead of rewriting it. A project may depend on a payment service, mail APIs, JSON libraries, database libraries, logging libraries, other internal services, and other third-party libraries — in companies, <b>hundreds of JARs</b>.</p>
+</div>
+
+<div class="problem">
+<b>The Problem With Manually Managed JARs</b>
+<ul style="margin-top:8px;">
+<li>Manually managing hundreds of JAR files becomes difficult.</li>
+<li>Suppose <code>payment.jar</code> sits at a specific location on your laptop — the project works <b>on your machine</b> because the JAR is at that local path.</li>
+<li>You push the source to GitHub. <b>The local external-JAR path does not travel with the source code.</b></li>
+<li>Another developer clones the project: the code is there, but the JAR may not exist at the same path — <b>the dependency breaks</b>.</li>
+</ul>
+<p style="margin-top:8px;">This is one of the problems <b>Maven</b> is meant to solve.</p>
+</div>
+
+<div class="card">
+<b>When a Service Changes — a New JAR Is Required</b>
+<p>Question from class: if Payment Service changes, do we need a new JAR? <b>Yes</b> — if the consumer uses the packaged JAR, the changed code must be packaged again into a new version.</p>
+<div class="flow">
+<div class="fstep">Payment Service changes</div><div class="farrow">→</div>
+<div class="fstep jar">Create new JAR</div><div class="farrow">→</div>
+<div class="fstep jar">payment-1.3.jar</div><div class="farrow">→</div>
+<div class="fstep warn">Replace old payment-1.2.jar</div><div class="farrow">→</div>
+<div class="fstep">Update Order Management dependency</div><div class="farrow">→</div>
+<div class="fstep">Build &amp; test Order Management</div>
+</div>
+<p><b>Example:</b> if a new method <code>checkStatus()</code> exists only in <code>payment-1.3.jar</code>, Order Management won't see it while it still uses <code>payment-1.2.jar</code>. <b>The consumer must use the correct version of the provider's packaged artifact.</b></p>
+</div>
+
+<div class="card">
+<b>Deployment — The Simplified Idea</b>
+<p>Source code → compile → create/package a JAR → copy/deploy the JAR to the server. The instructor gave this as a simplified view; real production deployment is much more involved.</p>
+</div>
+
+<div class="card">
+<b>Maven — Introduced, Not Yet Taught</b>
+<p>Maven was introduced as the answer to dependency management: instead of arbitrary local JAR paths, it provides a <b>standard way to declare and manage dependencies</b> so the required libraries can be resolved. <b>The detailed mechanics were reserved for the next session.</b></p>
+<p style="margin-top:8px;"><b>The instruction for now:</b></p>
+<ol>
+<li>Install Maven following the provided document, completely.</li>
+<li>Create a sample <b>Hello World Maven project</b>.</li>
+<li><b>Build</b> it successfully.</li>
+<li>Confirm Maven is actually working.</li>
+<li>Only then move on to Maven concepts.</li>
+</ol>
+<div class="hot">
+<b>Checking <code>mvn -version</code> and saying "Maven is installed" is NOT the task.</b> The instructor asked for a working sample project that builds successfully.
+</div>
+</div>
+
+<div class="flag">
+<b>⚠️ Standard Details Added (Not Taught in This Class)</b>
+<ul style="margin-top:8px;">
+<li><b>Creating a JAR by command:</b> besides Eclipse's Export, the JDK's jar tool can create one, e.g. <code>jar cvf payment-1.2.jar -C bin .</code> (c = create). The class only showed Export and the -tvf / -xvf commands.</li>
+<li><b>Runnable JAR specifics:</b> a runnable JAR's manifest names the entry point (<code>Main-Class</code>), and it's launched with <code>java -jar app.jar</code>. The class only said a runnable JAR needs an entry point like main().</li>
+<li><b>JARs are ZIP-format files</b> — that's why the ZIP comparison fits, and why zip tools can open them. (The class used ZIP purely as a bundling analogy.)</li>
+<li><b>NoClassDefFoundError vs ClassNotFoundException:</b> NoClassDefFoundError usually means a class was available when the code was compiled but is missing at runtime; ClassNotFoundException occurs when a class is loaded by name and can't be found. The class treated them together as "class-not-found related" errors.</li>
+<li><b>Build path ≈ classpath:</b> Eclipse's Build Path is how the IDE builds the classpath for your project; the class used the two terms side by side.</li>
+<li><b>Maven preview:</b> Maven dependencies are normally declared in a <code>pom.xml</code> and downloaded from a repository — that's the next session's content, not yet taught.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>💻 Examples &amp; Commands</h2>
+
+<div class="flag">
+<b>Note:</b> the instructor's demo code wasn't visible in the transcript and he said the example was intentionally simple. The Java below is <b>illustrative</b> — it shows the idea (two projects, one JAR between them), not his exact code.
+</div>
+
+<p><b>Inspecting and extracting a JAR:</b></p>
+<pre><code class="language-bash"># list what's inside (verify a class is really packaged)
+jar -tvf payment-1.2.jar
+
+# extract the contents so you can look at the classes/resources
+jar -xvf payment-1.2.jar</code></pre>
+
+<p><b>Project 2 — Payment Service (becomes payment-1.2.jar):</b></p>
+<pre><code class="language-java">package com.kodewala.payment;
+
+public class PaymentService {
+
+    public boolean makePayment(int orderId, double amount) {
+        System.out.println("Payment of " + amount + " received for order " + orderId);
+        return true;
+    }
+}</code></pre>
+
+<p><b>Project 1 — Order Management uses it (after the JAR is on the build path):</b></p>
+<pre><code class="language-java">package com.kodewala.order;
+
+import com.kodewala.payment.PaymentService;   // visible only because payment-1.2.jar is a dependency
+
+public class OrderManagement {
+    public static void main(String[] args) {
+        PaymentService payment = new PaymentService();
+        boolean paid = payment.makePayment(101, 4999.0);
+        System.out.println(paid ? "Order confirmed" : "Payment failed");
+    }
+}</code></pre>
+
+<p><b>After the service changes — payment-1.3.jar adds a method:</b></p>
+<pre><code class="language-java">// Added in payment-1.3.jar ONLY:
+public String checkStatus(int orderId) {
+    return "SUCCESS";
+}
+
+// Order Management can call payment.checkStatus(101) only after it
+// replaces payment-1.2.jar with payment-1.3.jar on its build path.</code></pre>
+</div>
+
+<div class="section">
+<h2>⚖️ The Gap Maven Fills (Preview)</h2>
+<table>
+<tr><th>Manual JARs (today)</th><th>Why it hurts</th><th>What the instructor says Maven does</th></tr>
+<tr><td>JAR sits at a path on your laptop</td><td>Path doesn't travel with the code on GitHub — a cloned project breaks</td><td>Standard way to declare dependencies so libraries can be resolved, not tied to arbitrary local paths</td></tr>
+<tr><td>Hundreds of JARs to track by hand</td><td>Hard to manage; easy to mismatch versions</td><td>Dependency management (details next session)</td></tr>
+<tr><td>Replace old JAR by hand when a service changes</td><td>Consumers can silently stay on an old version</td><td>Reserved for the next topic</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>If Payment Service changes, do we need a new JAR?</td><td>Yes — repackage it as a new version (payment-1.2 → 1.3), then replace the old dependency in the consumer, update the build path, and build/test again.</td></tr>
+<tr><td>What's the difference between Add JAR and Add External JAR?</td><td>Add JAR: the JAR is inside the project. Add External JAR: it's stored outside the project, e.g. elsewhere on the hard drive.</td></tr>
+<tr><td>Is putting the JAR in a lib folder enough?</td><td>No — it must also be added to the build path/classpath.</td></tr>
+<tr><td>Why does a dependency break when a project is cloned from GitHub?</td><td>The code is on GitHub but the externally-stored JAR isn't — its local path doesn't travel with the source.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>💼 Likely Interview Questions From This Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What is a JAR and why do we use it?</td><td>Java Archive — a bundle of compiled classes (plus metadata/resources) so many class files can be distributed and used as one file instead of copying source code.</td></tr>
+<tr><td>What does a JAR contain?</td><td>Compiled .class files and related metadata/resources — a handful to thousands of classes.</td></tr>
+<tr><td>JAR vs WAR?</td><td>JAR = Java Archive; WAR = Web Application Archive (used for web applications).</td></tr>
+<tr><td>Normal JAR vs Runnable JAR?</td><td>A normal JAR is used as a library/dependency; a runnable JAR has an entry point (main) and can be launched as an application.</td></tr>
+<tr><td>What is a dependency? How does one project use another's functionality?</td><td>A project that needs another's classes depends on it — the provider packages its code as a JAR and the consumer adds it to its build path, then creates objects and calls methods.</td></tr>
+<tr><td>How do you see what's inside a JAR? How do you extract it?</td><td><code>jar -tvf file.jar</code> to list; <code>jar -xvf file.jar</code> to extract.</td></tr>
+<tr><td>You get NoClassDefFoundError / a class-not-found error — how do you troubleshoot?</td><td>Check which JAR is used → list its contents with jar -tvf → confirm the class is there → check it's the latest version → ask the supplying team → check if the class was removed/renamed between versions.</td></tr>
+<tr><td>Why do JARs have versions?</td><td>To track changes (clothing-1.0 → 1.1); consumers update to the new version when the provider changes.</td></tr>
+<tr><td>Why might a new JAR be needed after a code change?</td><td>The consumer only sees what's inside the JAR it uses — e.g. a new checkStatus() method exists only in payment-1.3.jar.</td></tr>
+<tr><td>Add JAR vs Add External JAR in Eclipse?</td><td>Inside the project vs somewhere else on the computer; either way the JAR must be on the build path.</td></tr>
+<tr><td>What are the problems with manually managed external JARs?</td><td>Local paths don't travel with source on GitHub, hundreds of JARs are hard to manage, and version updates are manual.</td></tr>
+<tr><td>Why is Maven needed?</td><td>To manage dependencies in a standard way instead of relying on arbitrary local JAR paths.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Compiled classes → bundled into a JAR → used by other projects as a dependency.</li>
+<li>A JAR in the lib folder does nothing until it's on the build path/classpath.</li>
+<li>Add JAR = inside the project; Add External JAR = outside it.</li>
+<li>Use <code>jar -tvf</code> first whenever a class can't be found.</li>
+<li>The consumer only sees what's in the JAR version it uses — update it when the provider changes.</li>
+<li>Local JAR paths don't travel via GitHub — a classic reason projects "work on my machine" only.</li>
+<li>Real projects have hundreds of dependencies — hence the need for Maven.</li>
+<li>Don't stop at <code>mvn -version</code> — build a Hello World Maven project.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li><b>Install Maven</b> following the provided document, <b>completely</b>.</li>
+<li><b>Create a Hello World Maven project and build it successfully</b> — confirm Maven works before the next class.</li>
+<li>Recreate the demo: two Eclipse projects (Order Management, Payment Service); export Payment as <code>payment-1.2.jar</code>.</li>
+<li>Add it to Order Management via Build Path → Libraries (try both Add JAR and Add External JAR) and call it.</li>
+<li>Run <code>jar -tvf</code> and <code>jar -xvf</code> on your JAR and look at what comes out.</li>
+<li>Add a new method in Payment, export <code>payment-1.3.jar</code>, swap it in, and see Order Management pick up the method.</li>
+<li>Deliberately remove the JAR from the build path and read the error you get.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Earlier:</b> the Software Engineer workflow session — "build" meant compiling the source and creating a JAR, with Maven promised later</li>
+<li><b>Next:</b> Maven concepts and dependency management (the instructor reserved the details for the next session)</li>
+<li><b>Later in the course:</b> the project/Spring work depends on managing many libraries this way</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Headings, cards, flow diagrams, the Maven-gap table, and formatting were added. The content comes from your cleaned source file, which already normalized the speech-recognition errors; I kept the instructor's simplified level and put everything beyond it in the yellow dashed box (jar creation command, manifest/<code>java -jar</code>, ZIP format, NoClassDefFoundError vs ClassNotFoundException, build path vs classpath, Maven's pom.xml). The Java samples are illustrative reconstructions, since the demo code wasn't in the transcript.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-bash.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - CompletableFuture</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul,ol{padding-left:22px;}
+li{margin-bottom:8px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:14.5px;}
+code{font-size:14.5px;}
+table{width:100%;border-collapse:collapse;margin-top:16px;font-size:14px;}
+th{background:#0077ff;color:white;padding:10px;text-align:left;}
+td{padding:10px;border:1px solid #ddd;vertical-align:top;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:16px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:14px 0;font-family:monospace;font-size:12.5px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:8px 12px;border-radius:8px;text-align:center;}
+.fstep.thr{background:#1f2f4a;color:#8fc4ff;}
+.fstep.bad{background:#3a2a2a;color:#ff9a76;}
+.farrow{color:#888;font-size:16px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+@media(max-width:768px){.section{padding:20px;}.header{padding:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>CompletableFuture — Chaining Async Work Without Blocking</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: Future's advantage (you get the result) and its problem (get() blocks)</li>
+<li>CompletableFuture — introduced in Java 8; what it allows</li>
+<li>supplyAsync() — start async work that returns a value</li>
+<li>Who runs the task: the ForkJoinPool common pool (and supplying your own pool)</li>
+<li>thenApply() — transforming a result without blocking</li>
+<li>thenApply vs thenApplyAsync — which thread does the work</li>
+<li>Future vs CompletableFuture — the fundamental difference</li>
+<li>thenCombine() — combining two independent async results</li>
+<li>get() vs join()</li>
+<li>thenRun() and the Consumer-style method — when there's nothing to return</li>
+<li>The functional interfaces underneath: Supplier, Function, BiFunction, Consumer</li>
+<li>thenCompose(), exceptionally(), handle() and the other 50+ methods — what to practice</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Recap: Future Gives the Result — But Blocks</b>
+<p>The advantage of <code>Future</code> is that we were able to get the result. The problem: <b>we were blocking the thread</b>. If you call <code>get()</code>, the current thread waits until the result arrives.</p>
+</div>
+
+<div class="card">
+<b>CompletableFuture — Java 8's Answer</b>
+<p><code>CompletableFuture</code> is a class introduced in <b>Java 1.8</b>. With it you can:</p>
+<ul>
+<li><b>Create a chain of operations</b> — combine many operations together.</li>
+<li>Let those operations <b>run independently</b> — you don't have to wait.</li>
+<li>Work <b>asynchronously</b>.</li>
+<li>Still call <code>get()</code> <em>whenever the result is ready, if you want to</em>.</li>
+</ul>
+<p style="margin-top:8px;">The class provides <b>a lot of built-in methods</b> (more than 50, per the instructor) from which you assemble a chain that fits your requirement.</p>
+</div>
+
+<div class="card">
+<b>supplyAsync() — Start Work That Returns Something</b>
+<p>Simplest usage: <code>CompletableFuture.supplyAsync(...)</code>. <b>"Supply" means it just returns something and takes no input.</b> His example: supply the value 20, getting back a <code>CompletableFuture&lt;Integer&gt;</code>. <code>get()</code> on it is still blocking (he threw the checked exception out of main for the demo) and returned <b>20</b>. Writing a lambda body lets you put more code inside, e.g. printing the current thread's name.</p>
+</div>
+
+<div class="card">
+<b>Who Executes It? The ForkJoinPool Common Pool</b>
+<p>Printing the thread name showed the task ran on a worker thread that was <b>automatically picked from the existing ForkJoin common pool</b> (the name showed a worker number — "worker 9" in his run). <b>You don't have to decide how many threads you need.</b> If you have your own pool, you can <b>supply it as well</b>.</p>
+</div>
+
+<div class="card">
+<b>thenApply() — Transform the Result</b>
+<p>To perform an operation on the output of the first operation, chain <code>thenApply(...)</code>. Example: the first stage yields 20; <code>thenApply</code> multiplies it. The output shows the transformed value — and <b>no blocking was done here</b>. In the old Future style, to run another operation on a result you would get the result of one thread (blocked), then launch another operation, and so on.</p>
+</div>
+
+<div class="card">
+<b>thenApply vs thenApplyAsync — Same Thread or Worker Thread?</b>
+<p>He captured the current thread inside each stage:</p>
+<table>
+<tr><th>Method</th><th>Observed behavior</th></tr>
+<tr><td><code>thenApply</code></td><td>The <b>same worker thread</b> did the job — "only a single thread did the job"; effectively single-threaded for that chain (the only other thread printed was main).</td></tr>
+<tr><td><code>thenApplyAsync</code></td><td>A <b>worker thread from the pool</b> does the job — it may be a new worker or a reused one, but it is not guaranteed to be the same thread.</td></tr>
+</table>
+<p style="margin-top:8px;">His summary: <em>"There is no difference between sync versus async — sync uses the current thread, async uses a separate worker thread."</em> Another <code>thenApply</code> (e.g. multiply by 5) keeps the chain going, and the results come out correctly — it will decide which thread to use.</p>
+</div>
+
+<div class="flow">
+<div class="fstep">supplyAsync(() → 20)</div><div class="farrow">→</div>
+<div class="fstep">thenApply(n → n × …)</div><div class="farrow">→</div>
+<div class="fstep">thenApply(n → n × …)</div><div class="farrow">→</div>
+<div class="fstep bad">get() / join() — only if you want the final value</div>
+</div>
+<p style="font-size:13px;color:#777;">The stages are chained and run asynchronously; nothing in between blocks the calling thread.</p>
+
+<div class="hot">
+<b>🔥 The Fundamental Difference: Future vs CompletableFuture</b>
+<p style="margin-top:6px;">Many people get confused: <em>"Sir, get() is blocking here and blocking there — so what's the difference?"</em> His answer:</p>
+<table>
+<tr><th>Future</th><th>CompletableFuture</th></tr>
+<tr><td>Gives you the result, but <b>blocking</b></td><td>Asynchronous — you can <b>create a chain of operations</b>, so it is effectively <b>non-blocking</b></td></tr>
+<tr><td>Limited options — you can basically just <code>get</code></td><td>A rich set of methods to chain, combine, transform and handle errors</td></tr>
+<tr><td>To run a second step: launch a thread, get (block), pass the result to another thread, get again</td><td>Chain the steps; "you don't have to wait"</td></tr>
+</table>
+<p style="margin-top:8px;">You only need <code>get()</code> if you actually want the final value at the end.</p>
+</div>
+
+<div class="card">
+<b>thenCombine() — Merge Two Independent Results</b>
+<p>Scenario: two separate CompletableFutures (CF1 and CF2), each producing an Integer, and you want to <b>combine the result of this as well as the result of that</b>. You call <code>cf1.thenCombine(cf2, ...)</code>, passing the second future and a function that takes <b>both results</b>; it returns a new <code>CompletableFuture&lt;Integer&gt;</code> holding the combined result. In his demo the two chains produced <b>200</b> and <b>300</b>, and the combined result was <b>500</b>. The same sync/async split applies: the plain version uses the current thread, the Async version a worker thread.</p>
+</div>
+
+<div class="card">
+<b>get() vs join()</b>
+<p>To read the combined result you can use <code>get()</code> or <code>join()</code>. They do the same work — <b>the only difference is the exception part: join() doesn't throw the checked exception</b>, so you don't need the extra exception handling that get() requires.</p>
+</div>
+
+<div class="card">
+<b>thenRun() — Nothing to Return</b>
+<p><code>thenRun</code> is <b>void</b> — it doesn't return anything. His demo: <code>supplyAsync</code> of 20, then <code>thenRun</code> printing something like a test message. Since nothing comes back, there's <b>no point in printing a result</b>; it simply runs after the previous stage completes.</p>
+</div>
+
+<div class="card">
+<b>The Consumer Style — Take the Result, Return Nothing</b>
+<p>He also described another family of method that takes a <b>Consumer</b> — it <b>consumes</b> the value (the <code>accept</code> method, or <code>andThen</code>) and returns nothing: <em>"this will just consume it."</em></p>
+</div>
+
+<div class="card">
+<b>Functional Interfaces Under the Hood — A Definite Interview Topic</b>
+<p><code>supplyAsync</code> takes a <b>Supplier</b> — a functional interface. Read functional interfaces and you'll see <b>Supplier, Consumer, Function, BiFunction</b> used internally throughout CompletableFuture's methods.</p>
+<table>
+<tr><th>Interface</th><th>What it does</th><th>Used by</th></tr>
+<tr><td><b>Supplier</b></td><td>Takes <b>no input</b>, just supplies/returns a value</td><td><code>supplyAsync</code></td></tr>
+<tr><td><b>Function</b> (A → B)</td><td>Takes an input of type A, applies some logic / transforms it, gives back type B</td><td><code>thenApply</code></td></tr>
+<tr><td><b>BiFunction</b></td><td>Takes <b>two inputs</b> and performs some operation</td><td><code>thenCombine</code></td></tr>
+<tr><td><b>Consumer</b></td><td>Takes an input and <b>consumes</b> it — returns nothing (accept method)</td><td>the "consume the result" method</td></tr>
+</table>
+<p style="margin-top:8px;"><b>In the interview they will ask:</b> "What functional interfaces do you know? What is a Supplier, a Consumer, a Function, a BiFunction?" — and then the common CompletableFuture operations you did in class.</p>
+</div>
+
+<div class="card">
+<b>thenCompose(), exceptionally(), handle() — and the Other 50+</b>
+<ul>
+<li><b>thenCompose</b> — he described it as making sure the existing task completes first, then performing the next.</li>
+<li><b>exceptionally</b> — <b>handles the exception</b>: if you want to handle an exception in CompletableFuture, you use <code>exceptionally</code>.</li>
+<li><b>handle</b> — lets you handle <b>both scenarios, error versus success</b>.</li>
+<li>Others he named in passing: run-after / run-before style methods, "complete any of," cancel, complete.</li>
+</ul>
+</div>
+
+<div class="hot">
+<b>🔥 How to Study This (Instructor's Direction)</b>
+<ul style="margin-top:8px;">
+<li><b>Don't try to cover everything</b> — "that is not our job." There are more than 50 methods; read the comment on a method and use it when a requirement needs it.</li>
+<li>Same as the Collections framework: you didn't learn every method, only the critical ones, but you know you can pick up others when needed.</li>
+<li><b>Try 5 to 10 methods</b> and <b>stick to the basics</b>.</li>
+<li>But <b>know the domain</b> — <em>why</em> CompletableFuture is needed: <b>we want to do asynchronous operations</b>.</li>
+<li>Know the <b>three or four functional interfaces</b>: Supplier, Consumer, Function, BiFunction.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>⚠️ Clarifications Added (Not Stated This Way in Class)</b>
+<ul style="margin-top:8px;">
+<li><b>thenApply's thread, precisely:</b> plain <code>thenApply</code> runs on the thread that completed the previous stage — or on the calling thread if that stage had already finished. In his demo that was the same pool worker. <code>thenApplyAsync</code> submits the step to the pool (the common ForkJoinPool by default, or an Executor you pass in).</li>
+<li><b>join() exception:</b> join() skips the <i>checked</i> exceptions (InterruptedException, ExecutionException) that get() declares; if a stage failed, join() throws an <i>unchecked</i> CompletionException instead.</li>
+<li><b>thenCompose</b> is normally used when the next step <i>itself returns a CompletableFuture</i> (a dependent async call) — it flattens the nesting, much like flatMap. His description ("make sure the existing task completes, then perform the next") is a loose version of that.</li>
+<li><b>Consumer-style method name:</b> the transcript doesn't name it; the standard one is <code>thenAccept</code>.</li>
+<li><b>Keep the program alive:</b> common-pool worker threads are daemon threads, so if main finishes before the async work does, the JVM may exit first. In demos, that's why main calls get()/join() (or waits some other way) before ending.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the instructor typed the demos live and the audio is garbled, so the code below is <b>reconstructed from his spoken walkthrough</b>. The numbers 200 / 300 / 500 are the results he stated; the exact multipliers in each stage are my illustration.
+</div>
+
+<p><b>supplyAsync — and which thread ran it:</b></p>
+<pre><code class="language-java">import java.util.concurrent.CompletableFuture;
+
+public class Driver {
+    public static void main(String[] args) throws Exception {
+        CompletableFuture&lt;Integer&gt; cf = CompletableFuture.supplyAsync(() -&gt; {
+            System.out.println(Thread.currentThread().getName());
+            // prints something like: ForkJoinPool.commonPool-worker-9
+            return 20;
+        });
+
+        System.out.println(cf.get());   // 20 — get() is still a blocking call
+    }
+}</code></pre>
+
+<p><b>Supplying your own pool:</b></p>
+<pre><code class="language-java">ExecutorService pool = Executors.newFixedThreadPool(3);
+
+CompletableFuture&lt;Integer&gt; cf =
+        CompletableFuture.supplyAsync(() -&gt; 20, pool);   // runs on YOUR pool, not the common pool</code></pre>
+
+<p><b>A chain with thenApply — no blocking between steps:</b></p>
+<pre><code class="language-java">CompletableFuture&lt;Integer&gt; result = CompletableFuture
+        .supplyAsync(() -&gt; 20)          // Supplier: no input, returns 20
+        .thenApply(n -&gt; n * 10)         // Function: transform the result
+        .thenApply(n -&gt; n * 5);         // another transformation, chained
+
+System.out.println(result.get());       // only block here, because we want the final value</code></pre>
+
+<p><b>thenApply vs thenApplyAsync — compare the thread names:</b></p>
+<pre><code class="language-java">CompletableFuture.supplyAsync(() -&gt; {
+        System.out.println("supply  : " + Thread.currentThread().getName());
+        return 20;
+    })
+    .thenApply(n -&gt; {
+        System.out.println("apply   : " + Thread.currentThread().getName()); // same worker, as seen in class
+        return n * 10;
+    })
+    .thenApplyAsync(n -&gt; {
+        System.out.println("applyAsync: " + Thread.currentThread().getName()); // a pool worker (may differ)
+        return n * 5;
+    })
+    .join();</code></pre>
+
+<p><b>thenCombine — merge two independent async results (200 + 300 = 500):</b></p>
+<pre><code class="language-java">CompletableFuture&lt;Integer&gt; cf1 = CompletableFuture
+        .supplyAsync(() -&gt; 20)
+        .thenApply(n -&gt; n * 10);        // 200
+
+CompletableFuture&lt;Integer&gt; cf2 = CompletableFuture
+        .supplyAsync(() -&gt; 30)
+        .thenApply(n -&gt; n * 10);        // 300
+
+CompletableFuture&lt;Integer&gt; combined =
+        cf1.thenCombine(cf2, (a, b) -&gt; a + b);   // BiFunction: two inputs
+
+System.out.println(combined.get());     // 500
+System.out.println(combined.join());    // 500 — join() doesn't force you to handle checked exceptions</code></pre>
+
+<p><b>thenRun and the Consumer style — nothing to return:</b></p>
+<pre><code class="language-java">// thenRun: no input, returns void — just runs after the previous stage completes
+CompletableFuture.supplyAsync(() -&gt; 20)
+        .thenRun(() -&gt; System.out.println("Completed"))
+        .join();
+
+// Consumer-style (thenAccept): receives the result, returns nothing
+CompletableFuture.supplyAsync(() -&gt; 20)
+        .thenAccept(n -&gt; System.out.println("Got " + n))
+        .join();</code></pre>
+
+<p><b>Error handling — exceptionally and handle:</b></p>
+<pre><code class="language-java">// exceptionally: only runs if something failed
+CompletableFuture&lt;Integer&gt; safe = CompletableFuture
+        .supplyAsync(() -&gt; {
+            if (true) throw new RuntimeException("boom");
+            return 20;
+        })
+        .exceptionally(ex -&gt; -1);        // fallback value
+
+// handle: runs for BOTH success and failure
+CompletableFuture&lt;Integer&gt; either = CompletableFuture
+        .supplyAsync(() -&gt; 20)
+        .handle((value, ex) -&gt; ex == null ? value : -1);</code></pre>
+
+<p><b>The functional interfaces, written out by hand:</b></p>
+<pre><code class="language-java">Supplier&lt;Integer&gt;           supplier = () -&gt; 20;                  // no input → output
+Function&lt;Integer, Integer&gt;  function = n -&gt; n * 10;               // A → B
+BiFunction&lt;Integer, Integer, Integer&gt; bi = (a, b) -&gt; a + b;       // (A, B) → C
+Consumer&lt;Integer&gt;           consumer = n -&gt; System.out.println(n); // input → nothing</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>"get() is blocking in both Future and CompletableFuture — so what's the difference?"</td><td>With Future you only have get(); with CompletableFuture you can build a chain of asynchronous operations, so intermediate steps don't block. You call get() only if you want the final result.</td></tr>
+<tr><td>Who executes a supplyAsync task?</td><td>A worker from the ForkJoin common pool, picked automatically — you don't decide the thread count. You can also pass your own pool.</td></tr>
+<tr><td>Sync vs async variants (thenApply vs thenApplyAsync)?</td><td>Sync uses the current thread; async uses a worker thread from the pool.</td></tr>
+<tr><td>get() vs join()?</td><td>Same work; join() doesn't throw the (checked) exception, so the only difference is exception handling.</td></tr>
+<tr><td>How many methods should I learn?</td><td>Not all 50+. Try 5–10 common ones, read the comments for the rest, and know why CompletableFuture exists.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>💼 Likely Interview Questions From This Class</h2>
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What is CompletableFuture and since when?</td><td>A class introduced in Java 8 that lets you run operations asynchronously and chain/combine them, without blocking.</td></tr>
+<tr><td>Why do we need CompletableFuture when Future exists?</td><td>Future gives the result but get() blocks and you have limited operations. CompletableFuture supports chains of async operations, so you needn't wait between steps.</td></tr>
+<tr><td>What is supplyAsync?</td><td>Starts an async task from a Supplier (no input, returns a value) on a worker thread — by default from the ForkJoin common pool — and returns a CompletableFuture.</td></tr>
+<tr><td>What does thenApply do?</td><td>Applies a Function to the previous stage's result, transforming it, without blocking.</td></tr>
+<tr><td>thenApply vs thenApplyAsync?</td><td>thenApply uses the current/same thread; thenApplyAsync uses a pool worker thread.</td></tr>
+<tr><td>How do you combine two CompletableFutures?</td><td>thenCombine — takes the other future and a BiFunction over both results.</td></tr>
+<tr><td>Difference between get() and join()?</td><td>join() doesn't throw the checked exception; otherwise they behave the same.</td></tr>
+<tr><td>How do you handle exceptions in CompletableFuture?</td><td>exceptionally for errors; handle for both success and error.</td></tr>
+<tr><td>What functional interfaces do you know?</td><td>Supplier (no input → output), Consumer (input → nothing), Function (A → B), BiFunction (two inputs → one output).</td></tr>
+<tr><td>What does thenRun do?</td><td>Runs a step after completion; takes nothing and returns void.</td></tr>
+<tr><td>Which thread pool does CompletableFuture use by default?</td><td>The ForkJoin common pool — and you can supply your own.</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>📌 Important Points / Common Mistakes</h2>
+<ul>
+<li>Future: result, but blocking and limited. CompletableFuture: chained, asynchronous, many methods.</li>
+<li>supplyAsync = no input, returns something; thenApply = transform; thenCombine = two results in; thenRun = void.</li>
+<li>Default executor is the ForkJoin common pool; you don't pick the number of threads, but you can supply your own pool.</li>
+<li>Plain (sync) variants use the current thread; Async variants use a pool worker.</li>
+<li>Calling get()/join() at the end blocks — fine when you need the final value, but don't call it between every step.</li>
+<li>join() avoids the checked-exception handling get() requires; behavior is otherwise the same.</li>
+<li>Know Supplier, Consumer, Function, BiFunction cold — interviewers ask them with these operations.</li>
+<li>Don't memorize 50+ methods; practice 5–10 and read the Javadoc for others.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<ul>
+<li>Write the supplyAsync demo and print the thread name — confirm it's a ForkJoinPool.commonPool worker.</li>
+<li>Build a chain with 2–3 thenApply calls; then switch one to thenApplyAsync and compare thread names.</li>
+<li>Create two futures and merge them with thenCombine; read the result with both get() and join().</li>
+<li>Try thenRun, the Consumer-style method, exceptionally, and handle (force an exception to see them work).</li>
+<li>Pass your own fixed thread pool into supplyAsync and confirm the thread names change.</li>
+<li>Write definitions of Supplier, Consumer, Function, and BiFunction in your own words, with an example each.</li>
+<li>Be ready to answer: "Why was CompletableFuture needed when we already had Future?"</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Class:</b> Callable &amp; Future — why Future.get() blocks, and the three thread pool types (this class is the direct fix for that blocking problem)</li>
+<li><b>Earlier topics it builds on:</b> lambda expressions and functional interfaces (Supplier/Consumer/Function), the Executor Framework and thread pools, the ForkJoin pool mentioned with parallel streams</li>
+<li><b>Upcoming:</b> not specified in this session — it ended with "keep on practicing"</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by ChatGPT (Optional)</h2>
+<div class="extra">
+Headings, grouping into cards, the Future-vs-CompletableFuture table, the functional-interface table, and formatting were added. Content comes from your uploaded transcript (a short, 27-minute session). Because the audio was heavily garbled — and the instructor's live code isn't visible — the code samples are reconstructed from his spoken walkthrough, and a few method names the audio mangled (e.g. "supply a sick" = supplyAsync, "then apply a seat/sink" = thenApply / thenApplyAsync, "complete any of" = anyOf-style) were interpreted from context. Yellow dashed boxes mark every clarification I added that the class didn't state (precise thread behavior, join()'s unchecked exception, thenCompose's usual meaning, the Consumer method name, and keeping main alive for async work).
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>

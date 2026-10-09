@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Executor Framework, Thread Pools, Callable &amp; Future</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.pill{display:inline-block;padding:1px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;}
+.pill.lec{background:#e3f2fd;color:#0066ff;}
+.pill.add{background:#fff3cd;color:#a67c00;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Executor Framework, Thread Pools, Runnable vs Callable &amp; Future</p>
+<p class="meta">Source: June 2026 offline class · Sep 29, 2026 · 57:03</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Why manual thread creation is a problem — and why the Executor Framework (Java 5) was introduced</li>
+<li>Executor, ExecutorService, thread pool, worker thread, task queue</li>
+<li>Fixed thread pool — the practical "2 threads + 4 tasks" example</li>
+<li>Why worker threads are reused and why tasks wait in a queue</li>
+<li>shutdown() — closing the executor when work is finished</li>
+<li>Runnable vs Callable — void run() vs a call() that returns a value</li>
+<li>The "10-second calculation" problem — how does the caller get an asynchronous result?</li>
+<li>Why Thread.sleep() and join() are not the answer</li>
+<li>Callable + Future — the standard Java solution</li>
+<li>Future.get() and its blocking behaviour</li>
+<li>execute() vs submit()</li>
+<li>Interview traps and likely follow-up questions</li>
+</ul>
+
+<div class="flag">
+<b>How to read these notes:</b> <b>Green-bordered cards</b> hold what the instructor taught (cleaned from the auto-transcript). <b>Yellow dashed boxes</b> hold clarifications I added that the lecture did <em>not</em> state — verify them with your instructor if in doubt. <b>Orange 🔥 boxes</b> are interview alerts. Garbled transcript words were <em>not</em> treated as Java API names; only standard Java terminology is used.
+</div>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Why Do We Need the Executor Framework?</b>
+<p>Creating threads manually causes two major problems:</p>
+<ol style="padding-left:20px;">
+<li>For a particular task, it is <b>difficult to estimate how many threads are required</b>.</li>
+<li>After a manually created thread finishes its task, <b>the thread terminates</b> instead of being reused.</li>
+</ol>
+<p>Java introduced the <b>Executor Framework in Java 5 (Java 1.5)</b> to address exactly these two problems.</p>
+</div>
+
+<div class="card">
+<b>The Main Idea — Submit Tasks, Don't Manage Threads</b>
+<ul style="margin-top:8px;">
+<li>The programmer <b>submits tasks</b> instead of manually managing every thread.</li>
+<li>A <b>thread pool</b> manages the <b>worker threads</b>.</li>
+<li>Worker threads can be <b>reused</b> for multiple tasks.</li>
+<li>Tasks that cannot execute immediately <b>wait in a queue</b>.</li>
+<li>The framework manages much of the <b>thread lifecycle and task scheduling</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>ExecutorService — The Interface You Use</b>
+<p><code>ExecutorService</code> is the interface commonly used to <b>submit and manage tasks</b>. Typical code:</p>
+<p style="margin-top:8px;"><code>ExecutorService service = Executors.newFixedThreadPool(5);</code></p>
+<p style="margin-top:8px;">When the work is finished, call <code>service.shutdown();</code>. If the ExecutorService is <b>not shut down</b> when it is no longer needed, its worker threads can <b>keep the executor alive</b>.</p>
+</div>
+
+<div class="card">
+<b>Example: 5 Worker Threads, 10 Tasks</b>
+<p>A fixed thread pool has 5 worker threads and 10 tasks are submitted:</p>
+<ul style="margin-top:8px;">
+<li>Up to <b>5 tasks</b> can execute concurrently.</li>
+<li>The remaining tasks <b>wait in the queue</b>.</li>
+<li>When a worker finishes, it <b>takes another waiting task</b>.</li>
+<li>The <b>same worker thread is reused</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Practical Example: 2 Worker Threads + 4 Tasks</b>
+<p>Create a fixed pool with <b>2 worker threads</b> and submit <b>4 tasks</b>.</p>
+<ul style="margin-top:8px;">
+<li><b>Task 1</b> and <b>Task 2</b> execute using the two workers.</li>
+<li><b>Task 3</b> and <b>Task 4</b> <b>wait in the work queue</b> while both workers are busy.</li>
+<li>When a worker finishes, it takes another queued task.</li>
+<li>The worker <b>does not terminate</b> after every task — it is <b>reused</b>.</li>
+</ul>
+<p style="margin-top:8px;">The executor therefore provides <b>thread reuse</b> and <b>automatic task distribution</b>. (See the diagram in the visual section below.)</p>
+</div>
+
+<div class="card">
+<b>Manual Thread vs Executor Worker</b>
+<div class="tw">
+<table>
+<tr><th>Aspect</th><th>Manual Thread</th><th>Executor Worker</th></tr>
+<tr><td>Lifespan</td><td>Usually created for one particular unit of work, then <b>terminates</b></td><td>Can execute <b>multiple submitted tasks</b> over its lifetime</td></tr>
+<tr><td>Who decides thread count?</td><td>The programmer, per task — hard to estimate</td><td>The pool has a fixed number of workers; extra tasks queue up</td></tr>
+<tr><td>Task distribution</td><td>Manual</td><td>Automatic — a free worker picks the next waiting task</td></tr>
+</table>
+</div>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification — why the queue exists, and why workers are reused (not stated this way in class):</b>
+<ul style="margin-top:8px;">
+<li><b>Why tasks wait in a queue:</b> a fixed pool has only N workers, so at most N tasks can run at once. The queue is the holding area for the extra tasks — the caller of <code>submit()</code> doesn't have to be blocked, the pool doesn't have to spawn an unlimited number of threads, and no task is lost. As soon as a worker frees up, it pulls the next task from the queue.</li>
+<li><b>Why workers are reused:</b> a worker isn't "one thread per task" — it is a thread that runs in a loop: <em>run a task → ask the queue for the next one → run it…</em>. Creating and destroying a thread for every task is wasteful work; reusing a small set of threads avoids it.</li>
+<li><b>Why a finished manual thread can't just be reused:</b> once a <code>Thread</code> object has finished, it is dead — calling <code>start()</code> on it again throws <code>IllegalThreadStateException</code>. A pool avoids this by keeping the <em>thread alive</em> and feeding it new <em>tasks</em>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Runnable vs Callable</b>
+<div class="tw">
+<table>
+<tr><th>Aspect</th><th>Runnable</th><th>Callable</th></tr>
+<tr><td>Method</td><td><code>void run()</code></td><td><code>call()</code></td></tr>
+<tr><td>Return value</td><td><b>None</b> (void)</td><td><b>Returns a value</b></td></tr>
+<tr><td>Checked exceptions</td><td>—</td><td><b>Can throw</b> checked exceptions</td></tr>
+<tr><td>Use for</td><td>A task that doesn't directly produce a result</td><td>An asynchronous task that needs to produce a result</td></tr>
+<tr><td>Availability</td><td>The original approach</td><td>Part of the Java 5 concurrency APIs</td></tr>
+</table>
+</div>
+<p style="margin-top:10px;"><b>Core difference:</b> Runnable → no return value. Callable → returns a value.</p>
+</div>
+
+<div class="card">
+<b>The Problem: The "10-Second Calculation"</b>
+<p>The main thread starts another thread to perform a calculation. The calculation takes <b>10 seconds</b>. The main thread carries on independently. If the calculation lives inside <code>Runnable.run()</code>, there is <b>no return value</b> the caller can directly receive from <code>run()</code>.</p>
+<p style="margin-top:8px;">The fundamental question: <em>"How does the caller know what result the asynchronous task produced?"</em></p>
+</div>
+
+<div class="card">
+<b>The Older / Manual Answer: Task ID + External Storage</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li>Generate a <b>unique task ID</b>.</li>
+<li>Store the task's <b>status/result</b> somewhere — such as a <b>database</b>.</li>
+<li>Update the database <b>when the task completes</b>.</li>
+<li>Later, <b>query the task ID</b> to discover the status/result.</li>
+</ol>
+<p style="margin-top:8px;">This works as an <b>external status-tracking mechanism</b> — but Java already provides a standard concurrency abstraction for asynchronous task results: <b>Future</b>.</p>
+</div>
+
+<div class="hot">
+<b>🔥 Interview Trap — Thread.sleep() Is Not an Answer</b>
+<p style="margin-top:6px;"><code>Thread.sleep()</code> is <b>not a proper general solution</b> for asynchronous result handling. It only <b>delays execution</b> and does not reliably coordinate task completion. (Guessing "the task will surely be done in 10 seconds" is fragile — it may take 9 or 12.)</p>
+</div>
+
+<div class="card">
+<b>Why join() Is Not the Same Solution</b>
+<p><code>Thread.join()</code> makes one thread <b>wait for another thread to finish</b>. It is appropriate when you <b>explicitly need to wait</b> for completion. But if the goal is asynchronous execution where the caller should <b>continue doing other work</b>, joining immediately <b>defeats much of the asynchronous behaviour</b>.</p>
+<div class="tw">
+<table>
+<tr><th>Approach</th><th>Meaning</th></tr>
+<tr><td><code>join()</code></td><td>Wait for another thread to finish</td></tr>
+<tr><td>Asynchronous task submission</td><td>Let the task run independently and obtain its result <b>later</b></td></tr>
+</table>
+</div>
+</div>
+
+<div class="card">
+<b>Why Was Callable Needed When Runnable Already Existed?</b>
+<p>Because <code>Runnable.run()</code> returns <b>void</b> — it has no channel through which an asynchronous task can hand a result back to the caller. Without it you're pushed into workarounds (task IDs, databases, shared variables). <b>Callable</b> fixes this at the source: <code>call()</code> <b>returns a value</b> (and may throw checked exceptions), and when you submit a Callable to an ExecutorService you get a <b>Future</b> — the handle for that result.</p>
+</div>
+
+<div class="card">
+<b>Callable + Future — The Standard Solution</b>
+<p>When a Callable is submitted to an ExecutorService, submission <b>returns a Future</b>:</p>
+<p style="margin-top:8px;"><code>Future&lt;Integer&gt; future = executor.submit(callable);</code></p>
+<p style="margin-top:8px;"><b>Why "Future"?</b> Because the result <b>may become available in the future</b>.</p>
+<p style="margin-top:10px;"><b>Conceptual flow:</b></p>
+<ol style="padding-left:20px;">
+<li>The main thread creates a <b>Callable</b>.</li>
+<li>The main thread <b>submits</b> it to the ExecutorService.</li>
+<li>The ExecutorService <b>assigns</b> the task to a worker thread.</li>
+<li>The worker thread executes <code>call()</code>.</li>
+<li><code>call()</code> <b>returns a value</b>.</li>
+<li><b>Future</b> represents the pending/available result.</li>
+<li>The caller can <b>retrieve the result later</b>.</li>
+</ol>
+</div>
+
+<div class="card">
+<b>Future Is Generic</b>
+<p>The type parameter depends on the result type of the Callable: <code>Future&lt;Integer&gt;</code>, <code>Future&lt;String&gt;</code>, <code>Future&lt;Void&gt;</code>. Example:</p>
+<p style="margin-top:8px;"><code>Callable&lt;Integer&gt; task = () -&gt; { return 20; };</code><br><code>Future&lt;Integer&gt; future = executor.submit(task);</code><br><code>Integer result = future.get();</code></p>
+</div>
+
+<div class="card">
+<b>Future.get() — And Its Blocking Behaviour</b>
+<p>The result is retrieved with <code>future.get()</code>. <b>Future.get() can block</b> if the result is not available yet. So Future does <b>not</b> automatically mean "never wait" — it is a <b>handle</b> through which the caller can obtain the asynchronous result. The benefit is that <b>you choose when to wait</b>: submit first, do other work, and call <code>get()</code> only when you actually need the value.</p>
+</div>
+
+<div class="card">
+<b>execute() vs submit()</b>
+<div class="tw">
+<table>
+<tr><th>Aspect</th><th>execute()</th><th>submit()</th></tr>
+<tr><td>Accepts</td><td><b>Runnable</b> only</td><td><b>Runnable or Callable</b></td></tr>
+<tr><td>Returns</td><td><b>No Future</b></td><td><b>A Future</b></td></tr>
+<tr><td>Best when</td><td>You don't need a task result</td><td>You need a result — especially with Callable</td></tr>
+</table>
+</div>
+<p style="margin-top:10px;">For a Callable returning <code>String</code>: <code>Future&lt;String&gt; future = executor.submit(callable);</code></p>
+</div>
+
+<div class="hot">
+<b>🔥 Core Interview Distinction (From the Lecture)</b>
+<p style="margin-top:6px;"><b>execute()</b> → Runnable → no Future returned.<br><b>submit()</b> → Runnable <em>or</em> Callable → Future returned.</p>
+</div>
+
+<div class="card">
+<b>Practical Mental Model — ExecutorService Is a Manager</b>
+<p>You give the manager tasks. The manager <b>maintains worker threads</b>, <b>assigns tasks</b> to available workers, <b>queues tasks</b> when workers are busy, <b>reuses workers</b>, and <b>manages task execution</b>. You focus on <b>WHAT</b> needs to run — not on creating and destroying a Thread for every task.</p>
+</div>
+
+<div class="card">
+<b>Terminology Cheat-Sheet</b>
+<p class="small" style="margin-top:4px;">Blue tag = defined in the lecture · Yellow tag = detail added by me.</p>
+<div class="tw">
+<table>
+<tr><th>Term</th><th>Meaning</th><th>Source</th></tr>
+<tr><td><b>Executor Framework</b></td><td>The Java 5 mechanism where you <b>submit tasks</b> and a pool manages threads, reuse, queueing and scheduling.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Executor</b></td><td>The simplest parent interface — it has a single method, <code>execute(Runnable)</code>. It only says "run this task somehow"; it separates <em>submitting</em> a task from <em>how</em> it runs.</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><b>ExecutorService</b></td><td>The interface commonly used to <b>submit and manage</b> tasks (<code>submit()</code>, <code>shutdown()</code>, …). It extends Executor.</td><td><span class="pill lec">Lecture</span> + <span class="pill add">Added</span></td></tr>
+<tr><td><b>Executors</b></td><td>A helper (factory) class — <code>Executors.newFixedThreadPool(n)</code> is how the lecture creates a pool. Note the "s" at the end.</td><td><span class="pill lec">Lecture</span> + <span class="pill add">Added</span></td></tr>
+<tr><td><b>Thread pool</b></td><td>A managed group of reusable worker threads.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Worker thread</b></td><td>A thread inside the pool that executes submitted tasks — many tasks over its lifetime.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Task queue / work queue</b></td><td>The waiting area for tasks that can't run immediately because all workers are busy.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Runnable</b></td><td>Task with <code>void run()</code> — no result.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Callable</b></td><td>Task with <code>call()</code> — returns a value, can throw checked exceptions.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Future</b></td><td>A handle to a result that may become available later; <code>get()</code> retrieves it (and may block).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>shutdown()</b></td><td>Called when the executor is no longer needed, so worker threads don't keep it alive.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>join()</b></td><td>Makes one thread wait until another thread finishes.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>FutureTask</b></td><td>The internal object that is both a Runnable and a Future; <code>submit()</code> wraps your Callable in one.</td><td><span class="pill add">Added</span></td></tr>
+</table>
+</div>
+</div>
+
+<div class="flag">
+<b>⚠️ Technical Nuances Worth Verifying (Not Stated This Way in Class)</b>
+<ul style="margin-top:8px;">
+<li><b>shutdown() is graceful:</b> it stops the pool from accepting <em>new</em> tasks, but tasks already submitted (running <em>and</em> queued) still complete, after which the workers exit. <code>shutdownNow()</code> is the forceful variant — it tries to interrupt running tasks and returns the tasks that never started. <code>shutdown()</code> does not wait for completion; use <code>awaitTermination()</code> if you need to.</li>
+<li><b>Why unshutdown pools "keep the executor alive":</b> workers created by the default factory are non-daemon threads, and in a fixed pool they stay alive waiting for work — so the JVM can't exit while they exist.</li>
+<li><b>Which worker gets which task is not guaranteed:</b> in the 2 + 4 example, Task 1 and Task 2 start first, but whichever worker finishes first takes Task 3 — you can't predict which. Don't rely on "Worker 1 runs Task 1 and Task 3".</li>
+<li><b><code>submit(Runnable)</code> also returns a Future</b> — but it carries no result, so <code>get()</code> returns <code>null</code> (it still tells you when the task is done).</li>
+<li><b>Callable exceptions:</b> a checked (or unchecked) exception thrown inside <code>call()</code> doesn't surface at <code>submit()</code> — it is captured in the Future and re-thrown from <code>get()</code> wrapped in an <code>ExecutionException</code>.</li>
+<li><b><code>Future&lt;Void&gt;</code>:</b> for a <code>Callable&lt;Void&gt;</code> you must still write <code>return null;</code>.</li>
+<li><b>Sleep in demos vs sleep as a solution:</b> the lecture warns against using <code>Thread.sleep()</code> to <em>wait for a result</em>. Using it <em>inside</em> a task to simulate a 10-second calculation (as in the code samples below) is fine — it just mimics slow work.</li>
+<li><b>Other pool types exist</b> (single-thread, cached, scheduled), but the lecture covers only the fixed thread pool, so these notes do too.</li>
+</ul>
+</div>
+
+</div>
+
+<div class="section">
+<h2>🖼️ Fixed Pool Flow: 2 Workers + 4 Tasks</h2>
+<p class="small">Illustrative — which worker finishes first (and therefore takes Task 3) can vary.</p>
+
+<div class="lane">
+<div class="label">Worker Thread 1</div>
+<div class="flowbox">
+<div class="fstep">runs Task 1</div>
+<div class="farrow">→</div>
+<div class="fstep notify">finished → takes next task from queue</div>
+<div class="farrow">→</div>
+<div class="fstep">runs Task 3</div>
+<div class="farrow">→</div>
+<div class="fstep wait">queue empty → stays alive (reused)</div>
+</div>
+</div>
+
+<div class="lane">
+<div class="label">Worker Thread 2</div>
+<div class="flowbox">
+<div class="fstep">runs Task 2</div>
+<div class="farrow">→</div>
+<div class="fstep notify">finished → takes next task from queue</div>
+<div class="farrow">→</div>
+<div class="fstep">runs Task 4</div>
+<div class="farrow">→</div>
+<div class="fstep wait">queue empty → stays alive (reused)</div>
+</div>
+</div>
+
+<div class="tw">
+<table>
+<tr><th>Moment</th><th>Worker 1</th><th>Worker 2</th><th>Work Queue</th></tr>
+<tr><td>All 4 tasks submitted</td><td>Task 1</td><td>Task 2</td><td>Task 3, Task 4</td></tr>
+<tr><td>A worker finishes first (say Worker 1)</td><td>Task 3</td><td>Task 2</td><td>Task 4</td></tr>
+<tr><td>Other worker finishes (Worker 2)</td><td>Task 3</td><td>Task 4</td><td><em>(empty)</em></td></tr>
+<tr><td>Everything done</td><td>idle</td><td>idle</td><td><em>(empty)</em> — workers still alive until <code>shutdown()</code></td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🖼️ The 10-Second Calculation: Callable + Future Flow</h2>
+
+<div class="lane">
+<div class="label">Main thread</div>
+<div class="flowbox">
+<div class="fstep">create Callable</div>
+<div class="farrow">→</div>
+<div class="fstep">executor.submit(callable)</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Future returned immediately</div>
+<div class="farrow">→</div>
+<div class="fstep">main does other work</div>
+<div class="farrow">→</div>
+<div class="fstep wait">future.get() — blocks if result not ready</div>
+<div class="farrow">→</div>
+<div class="fstep notify">result = 20</div>
+</div>
+</div>
+
+<div class="lane">
+<div class="label">Worker thread (in the pool)</div>
+<div class="flowbox">
+<div class="fstep">picks up the task</div>
+<div class="farrow">→</div>
+<div class="fstep">call() runs (10 s calculation)</div>
+<div class="farrow">→</div>
+<div class="fstep">return 20</div>
+<div class="farrow">→</div>
+<div class="fstep notify">result becomes available via the Future</div>
+<div class="farrow">→</div>
+<div class="fstep">free for the next task</div>
+</div>
+</div>
+<p class="small">The main thread is <b>not</b> stuck for 10 seconds at submit time — it only waits (if at all) at <code>get()</code>, and only if the worker hasn't finished by then.</p>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Old-style tracking vs Future</h3>
+
+<div class="lane">
+<div class="label">Manual task-ID approach (as described in class)</div>
+<div class="flowbox">
+<div class="fstep">generate task ID</div>
+<div class="farrow">→</div>
+<div class="fstep">start thread</div>
+<div class="farrow">→</div>
+<div class="fstep">thread writes status/result to DB when done</div>
+<div class="farrow">→</div>
+<div class="fstep notify">later: query DB using task ID</div>
+</div>
+</div>
+
+<div class="lane">
+<div class="label">Executor + Callable + Future</div>
+<div class="flowbox">
+<div class="fstep">submit(callable)</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Future = the task's "ID" and result handle in one</div>
+<div class="farrow">→</div>
+<div class="fstep">future.get() when needed</div>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h2>⚙️ Internal Working (Added Clarification)</h2>
+
+<div class="flag">
+<b>Note:</b> the lecture stayed at the conceptual level ("the manager assigns tasks to workers"). This section is <b>my addition</b> — a simplified picture of how the standard JDK implementation behaves. Exact details can differ between JDK versions, so treat it as a mental model and verify against your JDK's <code>ThreadPoolExecutor</code> source/docs.
+</div>
+
+<div class="card">
+<b>What <code>Executors.newFixedThreadPool(n)</code> Builds</b>
+<p>In the standard JDK it returns a <code>ThreadPoolExecutor</code> with <b>n core threads, n maximum threads</b>, and an <b>unbounded queue</b> (a <code>LinkedBlockingQueue</code>). That combination is exactly the "fixed workers + waiting queue" behaviour from the lecture.</p>
+</div>
+
+<div class="card">
+<b>What Happens When You Submit a Task</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li><code>submit(callable)</code> <b>wraps</b> your Callable in a <code>FutureTask</code> (which is both a Runnable and a Future), then passes it to <code>execute()</code>.</li>
+<li>If <b>fewer than n workers</b> exist, the pool <b>starts a new worker thread</b> with this task as its first job (workers are created lazily as tasks arrive, not all n upfront).</li>
+<li>If <b>all n workers</b> already exist, the task is <b>put in the queue</b>.</li>
+<li>Each worker runs a <b>loop</b>: run its task → <b>take the next task from the queue</b> (blocking while the queue is empty) → run it… That loop <em>is</em> the thread reuse.</li>
+<li>When the FutureTask runs, it calls your <code>call()</code>, <b>stores the return value (or the exception)</b>, and wakes anyone blocked in <code>future.get()</code>.</li>
+<li><code>shutdown()</code> stops new submissions; workers drain the queue, then exit.</li>
+</ol>
+</div>
+
+<div class="lane">
+<div class="label">Submit path (caller side)</div>
+<div class="flowbox">
+<div class="fstep">submit(callable)</div>
+<div class="farrow">→</div>
+<div class="fstep">wrap in FutureTask</div>
+<div class="farrow">→</div>
+<div class="fstep">workers &lt; n ?</div>
+<div class="farrow">→ yes →</div>
+<div class="fstep notify">start new worker with this task</div>
+<div class="farrow">|| no →</div>
+<div class="fstep wait">add task to queue</div>
+<div class="farrow">→</div>
+<div class="fstep">return Future</div>
+</div>
+</div>
+
+<div class="lane">
+<div class="label">Worker loop (simplified)</div>
+<div class="flowbox">
+<div class="fstep">take task from queue (blocks if empty)</div>
+<div class="farrow">→</div>
+<div class="fstep">FutureTask.run()</div>
+<div class="farrow">→</div>
+<div class="fstep">call() executes</div>
+<div class="farrow">→</div>
+<div class="fstep notify">store result / exception, wake get()</div>
+<div class="farrow">→</div>
+<div class="fstep">back to the queue for the next task</div>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the lecture source contains only the short fragments quoted above (<code>newFixedThreadPool</code>, <code>shutdown</code>, <code>submit</code>, <code>Callable</code> returning 20, <code>future.get()</code>). The complete, runnable programs below are <b>my reconstructions</b> built around those fragments and the instructor's examples.
+</div>
+
+<p><b>1. Fixed thread pool — 2 workers, 4 tasks (Runnable via execute):</b></p>
+<pre><code class="language-java">import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+public class FixedPoolDemo {
+    public static void main(String[] args) {
+        ExecutorService service = Executors.newFixedThreadPool(2);   // 2 worker threads
+
+        for (int i = 1; i &lt;= 4; i++) {
+            final int taskId = i;
+            service.execute(() -&gt; {                                  // Runnable, no result
+                String worker = Thread.currentThread().getName();
+                System.out.println("Task " + taskId + " started  by " + worker);
+                try {
+                    Thread.sleep(2000);                              // simulate 2 seconds of work
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+                System.out.println("Task " + taskId + " finished by " + worker);
+            });
+        }
+
+        service.shutdown();   // no more tasks will be submitted
+    }
+}
+// Sample output (interleaving and worker names for Task 3/4 may vary):
+// Task 1 started  by pool-1-thread-1
+// Task 2 started  by pool-1-thread-2
+// ... 2 seconds pass ...
+// Task 1 finished by pool-1-thread-1
+// Task 2 finished by pool-1-thread-2
+// Task 3 started  by pool-1-thread-1   &lt;-- same worker reused
+// Task 4 started  by pool-1-thread-2   &lt;-- same worker reused
+// ...
+// Only TWO distinct thread names ever appear: the workers are reused.</code></pre>
+
+<p><b>2. Runnable vs Callable — side by side:</b></p>
+<pre><code class="language-java">import java.util.concurrent.Callable;
+
+// Runnable — void run(), no result
+Runnable r = () -&gt; System.out.println("I return nothing");
+
+// Callable — call() returns a value and may throw checked exceptions
+Callable&lt;Integer&gt; c = () -&gt; {
+    return 20;
+};
+
+// The same thing as a classic class:
+class Calculation implements Callable&lt;Integer&gt; {
+    @Override
+    public Integer call() throws Exception {   // "throws Exception" is allowed here
+        return 20;
+    }
+}</code></pre>
+
+<p><b>3. The 10-second calculation with Callable + Future:</b></p>
+<pre><code class="language-java">import java.util.concurrent.*;
+
+public class CallableFutureDemo {
+    public static void main(String[] args) throws Exception {
+        ExecutorService executor = Executors.newFixedThreadPool(1);
+
+        Callable&lt;Integer&gt; task = () -&gt; {
+            System.out.println("Calculating in " + Thread.currentThread().getName());
+            Thread.sleep(10_000);          // sleep here only SIMULATES a 10-second calculation
+            return 20;                     // the result of the asynchronous work
+        };
+
+        Future&lt;Integer&gt; future = executor.submit(task);   // returns IMMEDIATELY
+
+        System.out.println("main: free to do other work...");
+
+        Integer result = future.get();     // BLOCKS here until the result is ready
+        System.out.println("Result = " + result);
+
+        executor.shutdown();
+    }
+}</code></pre>
+
+<p><b>4. Future is generic — String result, and submit(Runnable):</b></p>
+<pre><code class="language-java">Future&lt;String&gt; greeting = executor.submit(() -&gt; "Hello");        // Callable&lt;String&gt;
+System.out.println(greeting.get());                               // Hello
+
+Future&lt;?&gt; done = executor.submit(() -&gt; System.out.println("hi")); // Runnable
+done.get();                                                       // returns null — but confirms the task finished
+
+Callable&lt;Void&gt; noResult = () -&gt; {
+    System.out.println("side effect only");
+    return null;                                                  // Callable&lt;Void&gt; must return null
+};
+Future&lt;Void&gt; v = executor.submit(noResult);</code></pre>
+
+<p><b>5. execute() vs submit() — same task, different handling:</b></p>
+<pre><code class="language-java">Runnable task = () -&gt; System.out.println("working...");
+
+executor.execute(task);                    // returns void — no way to check status or result
+
+Future&lt;?&gt; f = executor.submit(task);       // returns a Future
+System.out.println(f.isDone());            // can ask: has it finished?</code></pre>
+
+<p><b>6. Robust Future usage — timeout, polling, exceptions (added):</b></p>
+<pre><code class="language-java">Future&lt;Integer&gt; future = executor.submit(task);
+
+// (a) Don't wait forever: give up after 2 seconds
+try {
+    Integer result = future.get(2, TimeUnit.SECONDS);
+    System.out.println("Got " + result);
+} catch (TimeoutException e) {
+    System.out.println("Not ready yet — do something else");
+    // future.cancel(true);              // optionally attempt to cancel
+} catch (ExecutionException e) {
+    System.out.println("Task itself failed: " + e.getCause());   // real exception from call()
+} catch (InterruptedException e) {
+    Thread.currentThread().interrupt();
+}
+
+// (b) Poll without blocking, do useful work in between
+while (!future.isDone()) {
+    // doOtherWork();
+}
+Integer result = future.get();             // returns immediately now</code></pre>
+
+<p><b>7. Exceptions: execute() vs submit() — a classic trap (added):</b></p>
+<pre><code class="language-java">Runnable failing = () -&gt; { throw new RuntimeException("boom"); };
+
+executor.execute(failing);
+// -&gt; the worker thread dies with an uncaught exception; a stack trace is printed
+//    ("Exception in thread pool-1-thread-1 ...") and the pool replaces the worker.
+
+Future&lt;?&gt; f = executor.submit(failing);
+// -&gt; NOTHING is printed. The exception is captured inside the Future.
+
+try {
+    f.get();                               // the exception only appears here
+} catch (ExecutionException e) {
+    System.out.println("Failed: " + e.getCause());   // java.lang.RuntimeException: boom
+}
+// If you submit() and never call get(), the failure is silently swallowed.</code></pre>
+
+<p><b>8. Proper shutdown (added):</b></p>
+<pre><code class="language-java">ExecutorService service = Executors.newFixedThreadPool(5);
+try {
+    // submit tasks ...
+} finally {
+    service.shutdown();                    // stop accepting new tasks; queued tasks still run
+}
+
+try {
+    if (!service.awaitTermination(30, TimeUnit.SECONDS)) {
+        service.shutdownNow();             // force-stop: interrupt running tasks
+    }
+} catch (InterruptedException e) {
+    service.shutdownNow();
+    Thread.currentThread().interrupt();
+}</code></pre>
+
+<p><b>9. join() — waits, but hands back no result:</b></p>
+<pre><code class="language-java">Thread t = new Thread(() -&gt; compute());   // compute() is void — nothing to return
+t.start();
+t.join();      // main WAITS here until t finishes, so it can't carry on with other work meanwhile.
+               // join() also gives no result back — you would still need a shared variable/DB to fetch one.</code></pre>
+
+<p><b>10. The older task-ID approach — illustration only (a Map stands in for the database):</b></p>
+<pre><code class="language-java">import java.util.Map;
+import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
+
+Map&lt;String, String&gt; statusStore = new ConcurrentHashMap&lt;&gt;();   // stands in for the DB
+
+String taskId = UUID.randomUUID().toString();       // 1. unique task ID
+statusStore.put(taskId, "RUNNING");                 // 2. store status
+
+new Thread(() -&gt; {
+    int result = heavyCalculation();                // ~10 seconds
+    statusStore.put(taskId, "DONE: " + result);     // 3. update when complete
+}).start();
+
+// 4. later, from anywhere: query by task ID
+String status = statusStore.get(taskId);
+// Future gives you this "handle to the result" as a standard Java object instead.</code></pre>
+
+<p><b>11. What newFixedThreadPool(n) roughly builds (added — JDK implementation detail):</b></p>
+<pre><code class="language-java">// Roughly equivalent to Executors.newFixedThreadPool(n):
+ExecutorService service = new ThreadPoolExecutor(
+        n, n,                                  // core = max = n worker threads
+        0L, TimeUnit.MILLISECONDS,
+        new LinkedBlockingQueue&lt;Runnable&gt;());  // unbounded queue for waiting tasks</code></pre>
+
+</div>
+
+<div class="section">
+<h2>💼 Likely Interview Questions From This Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>Why was the Executor Framework introduced?</td><td>Manual thread creation makes it hard to estimate how many threads a task needs, and a manually created thread terminates after its task instead of being reused. Executor Framework (Java 5) lets you submit tasks while a thread pool manages reusable workers and a queue.</td></tr>
+<tr><td>What is a thread pool / worker thread?</td><td>A thread pool is a managed set of reusable threads. A worker thread is one of them — it runs many submitted tasks over its lifetime instead of dying after one.</td></tr>
+<tr><td>A fixed pool has 5 workers and 10 tasks are submitted. What happens?</td><td>Up to 5 tasks run concurrently; the other 5 wait in the queue. When a worker finishes, it takes another waiting task — the same worker thread is reused.</td></tr>
+<tr><td>Walk through 2 threads + 4 tasks.</td><td>Tasks 1 and 2 run on the two workers; Tasks 3 and 4 wait in the work queue. As each worker finishes, it picks a queued task. Workers never terminate between tasks.</td></tr>
+<tr><td>Why are worker threads reused?</td><td>The pool keeps a worker alive and feeds it new tasks, instead of creating and terminating a thread per task (and a finished Thread can't be restarted anyway).</td></tr>
+<tr><td>Why do tasks wait in a queue?</td><td>The pool has a limited number of workers, so at most that many tasks run at once. The queue holds the rest until a worker is free.</td></tr>
+<tr><td>What is ExecutorService?</td><td>The interface commonly used to submit tasks to, and manage, a thread pool — created here via <code>Executors.newFixedThreadPool(n)</code>.</td></tr>
+<tr><td>Why call shutdown()?</td><td>If the executor isn't shut down, its worker threads can keep it (and the application) alive. shutdown() tells the pool no more tasks are coming.</td></tr>
+<tr><td>Runnable vs Callable?</td><td>Runnable: <code>void run()</code>, no result. Callable: <code>call()</code> returns a value and can throw checked exceptions — useful when an asynchronous task must produce a result.</td></tr>
+<tr><td>Why do we need Callable when Runnable already existed?</td><td>run() returns void, so an async task has no direct way to hand a result back. Callable returns a value, and submitting it gives you a Future to retrieve that value.</td></tr>
+<tr><td>How can the caller know the result of an asynchronous 10-second task?</td><td>Older style: generate a task ID, save status/result in a database, update it on completion, query by ID later. Standard Java: submit a Callable and use the returned Future.</td></tr>
+<tr><td>Can we use Thread.sleep() to wait for the result?</td><td>No — it only delays execution and does not reliably coordinate task completion.</td></tr>
+<tr><td>Is join() the same as getting an async result?</td><td>No. join() makes a thread wait for another to finish; used immediately it defeats the asynchronous benefit, and it returns no result.</td></tr>
+<tr><td>What is a Future, and why that name?</td><td>A handle representing a result that may become available in the future. It is generic — <code>Future&lt;Integer&gt;</code>, <code>Future&lt;String&gt;</code>, <code>Future&lt;Void&gt;</code> — matching the Callable's return type.</td></tr>
+<tr><td>Does Future.get() block?</td><td>Yes, if the result isn't ready yet. Future doesn't mean "never wait" — it lets you decide when to wait.</td></tr>
+<tr><td>execute() vs submit()?</td><td>execute(): Runnable only, no Future. submit(): Runnable or Callable, returns a Future.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🎤 Likely Interviewer Follow-Up Questions (Added)</h2>
+<p class="small">These go beyond what the lecture said — expect them in Java backend interviews.</p>
+<div class="tw">
+<table>
+<tr><th>Follow-up</th><th>Short answer</th></tr>
+<tr><td>What if the task throws an exception — how does execute() differ from submit()?</td><td>With execute(), the exception kills the worker thread and prints a stack trace (the pool replaces the worker). With submit(), the exception is captured in the Future and only thrown from <code>get()</code> as an <code>ExecutionException</code> — if you never call get(), it's silently lost.</td></tr>
+<tr><td>What happens if you never call shutdown()?</td><td>Non-daemon worker threads stay alive, so the JVM typically doesn't exit.</td></tr>
+<tr><td>shutdown() vs shutdownNow()?</td><td>shutdown(): no new tasks, already-submitted tasks (including queued) still finish. shutdownNow(): tries to interrupt running tasks and drains the queue.</td></tr>
+<tr><td>How do I avoid blocking forever on get()?</td><td>Use <code>get(timeout, unit)</code> (throws <code>TimeoutException</code>), or poll <code>isDone()</code>.</td></tr>
+<tr><td>Can you cancel a task?</td><td><code>future.cancel(true)</code> attempts to; it's best-effort and only works well if the task responds to interruption.</td></tr>
+<tr><td>What kind of queue does a fixed pool use? Any risk?</td><td>An unbounded <code>LinkedBlockingQueue</code> in the standard JDK — if tasks arrive faster than workers finish them, the queue keeps growing and memory can run out.</td></tr>
+<tr><td>How many threads should a pool have?</td><td>It depends on the workload — the lecture itself notes this is hard to estimate. A common rule of thumb: about the number of CPU cores for CPU-bound tasks, more for I/O-bound tasks; measure and tune.</td></tr>
+<tr><td>Is the result of submit(Runnable) useful?</td><td>The Future's get() returns null, but you can still use it to wait for completion and detect failure.</td></tr>
+<tr><td>What are the limits of Future?</td><td>get() blocks, and there's no built-in way to say "run this when it's done" — which is one reason later APIs such as CompletableFuture exist (not covered in this lecture).</td></tr>
+<tr><td>Difference between Executor and ExecutorService?</td><td>Executor has only <code>execute(Runnable)</code>. ExecutorService extends it with <code>submit()</code>, Futures, and lifecycle methods like <code>shutdown()</code>.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>📌 Lecture Takeaways</h2>
+<ul>
+<li>The Executor Framework was introduced in <b>Java 5</b>.</li>
+<li><b>ExecutorService</b> abstracts much of manual thread management.</li>
+<li>Thread pools <b>reuse worker threads</b>.</li>
+<li>Tasks that can't execute immediately <b>wait in a queue</b>.</li>
+<li>A <b>fixed thread pool</b> has a fixed number of worker threads.</li>
+<li><b>shutdown()</b> should be called when the executor is no longer needed.</li>
+<li><code>Runnable.run()</code> returns <b>void</b>; <code>Callable.call()</code> can <b>return a value</b>.</li>
+<li>Callable is useful for asynchronous work that <b>produces a result</b>.</li>
+<li><b>Future</b> represents a result that may become available later.</li>
+<li><b>submit()</b> returns a Future and supports Callable; <b>execute()</b> is for Runnable and returns no Future.</li>
+<li><b>join()</b> causes waiting — it is not equivalent to asynchronous result handling.</li>
+<li>An external <b>task-ID/database</b> mechanism can track long-running async work, while <b>Future</b> is the standard Java way to represent a submitted task's result.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🚧 Common Interview Traps</h2>
+<ul>
+<li><b>"Future means non-blocking."</b> Wrong — <code>get()</code> can block. Future is a handle; blocking depends on when you call get() and whether the task is finished.</li>
+<li><b>"Use Thread.sleep() until the result is ready."</b> Wrong — it only delays and doesn't coordinate completion.</li>
+<li><b>"Just join() the thread."</b> join() waits; if you join immediately you lose the asynchronous benefit, and you still get no return value.</li>
+<li><b>"execute() and submit() are the same."</b> They differ in accepted task types and in the Future return.</li>
+<li><b>"The pool creates a new thread per task."</b> The opposite — 5 workers, 10 tasks means 5 threads run and 5 tasks queue.</li>
+<li><b>Forgetting shutdown()</b> — the worker threads can keep the executor (and program) alive.</li>
+<li><b>Assuming a fixed worker–task mapping</b> — which worker runs which queued task isn't predictable.</li>
+<li><b>Treating garbled transcript words as APIs</b> — stick to real names: <code>Executors</code>, <code>ExecutorService</code>, <code>Runnable</code>, <code>Callable</code>, <code>Future</code>, <code>submit</code>, <code>execute</code>, <code>shutdown</code>, <code>get</code>.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Suggested Practice (Added — Not Assigned in the Lecture)</h2>
+<ul>
+<li>Run the 2 workers + 4 tasks program and print thread names — confirm only two distinct names ever appear.</li>
+<li>Change the pool size to 4 and watch all four tasks start together; then try 1 and watch them run one after another.</li>
+<li>Remove <code>shutdown()</code> and observe that the program doesn't exit.</li>
+<li>Recreate the 10-second calculation: print "main is free" right after <code>submit()</code>, then time how long <code>get()</code> takes.</li>
+<li>Try <code>get(2, TimeUnit.SECONDS)</code> on that 10-second task and handle the <code>TimeoutException</code>.</li>
+<li>Submit a task that throws — compare what you see with <code>execute()</code> vs <code>submit()</code> (with and without calling <code>get()</code>).</li>
+<li>Practise explaining "Runnable vs Callable and why Future exists" out loud in under two minutes.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Classes:</b> Not specified in the source.</li>
+<li><b>Connecting observations (my own, not stated in the lecture):</b> the manual-thread problem builds on basic thread creation and the thread lifecycle (a terminated thread can't be restarted); <code>join()</code> is the earlier way to wait for a thread, contrasted here with <code>Future.get()</code>.</li>
+<li><b>Upcoming Topics:</b> Not specified in the source.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+Section headings, card grouping, the flow diagrams, the terminology and comparison tables, and formatting/styling were added to match your reference notes. The lecture content comes from your cleaned study source. Because that source was derived from an imperfect automatic transcript, garbled words were not treated as API names. Everything marked with a yellow dashed box or the "Added" tag — the Executor/FutureTask explanations, the internal-working section, shutdown vs shutdownNow, exception behaviour of execute() vs submit(), the follow-up questions, the extra code samples and the practice list — is my clarification, not something the instructor said, so verify it against your JDK docs or instructor before relying on it in an interview.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>
