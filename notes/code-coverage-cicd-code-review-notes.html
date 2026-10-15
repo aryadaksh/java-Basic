@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Code Coverage, CI/CD Pipeline &amp; Code Review</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.pill{display:inline-block;padding:1px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;}
+.pill.lec{background:#e3f2fd;color:#0066ff;}
+.pill.add{background:#fff3cd;color:#a67c00;}
+.pill.hi{background:#e6f6ea;color:#1e8e3e;}
+.pill.med{background:#fff3cd;color:#a67c00;}
+.pill.low{background:#fdecea;color:#c62828;}
+.swatch{display:inline-block;width:14px;height:14px;border-radius:3px;margin-right:6px;vertical-align:middle;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Code Coverage, the CI/CD Pipeline (Jenkins) &amp; Code Review</p>
+<p class="meta">Source: June 2026 offline class · Oct 13, 2026 · 40:37</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: development → unit testing with JUnit → why the developer writes the tests</li>
+<li>The problem: how does the organisation know your unit tests are real, not empty?</li>
+<li><b>Code coverage</b> — what it is, how it's measured, how to read a coverage report</li>
+<li>Why 100% coverage is impossible, and why <b>85%</b> is the industry-standard answer</li>
+<li>How to improve coverage (e.g. 81% → 85%)</li>
+<li>The <b>CI/CD pipeline</b> with Jenkins: compile → JUnit → coverage check → JAR → deploy</li>
+<li>What happens when coverage is below the minimum — the build fails</li>
+<li>SonarQube, deployment targets (QA / SIT / pre-prod / prod) and where the QA team fits</li>
+<li><b>Code review</b>: static code review (tool) vs peer code review (humans)</li>
+<li>Interview-preparation advice: write a script about your day-to-day work</li>
+</ul>
+
+<div class="flag">
+<b>How to read these notes:</b> <b>Green-bordered cards</b> hold what the instructor taught. <b>Yellow dashed boxes</b> hold clarifications I added that the lecture did <em>not</em> state — verify them with your instructor if in doubt. <b>Orange 🔥 boxes</b> are interview alerts. The source is an <b>auto-generated transcript with many speech-recognition errors</b>: where the intended term was clear I corrected it (for example "Jenkin" → Jenkins, "CACD" → CI/CD, "food coverage" → code coverage); where it was <em>not</em> clear I flagged it instead of guessing. See the clean-up map near the end.
+</div>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Recap of the Previous Class</b>
+<ul style="margin-top:8px;">
+<li>We did <b>development</b>, then <b>unit testing using JUnit</b> — the Java unit testing framework.</li>
+<li>The purpose of unit testing: <b>to maintain code quality</b>.</li>
+<li>The <b>person who wrote the code writes the JUnit tests</b>. Because you wrote the code, you must know the scenarios — <b>without knowing the scenarios, you wouldn't be able to write the code</b> in the first place.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Problem — How Do They Know You Really Tested?</b>
+<p>For a whole project, a developer could write test methods that are <b>empty</b> — just add the <code>@Test</code> annotation, leave the body blank, and tell the boss: "All my test cases are working fine — all green." That's possible, but it's <b>not right</b>. You have to actually test your code.</p>
+<p style="margin-top:8px;">This is where <b>code coverage</b> comes in.</p>
+</div>
+
+<div class="card">
+<b>What Is Code Coverage?</b>
+<ul style="margin-top:8px;">
+<li>Code coverage tells you <b>how much of your code has been tested by your unit tests</b>.</li>
+<li>Example: a class has <b>1000 lines</b> of code; the tests exercise <b>900</b> of them → <b>90% coverage</b>.</li>
+<li><b>100% can't be achieved</b> — some corner scenarios cannot be tested.</li>
+<li>A <b>code-coverage tool</b> (the instructor said "Emma, or something") runs along with your JUnit tests and <b>catches which source code lines were actually called</b> by them, then <b>gives you a report</b>.</li>
+<li>The report is <b>per class</b>, e.g. <em>"in this class you tested 80%; in that class 90%; in this other class only 50%."</em></li>
+</ul>
+</div>
+
+<div class="card">
+<b>Per-Class Coverage — The Instructor's Example</b>
+<div class="tw">
+<table>
+<tr><th>Class</th><th>Tested by unit tests</th><th>Meaning</th></tr>
+<tr><td>Class A</td><td><b>80%</b></td><td>Most code exercised; some lines never called by a test</td></tr>
+<tr><td>Class B</td><td><b>90%</b></td><td>Very good coverage</td></tr>
+<tr><td>Class C</td><td><b>50%</b></td><td>Half of the code is untested</td></tr>
+</table>
+</div>
+<p style="margin-top:10px;">Coverage = lines tested ÷ total lines × 100. If a class has 100 lines and tests reach 70 of them, coverage is 70% and <b>30% of the code is untested</b>.</p>
+</div>
+
+<div class="card">
+<b>Demo — Reading a Coverage Report (Discount Calculator)</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li>Starting point: the previous day's code (with the lower-case change). <b>All three JUnit tests passed.</b></li>
+<li>The instructor ran the tests <b>with coverage</b> (the IDE's "Coverage As" option, instead of a plain run). The report <b>highlights lines</b>: <b>green = the line was tested by JUnit</b>.</li>
+<li>He added a <b>new condition</b>: a <b>Platinum</b> customer gets a <b>discount of 150</b>. <b>No test was written for it</b> (only Regular, Premium and Gold existed). The report flagged: <b>this line was never tested</b>.</li>
+<li>He then added <b>exception handling</b> code. The report showed the exception part was <b>not executed</b>; a <b>yellow</b> line meant "execution reached here, but no exception happened".</li>
+<li><b>The numbers dropped</b>: the earlier report showed about <b>74%</b>; after re-running, about <b>72%</b> — for the class overall. (The instructor's arithmetic was approximate in class.)</li>
+<li>Covering the exception path: pass the customer type as <b>null</b>. Inside the code the type is converted to upper case, which gives a <b>NullPointerException</b> on null. A test for that scenario makes the <b>exception path covered</b>.</li>
+</ol>
+</div>
+
+<div class="card">
+<b>Reading the Colours</b>
+<div class="tw">
+<table>
+<tr><th>Colour</th><th>What the instructor said</th></tr>
+<tr><td><span class="swatch" style="background:#4CAF50;"></span><b>Green</b></td><td>Line was <b>tested</b> using JUnit.</td></tr>
+<tr><td><span class="swatch" style="background:#f4c20d;"></span><b>Yellow</b></td><td>Execution went through the line, <b>but the exception (or other path) didn't happen</b>.</td></tr>
+<tr><td><span class="swatch" style="background:#e53935;"></span><b>Not tested / never executed</b></td><td>"This line was never tested using JUnit" — e.g. the new Platinum condition and the exception block. (The transcript doesn't name the colour; see the note below.)</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card">
+<b>Why Is Code Coverage Required?</b>
+<ul style="margin-top:8px;">
+<li>It is <b>part of the process</b>. The system gets to know <b>how much unit testing you have really written</b>.</li>
+<li>Otherwise you could write an empty method and claim "my JUnit is 100% done". No — you must write a unit test for <b>each and every scenario</b>.</li>
+<li>The instructor's point: <b>without meeting the coverage requirement you won't be able to check in</b> your code — the process stops you.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Why 100% Coverage Is Not Achievable</b>
+<ul style="margin-top:8px;">
+<li>One class might be 100%, another 70%. Across <b>10,000–20,000 classes</b> the <b>average</b> will never be 100%.</li>
+<li><b>Example:</b> your program talks to a <b>database</b> and throws an exception — but that exception comes <b>only if the database is down or crashes</b>. You <b>cannot produce that situation</b> in your unit tests, so those lines stay uncovered.</li>
+<li>Considering such cases, <b>industry says ~85% is good</b> (some say 80%, some say 90%).</li>
+</ul>
+</div>
+
+<div class="hot">
+<b>🔥 Interview Line — Code Coverage Requirement</b>
+<p style="margin-top:6px;">If asked <em>"What is your code coverage requirement?"</em> the instructor's advice is to answer: <b>"We maintain 85% code coverage."</b> (Some companies use 80%, some 90%.)</p>
+</div>
+
+<div class="card">
+<b>Follow-Up: How Do You Improve Coverage? (e.g. 81% → 85%)</b>
+<p>Write <b>more test cases</b> — specifically cover the <b>corner scenarios</b> that aren't tested yet (like the untested Platinum condition and the null/exception case).</p>
+</div>
+
+<div class="card">
+<b>Interview-Preparation Advice — Write Your Script</b>
+<ul style="margin-top:8px;">
+<li>From the first session, <b>start writing a script about your work</b>. It will be really tough to create it at the end and remember everything. Keep <b>notes</b>.</li>
+<li>Typical interview question: <em>"What is your day-to-day activity?"</em> (Often a face-to-face human interview, ~40 minutes, where they judge whether to hire you.)</li>
+<li>The instructor's outline: requirements come from a team (<b>Agile</b> — to be covered in depth later) → <b>development</b> → <b>unit test cases</b> → maintain <b>85% code coverage</b>…</li>
+<li>When you answer "we write JUnit tests" and then "we maintain 85% coverage", the interviewer builds <b>confidence and trust</b> that you can work in a real team.</li>
+<li>Data structures alone won't get you the job: do <b>easy and medium problems</b> at a basic level, but <b>focus on understanding what people actually do in a company</b> — the process. You can learn technology anywhere, but the process often isn't taught in structured courses.</li>
+</ul>
+<p class="small" style="margin-top:6px;">The transcript has several other personal remarks (salary stories, weekly LeetCode slot) that were too unclear to use.</p>
+</div>
+
+<div class="card">
+<b>The CI/CD Pipeline — What Happens After You Push Code</b>
+<p>If a project requires <b>85% minimum coverage</b> and you don't maintain it, <b>the system will catch you</b>. The flow:</p>
+<ol style="padding-left:20px;margin-top:8px;">
+<li>You write the code and <b>push it</b> (to Git / GitHub).</li>
+<li><b>Jenkins</b> (a CI/CD tool) <b>automatically triggers the build</b>: it compiles the code, builds the packages and creates the <b>JAR</b>, using <b>Maven</b>.</li>
+<li>It <b>executes the JUnit test cases</b>.</li>
+<li>It checks the <b>code coverage</b>.</li>
+<li><b>If coverage is above 85%</b> → it builds the JAR and <b>deploys</b> it ("deploy" = <b>copy the JAR to a target system</b>).</li>
+</ol>
+<p style="margin-top:8px;"><b>Why automatic?</b> You don't have one or two classes — you might have <b>20,000</b>. Somebody must compile and package them automatically. Even for a small change you go through this pipeline, and it is <b>already configured</b>.</p>
+<p style="margin-top:8px;">The instructor's message: don't just say "I know Java" — everybody does. Explaining <b>this structure</b> shows how you're different and what value you add. You'll do CI/CD hands-on when the time comes.</p>
+</div>
+
+<div class="card">
+<b>Second Scenario — Coverage Is Only 80%</b>
+<ul style="margin-top:8px;">
+<li>Your code is right, but coverage is <b>80%</b>, below the 85% minimum.</li>
+<li>The pipeline <b>fails the build</b>: it says <em>your code is right, but you aren't following the process</em> — 85% is the <b>minimum requirement</b>, not matched.</li>
+<li>It <b>sends an email to your entire engineering team</b>.</li>
+<li>You <b>cannot bypass or play with the system</b>. You must sit down, <b>write more JUnit tests</b>, and improve the coverage.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>SonarQube</b>
+<p>"Somewhere here", <b>SonarQube</b> also comes in — it <b>analyses your code</b> (the transcript says "Sonar Cube"; the instructor didn't go into detail). It's the kind of tool behind static code review, below.</p>
+</div>
+
+<div class="card">
+<b>Where Does the QA Team Fit? — Build, Deploy, Environments</b>
+<ul style="margin-top:8px;">
+<li>"My build is ready" means: <b>I've tested it from my side and the JAR has been created</b>, so it can be moved to another system. (Last time you created a JAR in the project's <code>target</code> folder — that's the build.)</li>
+<li><b>Deploy</b> = copy the JAR to a <b>target system</b>: <b>QA</b>, <b>SIT</b>, <b>pre-prod</b> or <b>prod</b>.</li>
+<li>If you move it to the <b>QA system</b>, the <b>testing team starts testing</b>. If testing is already done, it moves on to SIT, pre-prod, or prod.</li>
+<li>The testing is done <b>on your build only</b> — whatever JAR you create.</li>
+<li>All of this happens <b>through the Jenkins pipeline</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Jenkins Demo in Class</b>
+<p>The instructor showed a <b>locally installed Jenkins</b> with a pipeline already created. Flow: <b>the developer checks the code into GitHub</b>; the pipeline then lists the steps to run — e.g. <b>copy the code from GitHub</b>, run <b>Maven clean</b> (build), then a <b>Docker build</b> and <b>run the container</b>. You can configure whatever steps you want; they'll be understood properly later. At this stage the class <b>doesn't yet know what continuous integration / continuous delivery mean</b> — those come later. The resulting <b>build can be deployed to any environment</b> (QA, SIT, pre-prod, prod).</p>
+<p class="small" style="margin-top:6px;">The exact pipeline steps were hard to catch in the transcript (the Docker part especially) — treat this as the gist.</p>
+</div>
+
+<div class="card">
+<b>Code Review — The Step After Unit Testing</b>
+<p>After developing and finishing the unit tests, you go through <b>code review</b>. There are <b>two types</b>: <b>static code review</b> and <b>peer code review</b>.</p>
+</div>
+
+<div class="card">
+<b>Static Code Review — Done by a Tool</b>
+<ul style="margin-top:8px;">
+<li>Done by <b>some tool</b>, <b>based on configured rules</b>.</li>
+<li>It catches <b>small mistakes</b>, for example:
+<ul style="margin-top:6px;">
+<li>A <b>global (instance) variable</b> that you only use <b>locally</b> → should be a local variable.</li>
+<li>A <b>500-line method</b> → "can you break this into 3 methods?"</li>
+<li>A variable that is <b>declared but never used</b>.</li>
+<li><b>Creating objects inside a loop</b>.</li>
+</ul></li>
+<li><b>Rules are configurable</b> — your company or project decides, e.g. <b>a method must not exceed 200 lines</b> (a 210-line method gives an error), a <b>class must not exceed 1,000 lines</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Peer Code Review — Done by Humans</b>
+<ul style="margin-top:8px;">
+<li>Done by your <b>team members and team lead</b> (experts and architects may join).</li>
+<li>You <b>share your screen and present the code</b>; the <b>entire team reviews</b>.</li>
+<li>They check the <b>business requirement</b> too — what you're trying to do. <b>A static tool can't do that</b>; it only runs the configured rules and gives a checklist.</li>
+<li>They give <b>feedback</b>; you <b>fix it</b>; then <b>re-review</b>.</li>
+<li><b>Take it positively</b>. The instructor makes people present in class so that you feel comfortable when you join a company.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>What a Peer Review Can Look Like — The Instructor's Examples</b>
+<ul style="margin-top:8px;">
+<li><b>Naming:</b> "Why did you choose this class name? It doesn't convey anything." A badly named class (e.g. starting in lower case) can even derail the meeting.</li>
+<li><b>Static vs instance:</b> "Why is this calculation method non-static? It doesn't depend on any object — amount and type are just inputs — so it should be <b>static</b>." And the reviewer is right. Note the knock-on effect: <b>making it static changes your test cases</b>, because you no longer create an object to call it.</li>
+<li><b>Extensibility:</b> "What if a <b>new customer category</b> comes — will you change code each time? Make it pick the customer type dynamically, and then you won't need this <code>switch</code>." Maybe on closer thought your approach is right — but <b>in front of the manager and the manager's manager, the impression is already formed</b>.</li>
+<li><b>Defend your approach:</b> if you believe your design is the right one, <b>explain and defend it right there</b>, in the meeting.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Instructor's Note-Taking Requests</b>
+<ul style="margin-top:8px;">
+<li><b>Static code review</b> and <b>peer code review</b> are <b>not in the daily notes</b> — make a <b>one-pager</b> on them yourself.</li>
+<li>Build your own <b>booklet</b> of notes (20, 30 or even 100 pages) and read it before interviews.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification — terms and details the lecture didn't spell out:</b>
+<ul style="margin-top:8px;">
+<li><b>CI/CD:</b> <b>C</b>ontinuous <b>I</b>ntegration / <b>C</b>ontinuous <b>D</b>elivery (or <b>D</b>eployment). The transcript writes "CACD"; the instructor explicitly postponed defining it.</li>
+<li><b>Jenkins</b> is an automation server that runs pipelines like this one; pipelines can be defined as code in a file called a <code>Jenkinsfile</code>.</li>
+<li><b>Coverage tools:</b> the "Emma" the instructor mentioned is an older tool name; in Eclipse the common built-in feature is <b>EclEmma</b> ("Coverage As"), which is based on <b>JaCoCo</b>. Maven builds usually use the JaCoCo plugin to enforce a minimum percentage. (I'm inferring the exact tool from the "Coverage As" wording — the transcript doesn't confirm it.)</li>
+<li><b>Line vs branch coverage:</b> in EclEmma/JaCoCo-style reports, <b>green = fully covered</b>, <b>yellow = partly covered</b> (some branches of an <code>if</code>/<code>switch</code> missed), <b>red = not covered</b>. That matches the lecture's green/yellow descriptions, but the instructor didn't name red.</li>
+<li><b>Coverage ≠ quality:</b> coverage catches <em>empty</em> tests (their lines never run), but it can't tell whether a test <em>asserts</em> anything meaningful. A test that calls a method and checks nothing still "covers" it. Coverage is a minimum bar, not proof of good tests.</li>
+<li><b>How the 85% rule is enforced:</b> typically a coverage plugin or a SonarQube "quality gate" fails the build below the threshold — consistent with the lecture, but the exact mechanism wasn't shown.</li>
+<li><b>Environments:</b> QA = quality assurance (testing) environment; SIT = system integration testing; pre-prod = a production-like staging environment; prod = live. The usual direction is lower → higher; the instructor listed them as possible targets rather than a strict sequence.</li>
+<li><b>Other static-analysis tools</b> exist besides SonarQube (e.g. Checkstyle, PMD) — the lecture named only SonarQube.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Terminology Cheat-Sheet</b>
+<p class="small" style="margin-top:4px;">Blue tag = defined in the lecture · Yellow tag = detail added by me.</p>
+<div class="tw">
+<table>
+<tr><th>Term</th><th>Meaning</th><th>Source</th></tr>
+<tr><td><b>Code coverage</b></td><td>How much of your source code is exercised by your unit tests (lines tested ÷ total lines).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Coverage report</b></td><td>Per-class percentages with lines highlighted as tested / not tested.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Corner scenario</b></td><td>A rare situation that's hard or impossible to reproduce in a unit test (e.g. database crash).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>85% rule</b></td><td>Typical industry minimum coverage (some use 80% or 90%).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>CI/CD pipeline</b></td><td>Automated flow: build → test → coverage check → package → deploy.</td><td><span class="pill lec">Lecture</span> + <span class="pill add">Added</span></td></tr>
+<tr><td><b>Jenkins</b></td><td>The tool that triggers and runs the pipeline automatically.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Build</b></td><td>Compiling and packaging the code into a JAR that can be moved to another system.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Deploy</b></td><td>Copying the JAR to a target system (QA, SIT, pre-prod, prod).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>SonarQube</b></td><td>Tool that analyses code quality; part of the static review picture.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Static code review</b></td><td>Tool-based review against configured rules (method length, unused variables…).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Peer code review</b></td><td>Human review by team and team lead; checks business requirement and design.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Branch coverage</b></td><td>Whether each path of a decision (if/else) was taken, not just each line.</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><b>JaCoCo / EclEmma</b></td><td>Common Java coverage tooling (library / Eclipse plugin).</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><b>Quality gate</b></td><td>A pass/fail threshold (like 85% coverage) that blocks a build.</td><td><span class="pill add">Added</span></td></tr>
+</table>
+</div>
+</div>
+
+</div>
+
+<div class="section">
+<h2>🖼️ The CI/CD Pipeline</h2>
+
+<div class="lane">
+<div class="label">Happy path — coverage ≥ 85%</div>
+<div class="flowbox">
+<div class="fstep">Developer pushes code (Git/GitHub)</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Jenkins triggers the build</div>
+<div class="farrow">→</div>
+<div class="fstep">Compile (Maven)</div>
+<div class="farrow">→</div>
+<div class="fstep">Run JUnit tests</div>
+<div class="farrow">→</div>
+<div class="fstep">Check code coverage</div>
+<div class="farrow">→ ≥ 85% →</div>
+<div class="fstep notify">Build JAR</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Deploy (copy JAR to target system)</div>
+</div>
+</div>
+
+<div class="lane">
+<div class="label">Coverage below the minimum — e.g. 80%</div>
+<div class="flowbox">
+<div class="fstep">Compile</div>
+<div class="farrow">→</div>
+<div class="fstep">Run JUnit tests</div>
+<div class="farrow">→</div>
+<div class="fstep">Check code coverage</div>
+<div class="farrow">→ &lt; 85% →</div>
+<div class="fstep wait">BUILD FAILS</div>
+<div class="farrow">→</div>
+<div class="fstep wait">email to the whole engineering team</div>
+<div class="farrow">→</div>
+<div class="fstep">developer writes more JUnit tests</div>
+<div class="farrow">→</div>
+<div class="fstep notify">push again</div>
+</div>
+</div>
+<p class="small">Where exactly SonarQube-style analysis runs inside this flow wasn't specified in the lecture.</p>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">After the build: environments and the QA team</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">Build ready (JAR, tested by the developer)</div>
+<div class="farrow">→ deploy →</div>
+<div class="fstep notify">QA system — testing team starts testing</div>
+<div class="farrow">→</div>
+<div class="fstep">SIT</div>
+<div class="farrow">→</div>
+<div class="fstep">Pre-prod</div>
+<div class="farrow">→</div>
+<div class="fstep">Prod</div>
+</div>
+</div>
+<p class="small">The instructor listed QA, SIT, pre-prod and prod as possible target systems; the left-to-right order here is my reading of "if testing is already done, then I'll move to SIT or pre-prod or prod".</p>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">The whole journey of a change</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">Requirement (Agile team)</div>
+<div class="farrow">→</div>
+<div class="fstep">Development</div>
+<div class="farrow">→</div>
+<div class="fstep">Unit tests (JUnit)</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Code coverage (85% minimum)</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Code review: static + peer</div>
+<div class="farrow">→</div>
+<div class="fstep">Push to Git</div>
+<div class="farrow">→</div>
+<div class="fstep notify">CI/CD pipeline (Jenkins)</div>
+<div class="farrow">→</div>
+<div class="fstep">Deploy: QA → …</div>
+</div>
+</div>
+<p class="small">Sequence assembled from the lecture's statements; the instructor didn't present it as one single diagram.</p>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Static vs peer code review</h3>
+<div class="tw">
+<table>
+<tr><th>Aspect</th><th>Static Code Review</th><th>Peer Code Review</th></tr>
+<tr><td>Done by</td><td>A tool (e.g. SonarQube)</td><td>Team members, team lead, experts/architects</td></tr>
+<tr><td>Based on</td><td>Rules configured by the company/project</td><td>Human judgement; business requirement and design</td></tr>
+<tr><td>Catches</td><td>Unused variables, oversized methods/classes, objects created in loops, instance variables used only locally</td><td>Naming, static vs instance, extensibility (new customer category), whether the code meets the requirement</td></tr>
+<tr><td>Output</td><td>A checklist of violations (e.g. 210-line method → error)</td><td>Feedback → you fix → re-review</td></tr>
+<tr><td>You should</td><td>Fix what the rules flag</td><td>Take it positively; defend your design when you're confident</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the transcript describes the code only verbally. Every program below is <b>my reconstruction</b> from those descriptions (the Platinum discount of 150, the upper-casing of the type and the null case come from the lecture; the structure and names are mine). The JaCoCo and Jenkinsfile snippets were <b>not shown in class at all</b> — they illustrate the ideas.
+</div>
+
+<p><b>1. The Discount Calculator after the instructor's changes (reconstruction):</b></p>
+<pre><code class="language-java">public class DiscountCalculator {
+
+    public double calculateDiscount(double amount, String customerType) {
+        String type = customerType.toUpperCase();          // NullPointerException if customerType is null
+
+        if (type.equals("REGULAR")) {
+            return amount - (amount * 0.10);               // tested
+        } else if (type.equals("GOLD")) {
+            return amount - (amount * 0.20);               // tested
+        } else if (type.equals("PLATINUM")) {
+            return amount - 150;                           // NEW branch -- no test yet = uncovered
+        }
+        return amount;                                     // default: no discount (tested via "Premium")
+    }
+}</code></pre>
+
+<p><b>2. What the existing tests cover (and what the coverage report would flag):</b></p>
+<pre><code class="language-java">@Test void testRegular()  { assertEquals(900,  calculator.calculateDiscount(1000, "Regular")); }   // covers REGULAR branch
+@Test void testGold()     { assertEquals(800,  calculator.calculateDiscount(1000, "Gold")); }      // covers GOLD branch
+@Test void testPremium()  { assertEquals(1000, calculator.calculateDiscount(1000, "Premium")); }   // covers the default
+
+// Coverage report:  Regular, Gold and default lines = green (tested)
+//                   the PLATINUM return line      = never executed by any test  -&gt; lowers coverage
+//                   the null-type scenario        = never exercised             -&gt; exception path untested</code></pre>
+
+<p><b>3. Raising coverage — tests for the Platinum branch and the null (exception) scenario:</b></p>
+<pre><code class="language-java">import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+
+@Test
+void testPlatinumCustomerGetsFlat150Discount() {
+    assertEquals(850, calculator.calculateDiscount(1000, "Platinum"));   // covers the new branch
+}
+
+@Test
+void testNullCustomerTypeThrowsNullPointerException() {                  // covers the exception scenario
+    assertThrows(NullPointerException.class,
+                 () -&gt; calculator.calculateDiscount(1000, null));
+}
+// assertThrows is added by me; the lecture only said to test the null scenario.</code></pre>
+
+<p><b>4. The "empty test" problem — green, but proves nothing:</b></p>
+<pre><code class="language-java">@Test
+public void testEverything() {
+    // empty on purpose: "all my test cases are passing!"
+}
+// JUnit shows green, but a coverage tool reports ~0% for the class,
+// because none of its lines were ever executed by a test.</code></pre>
+
+<p><b>5. Things a static code review tool would flag (illustrative):</b></p>
+<pre><code class="language-java">public class OrderService {
+
+    private double tempTotal;                        // flagged: instance variable used only inside one method -&gt; make it local
+
+    public double calculateTotal(List&lt;Item&gt; items) {
+        int unusedCounter = 0;                       // flagged: declared but never used
+        double total = 0;
+
+        for (Item item : items) {
+            DiscountCalculator calculator = new DiscountCalculator();   // flagged: object created inside a loop
+            total += calculator.calculateDiscount(item.getPrice(), "Gold");
+        }
+        return total;
+    }
+    // Also flagged by a typical rule: a method longer than the configured limit (e.g. 200 lines).
+}</code></pre>
+
+<p><b>6. A peer-review comment and its effect on the tests — "make it static":</b></p>
+<pre><code class="language-java">// Before: instance method -- tests must create an object
+DiscountCalculator calculator = new DiscountCalculator();
+double actual = calculator.calculateDiscount(1000, "Regular");
+
+// After the reviewer's suggestion: static method -- no object needed
+public static double calculateDiscount(double amount, String customerType) { ... }
+
+double actual = DiscountCalculator.calculateDiscount(1000, "Regular");   // tests change accordingly</code></pre>
+
+<p><b>7. Enforcing a minimum coverage in the Maven build (added — a typical JaCoCo setup; version is an example):</b></p>
+<pre><code class="language-markup">&lt;plugin&gt;
+    &lt;groupId&gt;org.jacoco&lt;/groupId&gt;
+    &lt;artifactId&gt;jacoco-maven-plugin&lt;/artifactId&gt;
+    &lt;version&gt;0.8.12&lt;/version&gt;
+    &lt;executions&gt;
+        &lt;execution&gt;
+            &lt;goals&gt;&lt;goal&gt;prepare-agent&lt;/goal&gt;&lt;/goals&gt;
+        &lt;/execution&gt;
+        &lt;execution&gt;
+            &lt;id&gt;report&lt;/id&gt;
+            &lt;phase&gt;test&lt;/phase&gt;
+            &lt;goals&gt;&lt;goal&gt;report&lt;/goal&gt;&lt;/goals&gt;
+        &lt;/execution&gt;
+        &lt;execution&gt;
+            &lt;id&gt;check-coverage&lt;/id&gt;
+            &lt;phase&gt;verify&lt;/phase&gt;
+            &lt;goals&gt;&lt;goal&gt;check&lt;/goal&gt;&lt;/goals&gt;
+            &lt;configuration&gt;
+                &lt;rules&gt;
+                    &lt;rule&gt;
+                        &lt;element&gt;BUNDLE&lt;/element&gt;
+                        &lt;limits&gt;
+                            &lt;limit&gt;
+                                &lt;counter&gt;LINE&lt;/counter&gt;
+                                &lt;value&gt;COVEREDRATIO&lt;/value&gt;
+                                &lt;minimum&gt;0.85&lt;/minimum&gt;      &lt;!-- 85% minimum: below this the build FAILS --&gt;
+                            &lt;/limit&gt;
+                        &lt;/limits&gt;
+                    &lt;/rule&gt;
+                &lt;/rules&gt;
+            &lt;/configuration&gt;
+        &lt;/execution&gt;
+    &lt;/executions&gt;
+&lt;/plugin&gt;</code></pre>
+
+<p><b>8. A pipeline sketch as a Jenkinsfile (added — illustration only; the lecture's real pipeline also had Docker steps):</b></p>
+<pre><code class="language-groovy">pipeline {
+    agent any
+    stages {
+        stage('Checkout') {
+            steps { git branch: 'main', url: 'https://github.com/your-org/your-repo.git' }
+        }
+        stage('Build, Test &amp; Coverage Gate') {
+            steps { sh 'mvn clean verify' }        // compile + JUnit + coverage rule; fails below 85%
+        }
+        stage('Deploy') {
+            steps { echo 'Copy the JAR to the target system (QA / SIT / pre-prod / prod)' }
+        }
+    }
+    post {
+        failure { echo 'Build failed -- notify the engineering team (e.g. by email)' }
+    }
+}
+// A failed stage stops the pipeline, so Deploy never runs for a build that missed the coverage rule.</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question / Point</th><th>Answer Given in Class</th></tr>
+<tr><td>How does the organisation know your unit tests are real and not empty methods?</td><td>Through <b>code coverage</b> — the tool shows how much of the source code your tests actually executed.</td></tr>
+<tr><td>Why can't we reach 100% coverage?</td><td>Some corner scenarios can't be produced in tests (e.g. an exception that only occurs if the database is down). Industry settles around 85%.</td></tr>
+<tr><td>What will you do if coverage is 81% and the requirement is 85%? (an interview follow-up)</td><td>Write more test cases, covering the corner scenarios.</td></tr>
+<tr><td>What if coverage is below the minimum?</td><td>The pipeline fails the build and emails the whole engineering team; you can't bypass it — you write more tests.</td></tr>
+<tr><td>Where does the QA team come in?</td><td>After your build (JAR) is created and tested by you, it's deployed to the QA system, where the testing team starts testing; later SIT / pre-prod / prod.</td></tr>
+<tr><td>What are CI and CD exactly?</td><td>Deferred — "we don't yet know what continuous integration / continuous delivery are"; hands-on later.</td></tr>
+<tr><td>Static / peer code review aren't in the daily notes — what should we do?</td><td>Make your own one-pager on them and keep a personal booklet of notes.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>💼 Likely Interview Questions From This Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What is code coverage?</td><td>The percentage of your source code (lines) exercised by your unit tests — e.g. 900 of 1000 lines = 90%.</td></tr>
+<tr><td>Why do we need code coverage?</td><td>So the system can verify how much unit testing was really written — otherwise someone could write empty test methods and claim 100% done.</td></tr>
+<tr><td>How is it measured?</td><td>A coverage tool runs with your JUnit tests, tracks which source lines get called, and reports percentages per class with lines highlighted as tested / not tested.</td></tr>
+<tr><td>What is your code coverage requirement?</td><td>"We maintain 85%" (some companies 80%, some 90%).</td></tr>
+<tr><td>Can you achieve 100% coverage?</td><td>No — some corner scenarios (e.g. exceptions that occur only when the database is down) can't be reproduced in unit tests; averages across thousands of classes won't reach 100%.</td></tr>
+<tr><td>If coverage is 81% and you need 85%, what do you do?</td><td>Write more test cases that cover the corner scenarios — the untested branches and exception paths.</td></tr>
+<tr><td>What happens if you push code with coverage below the requirement?</td><td>The CI/CD pipeline fails the build and emails the engineering team; you must add tests and push again.</td></tr>
+<tr><td>Explain the CI/CD pipeline you've worked with.</td><td>Developer pushes code → Jenkins triggers the build → compile → run JUnit tests → check coverage → if ≥ 85%, build the JAR and deploy it to the target system.</td></tr>
+<tr><td>What does "build" and "deploy" mean?</td><td>Build = compile and package into a JAR that can be moved elsewhere; deploy = copy that JAR to a target system (QA, SIT, pre-prod, prod).</td></tr>
+<tr><td>Where does the QA team fit in?</td><td>They test the build after it's deployed to the QA system; further environments follow.</td></tr>
+<tr><td>What is SonarQube used for?</td><td>Analysing your code (code quality / static analysis).</td></tr>
+<tr><td>Types of code review?</td><td>Static code review (tool, rule-based) and peer code review (team members and team lead).</td></tr>
+<tr><td>What does static code review catch?</td><td>Unused variables, instance variables used only locally, very long methods/classes (configurable limits), objects created in loops.</td></tr>
+<tr><td>Why do we need peer review if a tool already reviews the code?</td><td>A tool only applies configured rules; humans check the business requirement, naming and design choices.</td></tr>
+<tr><td>What is your day-to-day activity?</td><td>Requirement from the team (Agile) → development → JUnit tests → maintain 85% coverage → review → pipeline build and deployment.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🎤 Likely Interviewer Follow-Up Questions (Added)</h2>
+<p class="small">These go beyond what the lecture said — expect them in Java backend interviews.</p>
+<div class="tw">
+<table>
+<tr><th>Follow-up</th><th>Short answer</th></tr>
+<tr><td>Does 100% coverage mean the code has no bugs?</td><td>No. Coverage only shows lines that executed; tests may assert nothing meaningful. It's a minimum bar, not proof of quality.</td></tr>
+<tr><td>Line coverage vs branch coverage?</td><td>Line: was each line executed. Branch: was each outcome of each decision (if/else, switch) taken — the yellow "partly covered" lines.</td></tr>
+<tr><td>Which coverage tools do you know?</td><td>JaCoCo (library/Maven plugin), EclEmma (Eclipse plugin built on JaCoCo); SonarQube can display coverage results.</td></tr>
+<tr><td>What is CI vs CD?</td><td>CI: automatically build and test every change as it's integrated. CD: automatically deliver (or deploy) the tested build to environments.</td></tr>
+<tr><td>What is a quality gate?</td><td>A pass/fail rule (like ≥ 85% coverage, no critical issues) that blocks the build or release when not met.</td></tr>
+<tr><td>What is a Jenkinsfile?</td><td>The pipeline definition written as code and stored with the project.</td></tr>
+<tr><td>Which code should be excluded from coverage?</td><td>Typically generated code and trivial boilerplate — decided by project policy.</td></tr>
+<tr><td>How do you handle reviewer comments you disagree with?</td><td>Discuss respectfully and defend your design with reasons; accept the feedback if it holds.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>📌 Lecture Takeaways</h2>
+<ul>
+<li>Developers write JUnit tests to <b>maintain code quality</b>; the person who wrote the code writes them.</li>
+<li>Empty test methods can fake "all green" — <b>code coverage</b> exposes that.</li>
+<li><b>Code coverage</b> = how much of the code your unit tests execute; reported per class.</li>
+<li>A coverage tool runs with the tests and highlights <b>tested vs untested lines</b>; new untested branches and exception paths lower the percentage.</li>
+<li><b>100% is not achievable</b> (e.g. exceptions only when the database is down); industry standard is about <b>85%</b>.</li>
+<li>To improve coverage, <b>write tests for corner scenarios</b>.</li>
+<li>The <b>pipeline</b>: push → Jenkins build → compile → JUnit → coverage check → (≥ 85%) JAR → deploy.</li>
+<li>Below the minimum, <b>the build fails and the team is emailed</b> — you can't bypass the system.</li>
+<li><b>Deploy</b> = copy the JAR to a target system (QA, SIT, pre-prod, prod); the QA team tests your build.</li>
+<li><b>Code review</b> has two kinds: <b>static</b> (tool, rules) and <b>peer</b> (humans, business and design).</li>
+<li>Write <b>your own script</b> about your day-to-day work for interviews.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🚧 Common Interview Traps</h2>
+<ul>
+<li><b>"All my tests are green, so my code is covered."</b> Empty or weak tests are green too — coverage is what measures how much code ran.</li>
+<li><b>"We target 100% coverage."</b> Unrealistic — say you maintain about 85%, and explain why 100% isn't practical.</li>
+<li><b>Saying "I know Java" and stopping there.</b> The instructor wants you to explain the process — tests, coverage, pipeline, reviews.</li>
+<li><b>Confusing build with deploy.</b> Build creates the JAR; deploy copies it to a target system.</li>
+<li><b>Thinking you can bypass the coverage rule.</b> The pipeline enforces it and informs the whole team.</li>
+<li><b>Thinking a tool can replace peer review.</b> Static tools check rules, not business requirements.</li>
+<li><b>Getting defensive in a review.</b> Take feedback positively — but defend a design you can justify.</li>
+<li><b>Treating coverage as proof of quality.</b> <span class="pill add">Added</span> A test that asserts nothing still counts as "covered".</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+
+<div class="card">
+<b>Assigned in the lecture</b>
+<ul style="margin-top:8px;">
+<li><b>In-class exercise (5–10 minutes, 5–7 minutes max for the coverage run):</b> take your existing discount code, <b>add some condition</b>, and <b>run it with coverage</b> to see the report change.</li>
+<li><b>Start writing a script</b> about your work and keep notes for interviews (requirement → development → JUnit → 85% coverage …).</li>
+<li>Make a <b>one-pager on static code review and peer code review</b>, and build your own <b>booklet</b> of notes.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>Suggested extra practice (added — not assigned in the lecture):</b>
+<ul style="margin-top:8px;">
+<li>Run your tests <em>with</em> coverage, find a red/uncovered line, then write the test that turns it green.</li>
+<li>Write an empty <code>@Test</code> and compare "tests passed" against the coverage percentage.</li>
+<li>Add the JaCoCo plugin with a 0.85 minimum and watch <code>mvn verify</code> fail, then pass after you add tests.</li>
+<li>Draw the pipeline from memory and explain each stage out loud in two minutes.</li>
+<li>Pick one of your classes and list five things a static tool and five things a human reviewer would flag.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>A sample "day-to-day" answer built from this lecture's vocabulary (added — adapt it to your genuine experience, don't memorise it):</b>
+<p style="margin-top:8px;">"We get requirements from the requirements team and work in Agile. I develop the feature in Java and write JUnit tests for the scenarios, aiming to maintain around 85% code coverage. The code goes through static code review and peer review, then our Jenkins pipeline compiles it, runs the tests and the coverage check, builds the JAR and deploys it to the QA environment."</p>
+</div>
+</div>
+
+<div class="section">
+<h2>🧾 Transcript Clean-Up Map</h2>
+<p class="small">The recording was auto-transcribed with many errors (and Hindi words mixed in). This is how I interpreted the unclear terms. Several passages were too garbled to use and were left out rather than guessed.</p>
+<div class="tw">
+<table>
+<tr><th>Transcript wording</th><th>Interpreted as</th><th>Confidence</th></tr>
+<tr><td>"JNIT", "Jamie test cases", "Jay unit"</td><td>JUnit</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Food coverage", "code cover"</td><td>Code coverage</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Jenkin", "Genkin"</td><td>Jenkins</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"CACD", "CA CD", "CAC"</td><td>CI/CD</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Sonar Cube"</td><td>SonarQube</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Pier coding", "Pier 4"</td><td>Peer code review</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Maverick will come the bill too"</td><td>Maven (build) is used for the build step</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Emma, or something"</td><td>A coverage tool — possibly EMMA / EclEmma (Eclipse "Coverage As")</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Static variable will catch"</td><td>The static code review tool will catch it (a slip of the tongue)</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"TUA system", "All SIT system"</td><td>QA system, SIT system</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Broad" (after pre-prod)</td><td>Prod</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Nitinam" / Platinum discount of 150</td><td>Platinum customer, flat discount of 150 (flat vs percentage is my reading)</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"74%" then "72%" and "70 by 2 K"</td><td>Coverage dropped from about 74% to about 72%; the instructor's arithmetic was approximate</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>Docker/pipeline steps ("somewhere, Docker, Java, CICD, test again")</td><td>Pipeline checks out from GitHub, runs Maven clean, Docker build, runs a container</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"Dilmate / Dynamic" (reviewer's suggestion)</td><td>Make the customer type dynamic instead of hard-coded</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>Colour for "not tested" lines</td><td>Not named in the transcript; red is typical in EclEmma-style reports</td><td><span class="pill low">Low</span></td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Classes:</b> The <b>JUnit unit-testing class (Oct 12)</b> — the Discount Calculator, <code>@Test</code> and <code>assertEquals</code> — is the direct base for this class. The <b>Maven build</b> and the JAR created in the <code>target</code> folder (from an earlier class) are what the pipeline now automates. See the separate JUnit notes.</li>
+<li><b>Upcoming Topics:</b> <b>Agile</b> ("I'll cover in depth") and proper <b>continuous integration / continuous delivery</b>, with Jenkins hands-on later; the transcript ends with "we'll pick up the next topic tomorrow" without naming it.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+Section headings, card grouping, the flow diagrams, the terminology/comparison tables, the interview Q&amp;A, and the styling were added to match your earlier notes. The lecture content comes from your transcript. Because the transcript was auto-generated and often garbled, I corrected clear speech errors, flagged unclear ones in the clean-up map, and left out unreadable passages and personal side remarks. Everything marked with a yellow dashed box or the "Added" tag — CI/CD expansions, JaCoCo/EclEmma, line vs branch coverage, "coverage ≠ quality", quality gates, the Jenkinsfile and JaCoCo snippets, environment definitions, the sample interview answer and all follow-up questions — is my clarification, not something the instructor said, so verify it against your instructor or the tool documentation before relying on it in an interview. All code is reconstructed from descriptions, not copied from the instructor's screen.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-groovy.min.js"></script>
+</body>
+</html>

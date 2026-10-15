@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Maven, Dependency Management, pom.xml &amp; Repositories</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.pill{display:inline-block;padding:1px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;}
+.pill.lec{background:#e3f2fd;color:#0066ff;}
+.pill.add{background:#fff3cd;color:#a67c00;}
+.pill.hi{background:#e6f6ea;color:#1e8e3e;}
+.pill.med{background:#fff3cd;color:#a67c00;}
+.pill.low{background:#fdecea;color:#c62828;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Maven — Build Tool, Dependency Management, pom.xml, Repositories, .m2 &amp; settings.xml</p>
+<p class="meta">Source: June 2026 offline class · Oct 9, 2026 · 1:00:29</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Recap: JAR and dependency — and what a real system depends on</li>
+<li>The version and team problem: why managing hundreds of JARs by hand fails</li>
+<li><b>Maven</b> — what a build tool is; what "build" means (compile + package)</li>
+<li><code>pom.xml</code> — the "brain" of Maven</li>
+<li>Creating a Maven project in Eclipse (archetype, Group ID, Artifact ID, version, SNAPSHOT)</li>
+<li>Adding a dependency: Maven repository website → copy → paste in <code>pom.xml</code></li>
+<li>Maven Central repository (public) and how Maven fetches JARs</li>
+<li>The local <code>.m2</code> repository — Maven checks local first</li>
+<li>How companies work: private/local repository, the security team, and <code>settings.xml</code></li>
+<li>Packaging the project into a JAR (the <code>target</code> folder)</li>
+<li>Other build tools (Gradle, SBT) and how to study Maven</li>
+</ul>
+
+<div class="flag">
+<b>How to read these notes:</b> <b>Green-bordered cards</b> hold what the instructor taught. <b>Yellow dashed boxes</b> hold clarifications I added that the lecture did <em>not</em> state — verify them with your instructor if in doubt. <b>Orange 🔥 boxes</b> are interview alerts. The source is an <b>auto-generated transcript with many speech-recognition errors</b> (Maven appears as "Maverick", "Navan", "Bhavan"; <code>pom.xml</code> as "palm.xml" / "pong.xml"): where the intended term was clear I corrected it; where it was <em>not</em> I flagged it instead of guessing. See the clean-up map near the end.
+</div>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Recap of the Previous Class</b>
+<p>Yesterday we understood the <b>JAR</b>, its purpose, and what a <b>dependency</b> is. We gave one dependency to a project — the <b>payment service</b> used inside the <b>order service</b>.</p>
+</div>
+
+<div class="card">
+<b>What Is a Dependency? — The E-Commerce Example</b>
+<p>When you develop a system you write your own code, but to complete it you need <b>many dependencies</b>. You are <b>not going to develop anything from scratch</b> — you use functionality that somebody else has already developed. Imagine a Java e-commerce backend:</p>
+<div class="tw">
+<table>
+<tr><th>Your system needs…</th><th>You don't build it — you use…</th></tr>
+<tr><td>Payment / encryption</td><td>A payment (encryption) JAR</td></tr>
+<tr><td>Sending email</td><td>An email-functionality JAR</td></tr>
+<tr><td>Sending SMS</td><td>An SMS JAR (integration with an SMS gateway)</td></tr>
+<tr><td>Database access</td><td>The database's JAR (e.g. to connect your program to MySQL you need the MySQL JAR)</td></tr>
+<tr><td>Mathematics</td><td>A math-functionality JAR</td></tr>
+<tr><td>Maps / navigation</td><td>A Google Maps / navigation JAR</td></tr>
+</table>
+</div>
+<p style="margin-top:10px;">All of these JARs act as <b>dependencies of your backend system</b>. Your program <b>cannot connect to MySQL until you use the MySQL JAR</b>, and cannot send messages <b>until it integrates with the SMS gateway code/JAR</b>.</p>
+</div>
+
+<div class="card">
+<b>What Is Inside a Dependency JAR?</b>
+<p>Why was the payment service a dependency for the order service? Because the payment service was <b>developed by somebody else</b> and you want to use it in your order service. The <b>bytecode / <code>.class</code> files</b> are part of the JAR, and you give that JAR as a dependency.</p>
+</div>
+
+<div class="card">
+<b>One Dependency ≠ One JAR</b>
+<ul style="margin-top:8px;">
+<li>A system might need 20 JARs, 5, 3 or 2.</li>
+<li>In a typical project the instructor said you'll have <b>hundreds of dependencies</b> (he quoted 500 to 1,000 at one point, and "20–30 different types of JARs" at the end — the numbers were rough).</li>
+<li><b>One dependency can bring multiple JARs</b> with it (you'll see this in the demo).</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Biggest Problem — Managing Dependencies and Versions</b>
+<ul style="margin-top:8px;">
+<li>JARs keep evolving. Today you use <b>SMS JAR 1.0</b>; after 6 months it becomes <b>1.5</b> with new functionality. Versions keep changing.</li>
+<li><b>How do you manage 500 JARs?</b> And what if you have a team of <b>20 developers</b>?</li>
+<li>Example from class: the project uses SMS <b>1.0</b>, but one developer used <b>1.2</b>. His functionality worked on his side, but <b>failed in production because production expected 1.0</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Why Yesterday's Manual Approach Doesn't Scale</b>
+<p>Yesterday we managed the dependency by <b>keeping one JAR file</b> on the local disk. That is <b>not a great idea</b>:</p>
+<ul style="margin-top:8px;">
+<li>It only works for <b>one JAR</b>. What about <b>1,000 JARs with different versions</b>?</li>
+<li>The JAR sits on <b>my local disk</b>. With a team of 20 who must all use version <b>1.3</b>, <b>I cannot control</b> who downloads what — one uses 1.0, another 1.2.</li>
+<li>If I <b>set up a new machine</b>, I'd have to <b>copy all the JARs</b> over — with 1,000 JARs that's <b>not feasible</b>; you'd waste your time just on setup.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Maven to the Rescue — A Build Tool</b>
+<ul style="margin-top:8px;">
+<li>This problem is solved by <b>Maven</b> — a <b>build tool</b>.</li>
+<li>If someone asks <em>"Which build tool are you using?"</em> — you say <b>Maven</b>. Others exist, such as <b>Gradle</b> (and SBT). If you have experience with Maven, you can work with any of them.</li>
+<li>Maven isn't something technical to memorise — it's <b>part of the process</b>. The instructor's view: <b>"Without Maven you cannot even work one day in a company."</b></li>
+</ul>
+</div>
+
+<div class="card">
+<b>What Does "Build" Mean?</b>
+<ul style="margin-top:8px;">
+<li><b>Build = compile + package.</b> Compile the code, then <b>bundle the classes into a JAR</b> (package).</li>
+<li>Don't think that pressing <b>Ctrl+S</b> (the IDE compiling) is the build — that's only local. When you give a release to <b>QA</b>, they need only <b>JAR files</b>, so someone must compile the code and create them.</li>
+<li>For a real product — <b>20,000 class files</b>, <b>hundreds of JARs</b> — compilation can take <b>10, 20, even 30 minutes</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>What Maven Does</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li><b>Builds</b> your code (compiles it).</li>
+<li><b>Creates the package</b> — puts your classes inside the JAR file.</li>
+<li><b>Manages your project structure</b> overall.</li>
+<li><b>Manages your dependencies</b> — you don't supply JARs from your local system. You just say <em>"I want the SMS JAR, version 1.3"</em> and <b>Maven gets it for you</b>. Dependencies are nothing but JAR files.</li>
+<li>Plus other features related to your build and deployment.</li>
+</ol>
+</div>
+
+<div class="card">
+<b>pom.xml — The Brain of Maven</b>
+<p><code>pom.xml</code> (the instructor guessed it stands for "project object model") is <b>the brain of the entire Maven</b>. Whatever your requirements are, <b>write them in <code>pom.xml</code></b>: "I want to compile; my JAR should be named X.jar; to create it I need these dependencies" — and <b>Maven automatically gets all the dependencies</b>.</p>
+<ul style="margin-top:8px;">
+<li>You <b>don't have to remember everything from day one</b>. From today, <code>pom.xml</code> will come up every day.</li>
+<li>After <b>10–15 days</b> you won't worry about it — adding a dependency becomes part of your <b>day-to-day activity</b>: just add it inside <code>pom.xml</code>.</li>
+<li>It's an interesting topic with <b>no heavy technicality</b> — you just need to <b>understand the system</b>.</li>
+</ul>
+</div>
+
+<div class="hot">
+<b>🔥 Instructor's Warning — Make Sure Maven Works on Your Machine</b>
+<p style="margin-top:6px;">From the next day <b>until the microservices topic is complete, Maven is used every day</b>. If Maven isn't working for you, fix it — ask friends, and if they can't help, ask the instructor — but <b>put in the effort</b>. Your journey in the course can stall if you don't fix it.</p>
+</div>
+
+<div class="card">
+<b>Creating a Maven Project in Eclipse</b>
+<p>So far we created projects with <b>New → Java Project</b>. Now use the <b>Maven Project</b> option:</p>
+<ol style="padding-left:20px;margin-top:8px;">
+<li><b>New → Maven Project</b>, then <b>Next</b>.</li>
+<li>Choose the archetype catalog: <b>Internal</b>. (If Internal doesn't work, use <b>Central</b>.) The list takes some time to load.</li>
+<li>For a <b>core Java standalone project</b>, choose the <b>quickstart archetype</b> (whatever version is shown). It creates the <b>basic project structure</b>.</li>
+<li>Fill in <b>Group ID</b>, <b>Artifact ID</b>, <b>Version</b> and <b>Package</b> (see the table below), then <b>Finish</b>.</li>
+<li><b>Maven needs internet</b> while doing this — a log scrolls by as it generates the project.</li>
+</ol>
+<p style="margin-top:8px;">You get a basic structure with a <b>"Hello World" app</b> — no code to write yet; this was just for exploring.</p>
+</div>
+
+<div class="card">
+<b>Group ID, Artifact ID, Version, Package</b>
+<div class="tw">
+<table>
+<tr><th>Field</th><th>Meaning (as taught)</th><th>Example</th></tr>
+<tr><td><b>Group ID</b></td><td>Which <b>group</b> you belong to — the area under the company. E.g. under Infosys there are business lines (financial, healthcare…); <b>healthcare would be the Group ID</b>.</td><td><code>com.fintech</code> <span class="small">(my example)</span></td></tr>
+<tr><td><b>Artifact ID</b></td><td>Your <b>project name</b>. Under healthcare, each company's project is an artifact.</td><td><code>infosys-finance</code> <span class="small">(my example)</span></td></tr>
+<tr><td><b>Version</b></td><td>The project's version. The default includes <b>-SNAPSHOT</b>; if you want to start at 1.0, edit it.</td><td><code>1.0-SNAPSHOT</code> or <code>1.0</code></td></tr>
+<tr><td><b>Package</b></td><td>By default <b>Group ID . Artifact ID</b> (you can choose another).</td><td><code>com.fintech.infosys_finance</code> <span class="small">(illustrative)</span></td></tr>
+</table>
+</div>
+<p style="margin-top:10px;">The <b>JAR file you create will be named from the Artifact ID and the version</b>.</p>
+</div>
+
+<div class="card">
+<b>SNAPSHOT — What Does It Mean?</b>
+<p><b>SNAPSHOT</b> is a <b>naming convention meaning "work in progress"</b>. The JAR will <b>change later as well</b>, so people should be careful while using a snapshot JAR. When you know a version is final, remove the word SNAPSHOT — which is what the instructor did while creating his project.</p>
+</div>
+
+<div class="card">
+<b>What the Generated Project Gives You</b>
+<ul style="margin-top:8px;">
+<li>A <b>Hello World</b> app in the main code folder, and a separate test folder meant for <b>unit testing</b> ("we'll understand why they write tests" — covered in later classes).</li>
+<li>A <b>Maven Dependencies</b> entry showing the JARs the project uses.</li>
+<li>The system <b>assumes you'll write test cases</b>, so it gives you <b>JUnit by default</b>.</li>
+<li>In <code>pom.xml</code>, a <b><code>&lt;dependencies&gt;</code></b> tag; under it each <b><code>&lt;dependency&gt;</code></b> is <b>one JAR addition</b>.</li>
+<li>If you <b>remove a dependency and save</b>, it disappears from the project's Maven Dependencies too.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Adding a Dependency — Step by Step</b>
+<p>Say Infosys Finance wants email-related functionality. Downloading the JAR and asking everybody to download it is <b>not the right way</b> — Maven manages it instead; you just give Maven an instruction.</p>
+<ol style="padding-left:20px;margin-top:8px;">
+<li>In Google, type the <b>keyword of the JAR you want + "maven dependency"</b>.</li>
+<li>Open the <b>Maven repository website</b> result (the <code>mvnrepository.com</code> style page).</li>
+<li>Pick your <b>version</b> — multiple versions are listed, so choose by your requirement.</li>
+<li>The page shows <b>copy-ready snippets for different build tools</b> (Gradle, SBT and others). Since we use Maven, <b>copy the Maven snippet</b>.</li>
+<li>Paste it <b>inside <code>&lt;dependencies&gt;</code> in <code>pom.xml</code></b>.</li>
+<li><b>Save.</b> Maven <b>downloads the JAR</b> from the Maven Central repository over the internet.</li>
+<li>The JAR appears under <b>Maven Dependencies</b> and is on your <b>class path</b> — you can use its classes in your code.</li>
+</ol>
+<p style="margin-top:8px;">You <b>never download anything yourself</b>: whatever JAR you need, find it, copy the dependency, paste, and the JAR comes.</p>
+</div>
+
+<div class="card">
+<b>The Demo — One Dependency Brought Many JARs</b>
+<p>When the instructor added a second library, the Maven Dependencies list <b>grew by several JARs</b>. That is <b>not your worry</b>: you only told Maven "bring this functionality/JAR"; the library uses other JARs <b>internally</b>, and Maven fetched all of them. This is what makes JAR management easy.</p>
+<p class="small" style="margin-top:6px;">The exact libraries used in the instructor's demo were garbled in the transcript (an SMS library and a Google library), so I don't name them here.</p>
+</div>
+
+<div class="card">
+<b>Maven Central Repository</b>
+<ul style="margin-top:8px;">
+<li>A <b>central repository over the internet</b> that holds <b>all the possible JARs</b>, in categorised locations.</li>
+<li>It is <b>open source and free to use</b>.</li>
+<li>The instructor quoted about <b>64 million</b> artifacts ("six and a half crore"; he later said "66 million"). <b>Treat it as approximate — the number changes.</b> His point: if you can't find a JAR with your keyword, <b>you're probably searching in the wrong direction</b>.</li>
+<li>It is saying, in effect: <em>"your build tool can connect to our central repository and download the JAR file."</em></li>
+<li>You can even <b>upload your own JAR</b> to it; once approved, people start using it.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>How It All Works — End to End</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li>Your project uses Maven, and you tell Maven what you need <b>through <code>pom.xml</code></b> ("I need these two dependencies").</li>
+<li>Maven knows <b>where to connect</b> — by default the <b>Maven Central repository on the internet</b>, and it knows where those artifacts live.</li>
+<li>Maven says "give me these JARs", <b>connects, and downloads them</b>.</li>
+<li>They're <b>stored on your local machine</b> — your system runs locally.</li>
+<li>From the local system, <b>Eclipse / your code refers to those JARs</b>.</li>
+</ol>
+<p style="margin-top:8px;"><b>Why internet?</b> Because Maven must fetch the JARs from the public repository <b>the first time</b>. Without internet you can't get new JARs; once they're downloaded, you can work without it.</p>
+</div>
+
+<div class="card">
+<b>The Local Repository — the .m2 Folder</b>
+<p>Where do the downloaded JARs go? A student shared their screen to show it:</p>
+<ul style="margin-top:8px;">
+<li>Open your <b>user folder</b> (e.g. C drive → Users → your user). Maven creates a <b><code>.m2</code> folder</b> there; inside it, a <b><code>repository</code></b> folder.</li>
+<li>When you tell Maven "give me these JARs", it connects to the central repo, gets them, and <b>drops them under <code>.m2/repository</code></b>.</li>
+<li>Package-style folders appear inside — e.g. a student's JSON library from Google landed under <code>com / google / code / gson</code>.</li>
+<li>You can verify it in Eclipse: expand <b>Maven Dependencies</b>, right-click a JAR → <b>Properties</b>, and look at its <b>path</b> — it points into your <code>.m2/repository</code>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Local-First Rule</b>
+<ul style="margin-top:8px;">
+<li>Whenever you give an instruction to Maven, it <b>first checks whether the JAR is already in the local machine's <code>.m2</code></b>. If yes, it <b>uses it</b>.</li>
+<li>Otherwise it goes to the remote repository, <b>downloads the file, drops it into <code>.m2</code></b>, and then uses it.</li>
+<li>So <b>if nothing changes, internet isn't required</b>; it's needed only the first time you ask for a JAR/version.</li>
+<li><b>Q (student):</b> a second project needs the same JSON dependency — central repo or local? <b>A:</b> <b>Local only.</b> The <code>.m2</code> path is <b>not specific to any project</b> — it's the user's <code>.m2</code> home, so on one system you might use the same JAR in 500 projects without downloading it again (same version).</li>
+</ul>
+</div>
+
+<div class="card">
+<b>How Companies Really Do It — Local (Private) Repository and the Security Team</b>
+<ul style="margin-top:8px;">
+<li>Imagine someone uploads a <b>fake JAR with a virus</b> to the public repository and it somehow gets approved. A bank that blindly uses it could be in trouble. With so many JARs, <b>nobody knows how many are corrupted</b>.</li>
+<li>So a company <b>does not connect to Maven Central directly</b>. Instead it has a <b>local repository</b> (also called the company/private repo) — <b>inside the company network, not on your own computer</b>.</li>
+<li>That repo holds only a <b>subset</b> of the ~66 million JARs, because no company needs them all.</li>
+<li><b>How JARs get in:</b> your manager/director gives a <b>list of required JARs</b> to the <b>(information) security team</b>. They <b>download from the public repo, scan for viruses</b>, mark them <b>approved</b>, and <b>drop them into the local repo</b>.</li>
+<li>When you join a team and use Maven, <b>it points to this local repo</b>, so your JARs come from there.</li>
+<li><b>If a JAR you need isn't in the local repo:</b> <b>raise a ticket</b> to the security team — "this JAR isn't available in our company; please get it from the public repo". They fetch, scan, and add it.</li>
+<li>It can take days (the instructor joked about <b>"10 days"</b>) — the point being that <b>real work is largely about process</b>, and people can use blockers as an excuse.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>settings.xml — Which Repository Does Maven Talk To?</b>
+<ul style="margin-top:8px;">
+<li>How does Maven decide whether to connect to the <b>public repo or the company's local repo</b>? Through <b><code>settings.xml</code></b>.</li>
+<li>The configuration of your <b>company's local repository</b> is kept here — including <b>username and password</b> if needed.</li>
+<li><b>If nothing is configured</b>, Maven connects by default to the <b>central/public repo</b> — <b>not advisable in a company</b>.</li>
+<li>It lives in your <b><code>.m2</code> home directory</b>. In practice: when your setup isn't working on day one, an expert will ask for the <code>settings.xml</code>; a colleague may send you the file with no explanation — <b>drop it into your <code>.m2</code> directory</b>.</li>
+<li><b>Distinguish:</b> <code>pom.xml</code> says <em>what your project needs</em>; <code>settings.xml</code> says <em>which repository Maven should talk to</em>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Packaging the Project into a JAR (Build Demo)</b>
+<ul style="margin-top:8px;">
+<li>The project's <b><code>target</code> folder</b> is <b>empty</b> to begin with.</li>
+<li>To build: <b>right-click the project → Run As → Maven build</b> (the transcript doesn't capture the goal that was typed).</li>
+<li>The console shows <b>"Building … from pom.xml"</b>, then <b>compilation</b>, then <b>building the JAR</b>. Each time it should end with <b>BUILD SUCCESS</b>.</li>
+<li>The JAR appears in <b><code>target</code></b>. If you can't see it, <b>refresh the project</b>.</li>
+<li><b>Give this JAR wherever you want to use the project.</b></li>
+<li>You can <b>delete the <code>target</code> folder</b> — it is <b>regenerated on the next build</b>.</li>
+<li>The instructor hit a Java-runtime prompt/issue during the demo (he mentioned JDK/JRE compatibility) — the details weren't captured; the fix was to proceed after sorting that out.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Other Build Tools — Does the Choice Matter?</b>
+<ul style="margin-top:8px;">
+<li>The same way there are 50+ programming languages, there are <b>several build tools</b> — different people built them with different implementations; it's also a market competition ("I'm giving you Gradle, slightly better in this area").</li>
+<li>Most common: <b>Maven</b> and <b>Gradle</b>; <b>SBT</b> is used in places. The instructor estimated <b>70–80% of people use Maven</b>.</li>
+<li>Some tools use <b>Groovy scripts</b> internally; people comfortable with Groovy may prefer Gradle (the instructor also mentioned Kotlin-style scripts for Gradle).</li>
+<li><b>All do the same work:</b> dependency management, connecting to the central repo, giving you dependencies, building your project, managing project structure.</li>
+<li>Difference he showed: in <b>Gradle a dependency is a single line</b>, whereas Maven's is an XML block — in some cases dependency management is easier, in others you write more script.</li>
+<li><b>For you it doesn't matter</b>: you know there's a central repo, a local repo, and a build file where you <b>keep pasting the dependency snippet</b> for your tool. The company decides which tool to use.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>How the Instructor Wants You to Study Maven</b>
+<ul style="margin-top:8px;">
+<li>Don't rush to ask an AI tool to explain Maven in detail. <b>First understand the basics</b>: why we need Maven, what <code>settings.xml</code> and <code>pom.xml</code> are for, what problem Maven solves, <b>what happens if Maven isn't there</b>.</li>
+<li>Do <b>a couple of projects</b>, run them, and <b>see the JAR being created</b>. After working with it, you can ask deeper questions.</li>
+<li>"<b>Start loving Maven</b>": nobody will ask you about it directly in daily life, but interviewers may well ask <em>"Which build tool are you using?"</em>, and from your first day at work Maven will be there.</li>
+<li>Right now <b>focus on dependency management</b>; many more tags will come slowly.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification — terms and details the lecture didn't spell out:</b>
+<ul style="margin-top:8px;">
+<li><b>Maven coordinates (GAV):</b> <b>G</b>roupId + <b>A</b>rtifactId + <b>V</b>ersion uniquely identify an artifact. Every dependency snippet you paste is exactly these three values.</li>
+<li><b>Transitive dependencies:</b> the "extra JARs that came along" are called transitive dependencies — a dependency's own dependencies, resolved automatically by Maven. You can inspect them with <code>mvn dependency:tree</code>.</li>
+<li><b>How the folder path is built:</b> the Group ID's dots become folders — <code>com.google.code.gson</code> → <code>com/google/code/gson/&lt;artifactId&gt;/&lt;version&gt;/&lt;artifactId&gt;-&lt;version&gt;.jar</code> — which is exactly why the student saw <code>com / google / code / gson</code>. Different versions of the same library sit side by side in separate version folders.</li>
+<li><b><code>.m2</code> is created on first use:</b> it appears in your user directory the first time Maven runs/downloads something (the lecture said "whenever you install Maven").</li>
+<li><b>Build phases, not just "build":</b> Maven's lifecycle includes <code>clean</code>, <code>compile</code>, <code>test</code>, <code>package</code>, <code>install</code> and <code>deploy</code>. The demo created a JAR, which is the <code>package</code> phase (typically <code>mvn clean package</code>); <code>install</code> additionally copies the JAR into your <code>.m2</code>; <code>deploy</code> pushes it to a remote repository. The lecture didn't name these.</li>
+<li><b>Dependency scope:</b> the default JUnit dependency in a quickstart project normally has <code>&lt;scope&gt;test&lt;/scope&gt;</code>, meaning it's only available for tests, not packaged into your app's runtime.</li>
+<li><b>SNAPSHOT behaviour:</b> Maven treats <code>-SNAPSHOT</code> versions as changing, so it may re-fetch them; fixed release versions are not expected to change.</li>
+<li><b>Repository managers:</b> companies typically run tools such as <b>Nexus</b> or <b>Artifactory</b> as the local/private repository. The instructor didn't name them.</li>
+<li><b>Mirrors:</b> in <code>settings.xml</code> a company usually declares a <code>&lt;mirror&gt;</code> that redirects requests for the public repository to the internal one.</li>
+<li><b>Eclipse refresh:</b> after editing <code>pom.xml</code>, if the IDE doesn't pick it up, use <b>right-click project → Maven → Update Project</b>.</li>
+<li><b>Maven needs a JDK</b> (a compiler), not just a JRE — a likely explanation for the JDK/JRE confusion in the demo, though the transcript doesn't confirm it.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Terminology Cheat-Sheet</b>
+<p class="small" style="margin-top:4px;">Blue tag = defined in the lecture · Yellow tag = detail added by me.</p>
+<div class="tw">
+<table>
+<tr><th>Term</th><th>Meaning</th><th>Source</th></tr>
+<tr><td><b>JAR</b></td><td>A bundle of compiled classes (bytecode / <code>.class</code> files) that provides ready-made functionality.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Dependency</b></td><td>A JAR (or a few) your project needs and uses instead of building the functionality itself.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Build tool</b></td><td>A tool that compiles and packages your code and manages dependencies (Maven, Gradle, SBT).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Build</b></td><td>Compile + package (create the JAR).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Maven</b></td><td>The build tool that builds, packages, manages project structure and dependencies.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>pom.xml</b></td><td>Maven's "brain": your project's build requirements and dependencies.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Archetype</b></td><td>A project template (e.g. quickstart) that generates the basic structure.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Group ID / Artifact ID</b></td><td>The group/business area, and the project name.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>SNAPSHOT</b></td><td>Naming convention for a work-in-progress version.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Maven Central repository</b></td><td>The public, internet-based repository of JARs.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Local repository (.m2)</b></td><td>Folder in your user directory where Maven stores downloaded JARs; shared by all your projects.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Company local repo</b></td><td>The company's own approved set of JARs, scanned by the security team.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>settings.xml</b></td><td>Config deciding which repository Maven connects to (and credentials); lives in <code>.m2</code>.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>target folder</b></td><td>Build output folder; contains the generated JAR; safe to delete.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Transitive dependency</b></td><td>A dependency of your dependency, fetched automatically.</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><b>GAV</b></td><td>groupId + artifactId + version — the coordinates of an artifact.</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><b>Scope</b></td><td>Where a dependency is available (e.g. <code>test</code> for JUnit).</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><b>Mirror</b></td><td>A <code>settings.xml</code> entry that redirects repository requests to another server.</td><td><span class="pill add">Added</span></td></tr>
+</table>
+</div>
+</div>
+
+</div>
+
+<div class="section">
+<h2>🖼️ Visual Flows</h2>
+
+<h3 style="margin-top:6px;color:#0066ff;font-size:17px;">Without Maven vs with Maven</h3>
+
+<div class="lane">
+<div class="label">Manual JAR management</div>
+<div class="flowbox">
+<div class="fstep wait">each developer downloads JARs by hand</div>
+<div class="farrow">→</div>
+<div class="fstep wait">versions differ (1.0, 1.2, 1.3…)</div>
+<div class="farrow">→</div>
+<div class="fstep wait">works on my machine, fails in production</div>
+<div class="farrow">→</div>
+<div class="fstep wait">new machine = copy 1,000 JARs again</div>
+</div>
+</div>
+
+<div class="lane">
+<div class="label">With Maven</div>
+<div class="flowbox">
+<div class="fstep">declare "SMS JAR, version 1.3" in pom.xml</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Maven fetches it (and what it needs)</div>
+<div class="farrow">→</div>
+<div class="fstep">everyone on the team gets the same version</div>
+<div class="farrow">→</div>
+<div class="fstep">new machine: just build</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">How Maven finds a JAR — local first</h3>
+
+<div class="lane">
+<div class="label">First time (JAR not on your machine)</div>
+<div class="flowbox">
+<div class="fstep">pom.xml: dependency declared</div>
+<div class="farrow">→</div>
+<div class="fstep">Maven checks .m2 (local repo)</div>
+<div class="farrow">→ not found →</div>
+<div class="fstep notify">goes to remote repo (Central, or company repo via settings.xml)</div>
+<div class="farrow">→</div>
+<div class="fstep">downloads JAR into .m2</div>
+<div class="farrow">→</div>
+<div class="fstep notify">on the class path — your code can use it</div>
+</div>
+</div>
+
+<div class="lane">
+<div class="label">Next time (same JAR and version, any project on this machine)</div>
+<div class="flowbox">
+<div class="fstep">pom.xml: dependency declared</div>
+<div class="farrow">→</div>
+<div class="fstep">Maven checks .m2</div>
+<div class="farrow">→ found →</div>
+<div class="fstep notify">uses it — no download, no internet needed</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Inside a company</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">Public Maven Central (internet)</div>
+<div class="farrow">→ security team downloads + virus-scans →</div>
+<div class="fstep notify">Company local repo (approved JARs only)</div>
+<div class="farrow">→ settings.xml points Maven here →</div>
+<div class="fstep">Developer's Maven</div>
+<div class="farrow">→</div>
+<div class="fstep">.m2 on your machine</div>
+</div>
+</div>
+<div class="lane">
+<div class="label">JAR not in the company repo?</div>
+<div class="flowbox">
+<div class="fstep">raise a ticket to the security team</div>
+<div class="farrow">→</div>
+<div class="fstep">they fetch from public repo + scan</div>
+<div class="farrow">→</div>
+<div class="fstep notify">approved → added to company repo</div>
+<div class="farrow">→</div>
+<div class="fstep">your Maven can now fetch it</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">The build</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">source code (.java)</div>
+<div class="farrow">→ compile →</div>
+<div class="fstep">classes (.class)</div>
+<div class="farrow">→ package →</div>
+<div class="fstep notify">JAR in the target folder</div>
+<div class="farrow">→</div>
+<div class="fstep">give the JAR to QA / wherever the project is used</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Group ID → Artifact ID</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">Company (e.g. Infosys)</div>
+<div class="farrow">→</div>
+<div class="fstep">business line = Group ID (e.g. healthcare)</div>
+<div class="farrow">→</div>
+<div class="fstep">each project = Artifact ID</div>
+<div class="farrow">→</div>
+<div class="fstep notify">artifactId-version.jar</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">settings.xml vs pom.xml</h3>
+<div class="tw">
+<table>
+<tr><th>Aspect</th><th>pom.xml</th><th>settings.xml</th></tr>
+<tr><td>Scope</td><td>One per project</td><td>One per machine/user (in the common <code>.m2</code>)</td></tr>
+<tr><td>Answers</td><td>What does my project need? (dependencies, JAR name…)</td><td>Which repository should Maven connect to? (company repo, credentials)</td></tr>
+<tr><td>Who edits it</td><td>You, whenever you add a dependency</td><td>Usually given to you by the team/experts during setup</td></tr>
+<tr><td>If missing</td><td>Maven has no project to build</td><td>Maven defaults to the public Central repo (not advisable in a company)</td></tr>
+</table>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Generated project layout</h3>
+<div class="tw">
+<table>
+<tr><th>Item</th><th>Purpose</th><th>Source</th></tr>
+<tr><td><code>pom.xml</code></td><td>Maven's brain — dependencies, JAR name, build instructions</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td>Main source folder (<code>src/main/java</code>)</td><td>Your application code (the generated Hello World)</td><td><span class="pill add">Added</span></td></tr>
+<tr><td>Test source folder (<code>src/test/java</code>)</td><td>Unit test classes</td><td><span class="pill lec">Lecture</span> (purpose) + <span class="pill add">Added</span> (path)</td></tr>
+<tr><td>Maven Dependencies</td><td>The JARs the project uses, including JUnit by default</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><code>target</code></td><td>Build output — compiled classes and the generated JAR</td><td><span class="pill lec">Lecture</span></td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the transcript contains no readable code — the instructor worked on screen. Every snippet below is <b>my reconstruction/illustration</b> (names, versions and paths are examples; copy current versions from the Maven repository site). Only the ideas — the <code>&lt;dependencies&gt;</code> tag, one <code>&lt;dependency&gt;</code> per JAR, <code>.m2</code>, and <code>settings.xml</code> — come from the lecture.
+</div>
+
+<p><b>1. A quickstart project's pom.xml (simplified; the generated file also has compiler/plugin settings):</b></p>
+<pre><code class="language-markup">&lt;project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"&gt;
+    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+
+    &lt;groupId&gt;com.fintech&lt;/groupId&gt;                 &lt;!-- Group ID: the group/business area --&gt;
+    &lt;artifactId&gt;infosys-finance&lt;/artifactId&gt;       &lt;!-- Artifact ID: the project name --&gt;
+    &lt;version&gt;1.0-SNAPSHOT&lt;/version&gt;                &lt;!-- work in progress; remove -SNAPSHOT for a final version --&gt;
+    &lt;packaging&gt;jar&lt;/packaging&gt;
+
+    &lt;dependencies&gt;
+        &lt;!-- one dependency = one JAR (and whatever it needs) --&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;junit&lt;/groupId&gt;
+            &lt;artifactId&gt;junit&lt;/artifactId&gt;
+            &lt;version&gt;4.13.2&lt;/version&gt;              &lt;!-- example: the generated version may differ --&gt;
+            &lt;scope&gt;test&lt;/scope&gt;
+        &lt;/dependency&gt;
+    &lt;/dependencies&gt;
+&lt;/project&gt;</code></pre>
+
+<p><b>2. Adding a dependency — paste the Maven snippet inside &lt;dependencies&gt;, then save:</b></p>
+<pre><code class="language-markup">&lt;dependencies&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;junit&lt;/groupId&gt;
+        &lt;artifactId&gt;junit&lt;/artifactId&gt;
+        &lt;version&gt;4.13.2&lt;/version&gt;
+        &lt;scope&gt;test&lt;/scope&gt;
+    &lt;/dependency&gt;
+
+    &lt;!-- copied from the Maven repository website (Gson = a JSON library from Google; example version) --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;com.google.code.gson&lt;/groupId&gt;
+        &lt;artifactId&gt;gson&lt;/artifactId&gt;
+        &lt;version&gt;2.10.1&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;
+&lt;!-- On save, Maven downloads the JAR from Maven Central into .m2 and adds it to Maven Dependencies. --&gt;</code></pre>
+
+<p><b>3. The same dependency as the Gradle snippet — "one line" (the comparison the instructor made):</b></p>
+<pre><code class="language-groovy">// build.gradle
+dependencies {
+    implementation 'com.google.code.gson:gson:2.10.1'
+}</code></pre>
+
+<p><b>4. Once the JAR is on the class path, you can use its classes (illustration):</b></p>
+<pre><code class="language-java">import com.google.gson.Gson;
+
+public class App {
+
+    static class Customer {
+        String name;
+        String type;
+        Customer(String name, String type) { this.name = name; this.type = type; }
+    }
+
+    public static void main(String[] args) {
+        Gson gson = new Gson();                                  // class from the downloaded JAR
+        String json = gson.toJson(new Customer("Asha", "Gold"));
+        System.out.println(json);                                // {"name":"Asha","type":"Gold"}
+    }
+}</code></pre>
+
+<p><b>5. Where the JAR lands on your machine (added — how the Group ID becomes folders):</b></p>
+<pre><code>C:\Users\&lt;you&gt;\.m2\repository\com\google\code\gson\gson\2.10.1\gson-2.10.1.jar
+                                 |_______ groupId _______| |artifactId| |version|
+
+(Linux/macOS:  ~/.m2/repository/com/google/code/gson/gson/2.10.1/gson-2.10.1.jar)
+Different versions of the same library live side by side in their own version folders.</code></pre>
+
+<p><b>6. A settings.xml sketch — pointing Maven at a company repository (added; illustration only, not shown in class):</b></p>
+<pre><code class="language-markup">&lt;!-- ~/.m2/settings.xml --&gt;
+&lt;settings&gt;
+    &lt;mirrors&gt;
+        &lt;mirror&gt;
+            &lt;id&gt;company-repo&lt;/id&gt;
+            &lt;name&gt;Company approved repository&lt;/name&gt;
+            &lt;url&gt;https://repo.mycompany.example/maven-public&lt;/url&gt;   &lt;!-- placeholder URL --&gt;
+            &lt;mirrorOf&gt;*&lt;/mirrorOf&gt;                                      &lt;!-- send all requests here, not to the public repo --&gt;
+        &lt;/mirror&gt;
+    &lt;/mirrors&gt;
+
+    &lt;servers&gt;
+        &lt;server&gt;
+            &lt;id&gt;company-repo&lt;/id&gt;                                        &lt;!-- must match the mirror id --&gt;
+            &lt;username&gt;your-username&lt;/username&gt;
+            &lt;password&gt;your-password&lt;/password&gt;
+        &lt;/server&gt;
+    &lt;/servers&gt;
+&lt;/settings&gt;</code></pre>
+
+<p><b>7. Building the JAR from the command line (added — in Eclipse you did Run As → Maven build; the goal wasn't captured):</b></p>
+<pre><code>mvn clean package
+
+# typical console output (plugin versions vary):
+# [INFO] --- maven-compiler-plugin:...:compile (default-compile) ---     &lt;- compilation
+# [INFO] --- maven-jar-plugin:...:jar (default-jar) ---                  &lt;- packaging
+# [INFO] Building jar: .../target/infosys-finance-1.0-SNAPSHOT.jar       &lt;- artifactId-version.jar
+# [INFO] BUILD SUCCESS
+
+# See every JAR (including the ones that came along) your dependencies pulled in:
+mvn dependency:tree</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question / Point</th><th>Answer Given in Class</th></tr>
+<tr><td>Anyone facing difficulties with Maven?</td><td>Fix it — ask friends, then the instructor; Maven is used every day until the microservices topic is complete.</td></tr>
+<tr><td>Internal or Central while choosing the archetype catalog?</td><td>Internal usually works; if it doesn't, use Central.</td></tr>
+<tr><td>I added a JSON dependency in project 1; project 2 needs the same one — Central repo or local?</td><td>Local <code>.m2</code> only. It's not project-specific; you may use the same JAR in 500 projects on one system without re-downloading (same version).</td></tr>
+<tr><td>What is SNAPSHOT?</td><td>A naming convention for work in progress; the JAR may change later, so be careful using it. Remove it when the version is final.</td></tr>
+<tr><td>I can't see the JAR after the build.</td><td>Refresh the project; the JAR is in the <code>target</code> folder.</td></tr>
+<tr><td>Why are there so many build tools if Maven exists?</td><td>Different people built them (market competition, like programming languages); all do the same work; Maven is used by about 70–80%; the company decides.</td></tr>
+<tr><td>What exactly are Group ID, Artifact ID and package?</td><td>Group ID = the business area under the company (e.g. healthcare under Infosys); Artifact ID = each project's name; package = Group ID . Artifact ID by default.</td></tr>
+<tr><td>My setup suddenly stopped working — what do I do?</td><td>An expert will ask for <code>settings.xml</code>; when you receive it, drop it into your <code>.m2</code> directory.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>💼 Likely Interview Questions From This Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What is a dependency?</td><td>A JAR (or a few) containing functionality someone else developed that your project uses instead of building it — e.g. the email, SMS, database or payment JARs.</td></tr>
+<tr><td>What problems arise when managing JARs manually?</td><td>Different developers use different versions, production may expect another version, and setting up a new machine means copying hundreds of JARs.</td></tr>
+<tr><td>What is Maven?</td><td>A build tool that builds your code, packages it into a JAR, manages the project structure, and manages dependencies by fetching JARs from a repository.</td></tr>
+<tr><td>What does "build" mean?</td><td>Compile the code and package the classes into a JAR (not just the IDE's Ctrl+S compile).</td></tr>
+<tr><td>Which build tool do you use? Are there others?</td><td>Maven; others are Gradle and SBT. They do the same work — dependency management, building, structure; Maven is the most common.</td></tr>
+<tr><td>What is pom.xml?</td><td>The brain of Maven — you write your build requirements and dependencies there.</td></tr>
+<tr><td>How do you add a dependency in Maven?</td><td>Find it on the Maven repository website, pick the version, copy the Maven snippet, paste it inside <code>&lt;dependencies&gt;</code> in <code>pom.xml</code>, and save.</td></tr>
+<tr><td>What is the Maven Central repository?</td><td>A public, free, internet-based repository holding all possible JARs (millions); Maven downloads from it by default.</td></tr>
+<tr><td>Where does Maven store downloaded JARs? Does it download every time?</td><td>In the local <code>.m2</code> repository under the user directory. It checks there first and uses the local copy; it downloads only if the JAR/version isn't present.</td></tr>
+<tr><td>Why does Maven need internet?</td><td>To fetch JARs from the public repository the first time; afterwards, with JARs cached locally, it isn't needed.</td></tr>
+<tr><td>Why don't companies connect directly to Maven Central?</td><td>Security — public JARs could be corrupted or carry viruses. Companies use a private repository with JARs approved and scanned by the security team.</td></tr>
+<tr><td>What if a JAR you need isn't in the company repo?</td><td>Raise a ticket to the security team to fetch it from the public repo, scan it, and add it.</td></tr>
+<tr><td>What is settings.xml and where does it go?</td><td>It decides which repository Maven connects to (and holds credentials). It lives in the <code>.m2</code> directory. With nothing configured, Maven uses the public Central repo.</td></tr>
+<tr><td>pom.xml vs settings.xml?</td><td>pom.xml is per project and says what the project needs; settings.xml is per machine and says where Maven gets things from.</td></tr>
+<tr><td>What are Group ID and Artifact ID? What is SNAPSHOT?</td><td>Group ID = group/business area; Artifact ID = project name; SNAPSHOT = work-in-progress version that can change.</td></tr>
+<tr><td>How do you create the JAR with Maven? Where does it appear?</td><td>Run a Maven build (compile then package); the JAR appears in the project's <code>target</code> folder, named from artifact ID and version.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🎤 Likely Interviewer Follow-Up Questions (Added)</h2>
+<p class="small">These go beyond what the lecture said — expect them in Java backend interviews.</p>
+<div class="tw">
+<table>
+<tr><th>Follow-up</th><th>Short answer</th></tr>
+<tr><td>What are Maven coordinates (GAV)?</td><td>groupId, artifactId and version — together they uniquely identify an artifact.</td></tr>
+<tr><td>What are transitive dependencies?</td><td>Dependencies of your dependencies; Maven resolves and downloads them automatically. Inspect with <code>mvn dependency:tree</code>.</td></tr>
+<tr><td>What are the main Maven build phases?</td><td>clean, compile, test, package, install, deploy — each phase runs the earlier ones in its lifecycle first.</td></tr>
+<tr><td>Difference between <code>package</code>, <code>install</code> and <code>deploy</code>?</td><td>package creates the JAR in <code>target</code>; install also copies it to your local <code>.m2</code>; deploy publishes it to a remote repository.</td></tr>
+<tr><td>What does <code>&lt;scope&gt;test&lt;/scope&gt;</code> mean?</td><td>The dependency (e.g. JUnit) is available only for compiling/running tests, not in the packaged application.</td></tr>
+<tr><td>Two projects need different versions of the same library — what happens?</td><td>Both versions can sit in <code>.m2</code> in separate version folders; each project uses what its own <code>pom.xml</code> declares.</td></tr>
+<tr><td>What is a repository manager?</td><td>A server such as Nexus or Artifactory that hosts a company's private/proxy repository.</td></tr>
+<tr><td>What's the difference between a SNAPSHOT and a release version?</td><td>SNAPSHOT = changing, in-development build; release = fixed version that shouldn't change.</td></tr>
+<tr><td>How would you get Maven to use the company repo?</td><td>Configure it in <code>settings.xml</code> (typically a mirror plus credentials) in the <code>.m2</code> directory.</td></tr>
+<tr><td>Maven vs Gradle?</td><td>Same goals; Maven uses XML (<code>pom.xml</code>), Gradle uses a Groovy/Kotlin build script with more concise dependency declarations.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>📌 Lecture Takeaways</h2>
+<ul>
+<li>Real systems depend on many <b>JARs</b> (email, SMS, database, payment, maps…) — you reuse, not rebuild.</li>
+<li>Manual JAR handling breaks down: <b>version mismatches</b>, team inconsistency, painful machine setup.</li>
+<li><b>Maven</b> is the build tool that solves this; <b>build = compile + package</b>.</li>
+<li>Maven builds, packages, manages project structure and <b>dependencies</b>.</li>
+<li><b><code>pom.xml</code></b> is the brain — you declare your dependencies there.</li>
+<li>Create projects with <b>New → Maven Project</b> (quickstart archetype); know <b>Group ID, Artifact ID, version, SNAPSHOT</b>.</li>
+<li>To add a dependency: search "<b>jar name + maven dependency</b>" → copy the snippet → paste inside <code>&lt;dependencies&gt;</code> → save.</li>
+<li><b>Maven Central</b> is the public repo with millions of JARs; Maven needs internet to fetch from it the first time.</li>
+<li>Downloaded JARs go to <b><code>.m2</code></b>; Maven <b>checks local first</b>; <code>.m2</code> is not project-specific.</li>
+<li>Companies use a <b>private repo</b> filled with <b>security-scanned</b> JARs; missing JAR → <b>ticket to security team</b>.</li>
+<li><b><code>settings.xml</code></b> (in <code>.m2</code>) decides which repository Maven talks to.</li>
+<li>A Maven build creates the JAR in <b><code>target</code></b>; refresh to see it; <code>target</code> can be deleted and regenerated.</li>
+<li>Gradle/SBT do the same job; most companies use <b>Maven</b>; the company decides.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🚧 Common Interview Traps</h2>
+<ul>
+<li><b>"One dependency = one JAR."</b> A single dependency can bring several JARs along.</li>
+<li><b>"Build is just pressing Ctrl+S / compiling in the IDE."</b> Build means compile <em>and</em> package into JARs.</li>
+<li><b>"Maven always needs internet."</b> Only the first time for a new JAR/version; afterwards it uses the local <code>.m2</code>.</li>
+<li><b>"The <code>.m2</code> folder belongs to a project."</b> It's per user and shared by all projects on the machine.</li>
+<li><b>"Companies download from Maven Central directly."</b> They use a private repo of security-approved JARs.</li>
+<li><b>Mixing up <code>pom.xml</code> and <code>settings.xml</code>.</b> Project needs vs repository location/credentials.</li>
+<li><b>Using a SNAPSHOT as if it were final.</b> It can change; be careful.</li>
+<li><b>Not refreshing the project</b> and concluding "the JAR wasn't created".</li>
+<li><b>Thinking the build-tool brand matters.</b> They do the same job; the company chooses — but be able to explain Maven.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+
+<div class="card">
+<b>Assigned in the lecture</b>
+<ul style="margin-top:8px;">
+<li><b>Make sure Maven works on your system</b> — fix issues with friends, then the instructor.</li>
+<li>Create a <b>Maven project</b> (quickstart archetype) and explore the generated structure and <code>pom.xml</code>.</li>
+<li><b>Add dependencies</b> the instructor's way: search the JAR name + "maven dependency", copy the Maven snippet, paste into <code>pom.xml</code>, save, and look at what appears under Maven Dependencies and in <code>.m2</code>.</li>
+<li>Do <b>a couple of projects</b>, run the Maven build, and <b>see the JAR created</b> in <code>target</code>.</li>
+<li>Understand: <b>why Maven? what do <code>pom.xml</code> and <code>settings.xml</code> do? what problem does Maven solve? what if it didn't exist?</b></li>
+<li>Expect to work with <code>pom.xml</code> <b>every day</b> from now on.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>Suggested extra practice (added — not assigned in the lecture):</b>
+<ul style="margin-top:8px;">
+<li>After adding a dependency, find its JAR under <code>.m2/repository</code> by following the Group ID folders.</li>
+<li>Add the same dependency to a second project and confirm no new download happens.</li>
+<li>Run <code>mvn dependency:tree</code> and count how many extra JARs one dependency brought.</li>
+<li>Change the version between SNAPSHOT and a plain version, rebuild, and watch the JAR name change.</li>
+<li>Delete <code>target</code>, rebuild, and check it regenerates.</li>
+<li>Explain out loud, in under two minutes: "Why Maven, how does a JAR reach my project, and how do companies handle the public repo?"</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>🧾 Transcript Clean-Up Map</h2>
+<p class="small">The recording was auto-transcribed with many errors (and Hindi words mixed in). This is how I interpreted the unclear terms. Several passages were too garbled to use and were left out rather than guessed.</p>
+<div class="tw">
+<table>
+<tr><th>Transcript wording</th><th>Interpreted as</th><th>Confidence</th></tr>
+<tr><td>"Maverick", "Navan", "Bhavan", "Melon", "Memon"</td><td>Maven</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"palm.xml", "pong.xml", "POMRAX", "form file", "com.x"</td><td><code>pom.xml</code></td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"char", "JARFY", "RFA", "ZAR", "sarc", "Jarfats"</td><td>JAR / JARs</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Maven Nepo", "Maven Central Depot", "central rep", "public rep"</td><td>Maven Central (public) repository</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Setting dot XML"</td><td><code>settings.xml</code></td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Snapchat"</td><td>SNAPSHOT</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Mammal dependencies"</td><td>Maven Dependencies (the library node in Eclipse)</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"M2 folder", "M2 home", "dot M2"</td><td>The <code>.m2</code> folder in the user directory</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"64 million", "six and a half crore", "66 million"</td><td>Approximate number of artifacts in Maven Central, as quoted in class</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Subversion… this is the syntax" (in the build-tool comparison)</td><td>Most likely SBT's syntax</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Gradle is using Kotlin… supports Groovy also"</td><td>Gradle build scripts can be written in Groovy or Kotlin</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Infosys Finance", "FinTech", "ICICI Bank" in the demos</td><td>Example group/project names for the demo projects (not fixed values)</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Jason 114 chart", "com/google/code/…"</td><td>A JSON library from Google — the path <code>com/google/code/gson</code> suggests Gson; version unclear</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"Kamal SMS jar", "Google GSM", "4.19 dot 0"</td><td>The SMS-library demo and its version — unclear</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"Dreadel, SBT, MIL, EV, something"</td><td>Gradle, SBT and other build tools shown on the repository page — rest unclear</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"Run. Maven is solved."</td><td>Run As → Maven build (the goal isn't captured)</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"running on GRE… how come some JDK are okay"</td><td>A JDK/JRE compatibility issue during the demo — details unclear</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"500 to 1,000 dependencies" vs "20, 30 different type of JAR files"</td><td>Both numbers appear; treated as rough illustrations</td><td><span class="pill low">Low</span></td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Classes:</b> The <b>previous day's class on JARs and dependencies</b> — where the payment-service JAR was given manually as a dependency to the order service. Today's class replaces that manual step with Maven.</li>
+<li><b>Upcoming Topics:</b> The instructor said <b>Maven will be used every day until the microservices topic is complete</b>, with more <code>pom.xml</code> tags to come. In the following sessions, <b>JUnit</b> is added as a dependency and <code>settings.xml</code> comes up again — see the separate JUnit and Code Coverage / CI-CD notes (the JUnit class opens with a follow-up question about <code>settings.xml</code>).</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+Section headings, card grouping, the flow diagrams, the terminology/comparison tables, the interview Q&amp;A, and the styling were added to match your earlier notes. The lecture content comes from your transcript. Because the transcript was auto-generated and often garbled, I corrected clear speech errors, flagged unclear ones in the clean-up map, and left out unreadable passages and side remarks (for example comments about class participation and people's job situations). Everything marked with a yellow dashed box or the "Added" tag — GAV, transitive dependencies, lifecycle phases and <code>install</code>/<code>deploy</code>, scopes, repository managers, mirrors, the folder-path rule, the follow-up questions, the extra code samples and the practice list — is my clarification, not something the instructor said, so verify it against the Maven documentation or your instructor before relying on it in an interview. All code is illustrative, not copied from the instructor's screen.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-groovy.min.js"></script>
+</body>
+</html>

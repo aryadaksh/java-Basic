@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Unit Testing with JUnit</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.pill{display:inline-block;padding:1px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;}
+.pill.lec{background:#e3f2fd;color:#0066ff;}
+.pill.add{background:#fff3cd;color:#a67c00;}
+.pill.hi{background:#e6f6ea;color:#1e8e3e;}
+.pill.med{background:#fff3cd;color:#a67c00;}
+.pill.low{background:#fdecea;color:#c62828;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Unit Testing with JUnit — Why, How, and Protecting Existing Code</p>
+<p class="meta">Source: June 2026 offline class · Oct 12, 2026 · 57:22</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>Quick Maven recap: where <code>settings.xml</code> lives and why build tools matter</li>
+<li>A developer's day-to-day: requirement → development → <b>unit testing</b> → testing team</li>
+<li>Why you must test your own code before handing it over</li>
+<li>Test scenarios — positive and negative (the "product" analogy)</li>
+<li>JUnit — the Java unit testing framework — and adding the JUnit (Jupiter) dependency in <code>pom.xml</code></li>
+<li>Writing the first test: test class convention, <code>@Test</code>, <code>assertEquals(expected, actual)</code></li>
+<li>Running tests (Run As → JUnit Test), green vs failure</li>
+<li>Demo: Discount Calculator — Regular, Gold and an invalid customer type</li>
+<li>Why unit tests matter: code quality <em>and</em> protecting existing code (the GST story)</li>
+<li>Void methods, private methods and mocking (Mockito / EasyMock preview)</li>
+<li>Fixing setup problems in class, and the practice assignment</li>
+</ul>
+
+<div class="flag">
+<b>How to read these notes:</b> <b>Green-bordered cards</b> hold what the instructor taught. <b>Yellow dashed boxes</b> hold clarifications I added that the lecture did <em>not</em> state — verify them with your instructor if in doubt. <b>Orange 🔥 boxes</b> are interview alerts. The source is an <b>auto-generated transcript with many speech-recognition errors</b>: where the intended term was clear I corrected it (for example "JNIT / Jamie test" → JUnit); where it was <em>not</em> clear I flagged it instead of guessing. See the clean-up map near the end.
+</div>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Quick Recap — Where Does settings.xml Live?</b>
+<p>A question from the start of class: <em>is <code>settings.xml</code> specific to a project?</em> <b>No.</b></p>
+<ul style="margin-top:8px;">
+<li>Whenever you add a JAR (dependency) in <code>pom.xml</code>, your system must connect to a Maven repository — a <b>company-local repository</b> or the <b>Maven global repository</b>.</li>
+<li>There is only <b>one <code>settings.xml</code> per system</b>. It sits in the <b>common <code>.m2</code> directory inside your user (home) directory</b> (the transcript says "M2 home").</li>
+<li>Even if you have <b>20 projects</b> (possibly talking to 20 different repositories), the <code>settings.xml</code> is that same one, on your local machine.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Build Tools Are Not Optional (Instructor's Emphasis)</b>
+<p>The instructor stressed that you cannot avoid Maven (or another build tool) in a Java job, and that <b>from now on, every day's work will be a Maven project</b>. Even if it feels confusing at first, repetition builds the memory.</p>
+</div>
+
+<div class="card">
+<b>A Developer's Work — And Where Unit Testing Fits</b>
+<ul style="margin-top:8px;">
+<li><b>Development</b> is nothing but <b>writing code based on a requirement</b>. Don't try to mug it up — understand the flow.</li>
+<li>Once code is written, the <b>testing team</b> will check it — but <b>before you give it to them, you must verify it from your side</b>. You cannot hand over junk code.</li>
+<li>That verification by the developer is <b>unit testing</b>. It sits <b>between development and the testing team</b>.</li>
+<li><b>Who performs unit testing?</b> The <b>developer</b>.</li>
+</ul>
+<p style="margin-top:8px;">Interview angle: <em>"What is your day-to-day activity?"</em> — many people can't justify it. The honest flow is: you get a requirement → you write code → you test it (unit tests) → it goes to the testing team.</p>
+</div>
+
+<div class="card">
+<b>Why Test Your Own Code?</b>
+<ul style="margin-top:8px;">
+<li>You only need <b>Core Java</b> to write unit tests (as of now).</li>
+<li>You may think, "I wrote the code, why should I test it?" — but while writing, you were thinking <b>in one direction only</b>.</li>
+<li>When you start testing, <b>"100 directions" appear</b>: what if this is negative? what if this is positive? Testing forces you to cover them.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Product Analogy — Test Scenarios</b>
+<p>Imagine a product you have to test (the instructor used a household appliance example — the exact product word is unclear in the transcript; the scenarios he listed — on/off, rotation, speed control, swing, "should not heat up", "should not make noise" — suggest a fan). To test any product you write <b>test case scenarios</b>, e.g. when rotation is turned off, swing should also stop.</p>
+<p style="margin-top:8px;">In our world, the "product" is <b>our code</b> — specifically <b>methods</b>. To test a method you write <b>different scenarios</b>, and you do it <b>to maintain code quality</b>.</p>
+</div>
+
+<div class="card">
+<b>What Is JUnit?</b>
+<p><b>JUnit</b> is the <b>Java unit testing framework</b>. It lets you <b>write and execute test cases</b>.</p>
+<p style="margin-top:8px;"><b>The advantage:</b> imagine a class with 500 lines of code. If someone else modifies it and you don't know how it works or what the impact is — <b>JUnit captures it</b>.</p>
+</div>
+
+<div class="card">
+<b>Setup — Add the JUnit Dependency</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li>Create a Maven project (in class: an e-commerce/order project).</li>
+<li>Check <code>pom.xml</code> — the existing JUnit dependency was an <b>old version</b>, so the instructor searched for the <b>latest JUnit Jupiter</b> dependency on the Maven repository website, <b>copied the dependency block</b> and pasted it into <code>pom.xml</code>.</li>
+<li>On save, Maven <b>replaces the old one with the new one</b> and downloads it. You only declare <b>one dependency</b>; Maven works out and fetches <b>everything else it needs</b>.</li>
+</ol>
+<p style="margin-top:8px;"><b>What is a dependency?</b> Nothing but a <b>JAR file</b> containing functionality you want to use. Same idea as the <b>account and payment</b> dependency from the last project: whatever is written in <em>payment</em> can be used in <em>account</em>. Here, the testing functionality is written inside the JUnit JAR, so your project needs it as a dependency.</p>
+</div>
+
+<div class="card">
+<b>Which Version? — Instructor's Advice From the Class Fixes</b>
+<ul style="margin-top:8px;">
+<li>When some students had trouble with the newest version, the instructor told them to use <b>5.x — the highest 5.x version</b>.</li>
+<li><b>Copy the dependency from the Maven repository site</b> instead of only editing the version number — the artifact name might change between versions and you wouldn't know.</li>
+<li>General rule: <b>when you're learning something new, don't use the latest version — use "N minus one"</b>. If the latest is 10, start with 9; it will be a little more stable.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Test Class — Convention and Location</b>
+<ul style="margin-top:8px;">
+<li>Maven already creates a <b>test source folder</b> (<code>src/test/java</code>) in the project.</li>
+<li>There you write an <b>equivalent class</b> of the class you want to test (e.g. a test class for <code>DiscountCalculator</code>). This is <b>just a convention</b>.</li>
+<li>This class is used to <b>test the functionality of that class</b>, and holds <b>all the scenarios</b> for it.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Writing a Test Case — Input, Expected, Actual</b>
+<ul style="margin-top:8px;">
+<li>Write a method, e.g. <code>public void testXxx()</code>. The <b>"test…" name is only a convention</b>.</li>
+<li>Mark it with the <b><code>@Test</code> annotation</b> — this is what <b>qualifies the method as a test case</b>.</li>
+<li>Ultimately there's only one way to test: <b>call the method yourself and pass the input</b>. You know the input, so you also know the <b>expected output</b> (like pressing a switch and expecting the fan to turn).</li>
+<li>To call the method, <b>create an object of the class</b>, then call e.g. <code>calculateDiscount(...)</code>.</li>
+<li><b>Actual</b> = what the method really returns.</li>
+<li>Compare with <b><code>assertEquals(expected, actual)</code></b> — part of the JUnit framework. It takes <b>two parameters: expected first, then actual</b>, and tells you whether the method's result matches your expectation.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Who Writes the Unit Tests?</b>
+<p>The <b>developer who wrote the source code</b> — the owner of the class. Don't think "how would I know it should give 900?" — <b>based on the requirement, the developer knows the functionality</b>: if I pass 1000 and customer type Regular, the discount is 10%, so it should give 900. That's the expected value.</p>
+</div>
+
+<div class="card">
+<b>Running the Tests</b>
+<ul style="margin-top:8px;">
+<li>You do <b>not</b> use "Run as Java Application" for this.</li>
+<li>Right-click the test class → <b>Run As → JUnit Test</b>. It runs the test class and shows a results view.</li>
+<li><b>Green = passed.</b> A failing test reports what was expected and what the method actually gave (e.g. "expected 800 but was 1000").</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Demo — Discount Calculator</b>
+<p>The instructor played the developer of a <b>Discount Calculator</b>: you give a <b>price</b> and a <b>customer type</b>, it gives the <b>discounted amount</b>. Customer types: <b>Regular</b>, <b>Gold</b> (bigger discount), and a <b>default</b> where no discount applies. The scenarios he tested:</p>
+<div class="tw">
+<table>
+<tr><th>Scenario</th><th>Input</th><th>Expected</th><th>Kind</th></tr>
+<tr><td>Regular customer</td><td>1000, "Regular"</td><td><b>900</b> (10% off)</td><td>Positive</td></tr>
+<tr><td>Gold customer</td><td>1000, "Gold"</td><td><b>800</b></td><td>Positive</td></tr>
+<tr><td>Invalid / unknown type (e.g. "Premium")</td><td>1000, "Premium"</td><td><b>1000</b> (no discount)</td><td>Negative</td></tr>
+</table>
+</div>
+<p style="margin-top:10px;">While demonstrating the third test, a wrong expectation (800) made JUnit report <em>expected 800 but was 1000</em>. After correcting the expectation to 1000, <b>all 3 test cases passed</b>. (Only the Regular 10% figure is stated explicitly; Gold's 20% is inferred from the expected 800.)</p>
+</div>
+
+<div class="card">
+<b>Positive and Negative Scenarios</b>
+<p>Scenarios are <b>always both</b>: <b>positive</b> (valid inputs behave as expected) and <b>negative</b> (invalid or unexpected input is handled correctly). The instructor started with positive cases, then moved to negative ones. For this tiny method he said you could write <b>10 different test cases</b>; even a 10-line piece of code ends up with test cases of its own (in the demo, three).</p>
+</div>
+
+<div class="card">
+<b>Why Do We Write Unit Tests? — Two Reasons</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li><b>Maintain code quality</b> — by giving different inputs you test your code the first time around.</li>
+<li><b>Protect existing code over time</b> — code lives in a company for <b>20–30 years</b>. The person who wrote it leaves; someone else modifies it, assuming "this part shouldn't be affected". Tests tell you whether the new change <b>breaks the existing implementation</b>.</li>
+</ol>
+<p style="margin-top:8px;">The instructor's remark: to write 5 lines of code you might write <b>100 lines of unit tests</b> — because <b>quality matters</b>.</p>
+</div>
+
+<div class="card">
+<b>The "GST Story" — What Happens Without Unit Tests</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li>The discount module works. The original developer has left.</li>
+<li>Another developer is asked to enhance it — in the story, a <b>new GST-related functionality</b>, plus a change involving the customer type being <b>lower-cased</b>. He adds ~20 lines and thinks: "I'm not touching the base calculation, so nothing will break." (That's how we <b>always</b> assume — until an error shows up.)</li>
+<li>Nothing crashes. But a <b>Gold customer no longer gets the discount</b> — there's <b>no failure message</b> anywhere.</li>
+<li>The customer calls the <b>call centre</b> → they give a <b>credit of 200</b> → they report it to the <b>engineering team</b> → engineering explains that the newly introduced GST functionality caused it.</li>
+<li>The <b>VP asks</b>: "Why didn't we have unit tests? We could have caught this <b>right before the release</b>."</li>
+</ol>
+<p style="margin-top:8px;"><b>The rule:</b> whenever you change an <b>existing</b> code base, <b>run the unit tests again</b>. They tell you whether your new changes are <b>breaking the existing implementation</b>. In the demo, re-running showed the Gold test failing: <em>expected 800 but was 1000</em> — the one-line change had broken a fundamental. With 10,000 lines, you can't know what a change breaks elsewhere — <b>JUnit test cases will catch it</b>.</p>
+</div>
+
+<div class="card">
+<b>Standard Practice — Even for One Line of Code</b>
+<ul style="margin-top:8px;">
+<li>Interviewers ask: <em>"How do you maintain code quality?"</em> and <em>"If code is already running and you're doing an enhancement, how do you make sure the existing implementation isn't broken?"</em> The answer: <b>unit test cases</b>.</li>
+<li>Even a one-line change comes with test cases — <b>part of development</b>.</li>
+<li>The <b>owner of the class</b> writes them — the developer who knows the class inside out.</li>
+<li>Nobody in the company will <em>tell</em> you to write JUnit tests — just like nobody tells you to follow Java naming conventions. <b>It's a standard practice.</b></li>
+</ul>
+</div>
+
+<div class="card">
+<b>What About void Methods and Private Methods? (Q&amp;A in Class)</b>
+<ul style="margin-top:8px;">
+<li><b>Void method:</b> if you call a void method, you get <b>nothing back</b>. But if it <b>changes some state</b>, you can <b>read that state</b> afterwards and check it.</li>
+<li><b>Private methods / code you don't control:</b> there are <b>other frameworks — EasyMock and Mockito</b>. You can create a <b>mock</b>, set expectations and run it. They'll be covered when the <b>Spring framework</b> starts; they help test things like server-side code or methods you have no control over.</li>
+<li>To start with, practise on methods that <b>return something</b> (an integer, etc.).</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification — terms and details the lecture didn't spell out:</b>
+<ul style="margin-top:8px;">
+<li><b>"Re-run the tests after every change" has a name: regression testing.</b> A regression is when something that used to work stops working after a change. The instructor described the idea but didn't use the term.</li>
+<li><b>JUnit versions:</b> "JUnit Jupiter" is <b>JUnit 5</b>. JUnit 4 used <code>org.junit.Test</code>; JUnit 5 uses <code>org.junit.jupiter.api.Test</code>. Importing the <b>wrong <code>@Test</code></b> (or missing an import) is a very common reason a test doesn't run or <code>assertEquals</code> isn't suggested.</li>
+<li><b><code>mvn test</code> vs the IDE:</b> if tests run in the IDE but not from the command line, an old <code>maven-surefire-plugin</code> version is a frequent cause — JUnit 5 needs a reasonably recent Surefire.</li>
+<li><b>Argument order matters:</b> <code>assertEquals(expected, actual)</code>. Swapping them still passes/fails correctly, but the failure message becomes misleading.</li>
+<li><b>Decimals:</b> comparing <code>double</code> values can hit tiny rounding differences; JUnit offers <code>assertEquals(expected, actual, delta)</code> for that.</li>
+<li><b>Name vs annotation:</b> in JUnit 5, it's the <code>@Test</code> annotation — not the "test…" name prefix — that makes a method a test. The prefix is only a readable convention, as the instructor said.</li>
+<li><b>Mocking and private methods:</b> mock frameworks replace <em>collaborators</em>; the usual advice for private methods is to test them <em>through</em> the public methods that call them, rather than directly.</li>
+<li><b>Developers vs the testing team:</b> unit tests are the developer's first line of checking; the testing team's work happens afterwards and isn't replaced by it.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Terminology Cheat-Sheet</b>
+<p class="small" style="margin-top:4px;">Blue tag = defined in the lecture · Yellow tag = detail added by me.</p>
+<div class="tw">
+<table>
+<tr><th>Term</th><th>Meaning</th><th>Source</th></tr>
+<tr><td><b>Unit testing</b></td><td>The developer verifying their own code (methods) before it goes to the testing team.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>JUnit</b></td><td>The Java unit testing framework — lets you write and execute test cases.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Test case / scenario</b></td><td>One situation for a method: a specific input and the output you expect.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Positive / negative scenario</b></td><td>Valid input behaving as expected / invalid or unusual input handled correctly.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>@Test</b></td><td>Annotation that marks a method as a test case.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>assertEquals(expected, actual)</b></td><td>JUnit comparison between what you expected and what the method gave.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Expected vs Actual</b></td><td>Expected = what the requirement says should happen; actual = what the code returned.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Dependency</b></td><td>A JAR file whose functionality your project uses, declared in <code>pom.xml</code>.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>settings.xml</b></td><td>One per machine, in the common <code>.m2</code> directory; tells Maven how to reach repositories.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Mock</b></td><td>A stand-in object with set expectations, used (via Mockito/EasyMock) to test code you don't control — covered later.</td><td><span class="pill lec">Lecture</span> + <span class="pill add">Added</span></td></tr>
+<tr><td><b>Regression testing</b></td><td>Re-running existing tests after a change to check nothing that worked has broken.</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><b>JUnit Jupiter</b></td><td>The JUnit 5 programming model / API (<code>org.junit.jupiter…</code>).</td><td><span class="pill add">Added</span></td></tr>
+</table>
+</div>
+</div>
+
+</div>
+
+<div class="section">
+<h2>🖼️ Where Unit Testing Fits</h2>
+
+<div class="lane">
+<div class="label">The developer's flow (as the instructor described it)</div>
+<div class="flowbox">
+<div class="fstep">Requirement</div>
+<div class="farrow">→</div>
+<div class="fstep">Developer writes code</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Developer writes + runs unit tests (JUnit)</div>
+<div class="farrow">→</div>
+<div class="fstep">all green?</div>
+<div class="farrow">→ yes →</div>
+<div class="fstep">Testing team</div>
+</div>
+</div>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">all green?</div>
+<div class="farrow">|| no →</div>
+<div class="fstep wait">fix the code (or the wrong expectation), re-run</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Anatomy of one test</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">create object: new DiscountCalculator()</div>
+<div class="farrow">→</div>
+<div class="fstep">call method with input (1000, "Regular")</div>
+<div class="farrow">→</div>
+<div class="fstep notify">actual = 900</div>
+<div class="farrow">→</div>
+<div class="fstep">assertEquals(900, actual)</div>
+<div class="farrow">→</div>
+<div class="fstep notify">match ✅ green</div>
+<div class="farrow">||</div>
+<div class="fstep wait">mismatch ❌ "expected X but was Y"</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">With JUnit vs without JUnit (the GST story)</h3>
+
+<div class="lane">
+<div class="label">With unit tests</div>
+<div class="flowbox">
+<div class="fstep">another developer changes the code</div>
+<div class="farrow">→</div>
+<div class="fstep">re-runs the unit tests</div>
+<div class="farrow">→</div>
+<div class="fstep wait">Gold test fails: expected 800 but was 1000</div>
+<div class="farrow">→</div>
+<div class="fstep notify">fixed before release</div>
+</div>
+</div>
+<div class="lane">
+<div class="label">Without unit tests</div>
+<div class="flowbox">
+<div class="fstep">change released</div>
+<div class="farrow">→</div>
+<div class="fstep wait">Gold customer silently gets no discount</div>
+<div class="farrow">→</div>
+<div class="fstep wait">customer calls call centre → credit given</div>
+<div class="farrow">→</div>
+<div class="fstep wait">engineering traces it to the GST change</div>
+<div class="farrow">→</div>
+<div class="fstep wait">VP: "why no unit tests?"</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Adding the JUnit dependency</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">add dependency in pom.xml</div>
+<div class="farrow">→</div>
+<div class="fstep">Maven connects to a repository (company-local or global) via settings.xml in .m2</div>
+<div class="farrow">→</div>
+<div class="fstep notify">JUnit JAR (+ what it needs) downloaded</div>
+<div class="farrow">→</div>
+<div class="fstep">test code can use @Test, assertEquals…</div>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the transcript contains almost no readable code — only descriptions of what the instructor typed. Every program below is <b>my reconstruction</b> from those descriptions (class and method names, and the exact code of the "broken" change, are my choices). The numbers (1000 → 900 / 800 / 1000) come from the lecture.
+</div>
+
+<p><b>1. The JUnit dependency in pom.xml (version is an example — copy the current 5.x block from the Maven repository site):</b></p>
+<pre><code class="language-markup">&lt;dependencies&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.junit.jupiter&lt;/groupId&gt;
+        &lt;artifactId&gt;junit-jupiter&lt;/artifactId&gt;
+        &lt;version&gt;5.10.2&lt;/version&gt;
+        &lt;scope&gt;test&lt;/scope&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;</code></pre>
+
+<p><b>2. The class under test — Discount Calculator (src/main/java):</b></p>
+<pre><code class="language-java">public class DiscountCalculator {
+
+    public double calculateDiscount(double amount, String customerType) {
+        if ("Regular".equals(customerType)) {
+            return amount - (amount * 0.10);   // 10% off
+        } else if ("Gold".equals(customerType)) {
+            return amount - (amount * 0.20);   // 20% off
+        }
+        return amount;                         // default: no discount applicable
+    }
+}</code></pre>
+
+<p><b>3. The test class — the three scenarios from the demo (src/test/java):</b></p>
+<pre><code class="language-java">import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class DiscountCalculatorTest {
+
+    @Test
+    public void testRegularCustomerGets10PercentDiscount() {
+        DiscountCalculator calculator = new DiscountCalculator();
+
+        double actual = calculator.calculateDiscount(1000, "Regular");
+
+        assertEquals(900, actual);          // (expected, actual)
+    }
+
+    @Test
+    public void testGoldCustomerGets20PercentDiscount() {
+        DiscountCalculator calculator = new DiscountCalculator();
+
+        double actual = calculator.calculateDiscount(1000, "Gold");
+
+        assertEquals(800, actual);
+    }
+
+    @Test
+    public void testUnknownCustomerTypeGetsNoDiscount() {      // negative scenario
+        DiscountCalculator calculator = new DiscountCalculator();
+
+        double actual = calculator.calculateDiscount(1000, "Premium");
+
+        assertEquals(1000, actual);         // wrongly expecting 800 here would fail
+    }
+}
+// Run: right-click the class -&gt; Run As -&gt; JUnit Test.   All three green = passed.</code></pre>
+
+<p><b>4. What a failing test reports (wrong expectation or broken code):</b></p>
+<pre><code class="language-java">// If the third test said assertEquals(800, actual) while the method returns 1000:
+//
+//   testUnknownCustomerTypeGetsNoDiscount  FAILED
+//   org.opentest4j.AssertionFailedError: expected: &lt;800.0&gt; but was: &lt;1000.0&gt;
+//
+// "expected" = what you asserted;  "was" = what the method actually returned.</code></pre>
+
+<p><b>5. The "small change" that silently breaks Gold (illustrative reconstruction of the GST story):</b></p>
+<pre><code class="language-java">// AFTER another developer's "harmless" change
+public double calculateDiscount(double amount, String customerType) {
+    String type = customerType.toLowerCase();        // new line added for the new logic
+    if (type.equals("regular")) {                    // this branch was updated to match
+        return amount - (amount * 0.10);
+    } else if (type.equals("Gold")) {                // forgotten! a lower-case string can never equal "Gold"
+        return amount - (amount * 0.20);
+    }
+    // ... new GST-related logic added here ...
+    return amount;                                   // Gold customers now fall through: no discount, no error
+}
+
+// Re-running the existing tests immediately shows:
+//   testGoldCustomerGets20PercentDiscount  FAILED
+//   expected: &lt;800.0&gt; but was: &lt;1000.0&gt;
+// Nothing crashes in production -- only the tests would have caught it.</code></pre>
+
+<p><b>6. A tidier version using @BeforeEach and a delta (added — not shown in class):</b></p>
+<pre><code class="language-java">import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+
+public class DiscountCalculatorTest {
+
+    private DiscountCalculator calculator;
+
+    @BeforeEach
+    void setUp() {
+        calculator = new DiscountCalculator();    // fresh object before every test
+    }
+
+    @Test
+    void regularCustomerGets10PercentDiscount() {
+        assertEquals(900.0, calculator.calculateDiscount(1000, "Regular"), 0.001);  // delta for decimals
+    }
+}</code></pre>
+
+<p><b>7. Testing a void method through its state (the Q&amp;A point — example is mine):</b></p>
+<pre><code class="language-java">public class Cart {
+    private int itemCount;
+    public void addItem() { itemCount++; }          // void: returns nothing
+    public int getItemCount() { return itemCount; } // ...but changes state we can read
+}
+
+@Test
+void addItemIncreasesItemCount() {
+    Cart cart = new Cart();
+    cart.addItem();                                 // call the void method
+    assertEquals(1, cart.getItemCount());           // check the state it changed
+}</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question / Problem</th><th>Answer Given in Class</th></tr>
+<tr><td>Is <code>settings.xml</code> specific to a project?</td><td>No — one per system, in the common <code>.m2</code> directory under the user directory; all your projects (even if they use different repositories) share it.</td></tr>
+<tr><td>What do we test if the method is <code>void</code>?</td><td>A void method returns nothing, but if it changes state, you can read that state and check it.</td></tr>
+<tr><td>How do we test private methods or code we don't control?</td><td>Other frameworks — EasyMock and Mockito — help via mocks; they come with the Spring framework topic. Start with methods that return values.</td></tr>
+<tr><td>Student: <code>assertEquals</code> wasn't suggested (Ctrl+Space) / the test wouldn't compile or run.</td><td>See the troubleshooting checklist below — mostly wrong/missing imports and the JUnit version.</td></tr>
+<tr><td>Which JUnit version should we use?</td><td>Use a 5.x version (highest 5.x); while learning, use N-1 rather than the very latest.</td></tr>
+</table>
+</div>
+
+<div class="card" style="margin-top:20px;">
+<b>Troubleshooting Checklist (From the Live Fixes in Class)</b>
+<p class="small" style="margin-top:4px;">The recording captured the debugging only partly; items marked "(added)" are my inference.</p>
+<ol style="padding-left:20px;margin-top:8px;">
+<li>Test with <b>Ctrl+Space</b> in the test class — if <code>@Test</code> / <code>assertEquals</code> suggestions don't appear, the JUnit JAR isn't being picked up or the imports are wrong.</li>
+<li>Open <code>pom.xml</code> and check the version. If it's the very newest, switch to the <b>highest 5.x</b> — <b>copying the dependency</b> from the repository site.</li>
+<li>Save <code>pom.xml</code>, then <b>right-click the project → Maven → Update Project</b> (the instructor also used a <b>force update</b> option) so the IDE re-reads it.</li>
+<li>Save the class again and retry Ctrl+Space.</li>
+<li><b>Remove a wrong import</b> (the instructor had one student delete the first import statement and re-import via Ctrl+Space), and make sure the name is spelled exactly <code>assertEquals</code>.</li>
+<li>If suggestions are disabled, <b>paste the import lines manually</b> and use <b>Ctrl+Shift+O</b> (organise imports). <span class="pill add">(added)</span> The usual JUnit 5 lines are <code>import org.junit.jupiter.api.Test;</code> and <code>import static org.junit.jupiter.api.Assertions.assertEquals;</code>.</li>
+<li>If the test <em>runs</em> but fails, the issue may be your <b>expected/actual logic</b>, not the setup.</li>
+<li>Still stuck? The instructor's advice: <b>share your screen</b> and ask — don't sit idle.</li>
+</ol>
+</div>
+</div>
+
+<div class="section">
+<h2>💼 Likely Interview Questions From This Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What is your day-to-day activity as a developer?</td><td>Get a requirement, develop (write code), write and run unit tests, then hand over to the testing team.</td></tr>
+<tr><td>What is unit testing and who does it?</td><td>The developer testing their own code (methods) from their side, before it goes to the testing team.</td></tr>
+<tr><td>Why should a developer test their own code?</td><td>While writing, you think in one direction; testing exposes the many other directions — negative and positive scenarios — before you give junk code to others.</td></tr>
+<tr><td>What is JUnit?</td><td>The Java unit testing framework that lets you write and execute test cases.</td></tr>
+<tr><td>Why do we write unit test cases?</td><td>To maintain code quality, and to ensure new changes don't break the existing implementation.</td></tr>
+<tr><td>Who writes the unit tests for a class?</td><td>The developer who wrote it — the owner of the class — since they know the requirement and expected behaviour.</td></tr>
+<tr><td>How do you write a test in JUnit?</td><td>Create a test class (usually mirroring the class under test), add a method with <code>@Test</code>, call the method with known input, and compare using <code>assertEquals(expected, actual)</code>.</td></tr>
+<tr><td>What does <code>@Test</code> do?</td><td>Marks the method as a test case so the JUnit runner executes it.</td></tr>
+<tr><td>What are expected and actual?</td><td>Expected = the output you know the requirement demands; actual = what the method really returns.</td></tr>
+<tr><td>How do you run JUnit tests? How do you read the result?</td><td>Run As → JUnit Test (not Java Application). Green = passed; failures show "expected … but was …".</td></tr>
+<tr><td>Positive vs negative scenario?</td><td>Positive: valid input works as expected. Negative: invalid input (e.g. an unknown customer type) is handled correctly.</td></tr>
+<tr><td>If the code is already in production and you do an enhancement, how do you ensure nothing breaks?</td><td>Re-run the existing unit tests after the change; if one fails, your change broke existing behaviour.</td></tr>
+<tr><td>What is a dependency / why add JUnit to pom.xml?</td><td>A dependency is a JAR with functionality you want to use; the testing functionality lives in the JUnit JAR, so Maven must fetch it for your project.</td></tr>
+<tr><td>Where is settings.xml and is it per project?</td><td>No — one per system in the common <code>.m2</code> directory under the user's home directory.</td></tr>
+<tr><td>How do you test a void method?</td><td>Check the state it changes afterwards; for collaborators you don't control, use mocks (Mockito / EasyMock).</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🎤 Likely Interviewer Follow-Up Questions (Added)</h2>
+<p class="small">These go beyond what the lecture said — expect them in Java backend interviews.</p>
+<div class="tw">
+<table>
+<tr><th>Follow-up</th><th>Short answer</th></tr>
+<tr><td>What is regression testing?</td><td>Re-running existing tests after a change to confirm earlier functionality still works — exactly the GST-story rule.</td></tr>
+<tr><td>JUnit 4 vs JUnit 5?</td><td>JUnit 5 (Jupiter) uses <code>org.junit.jupiter.api.*</code>, has <code>@BeforeEach</code>/<code>@AfterEach</code> (JUnit 4: <code>@Before</code>/<code>@After</code>) and a more modular design.</td></tr>
+<tr><td>How do you test that a method throws an exception?</td><td><code>assertThrows(SomeException.class, () -&gt; method(...))</code> in JUnit 5.</td></tr>
+<tr><td>How do you avoid repeating object creation in every test?</td><td>Use <code>@BeforeEach</code> to create a fresh object before each test.</td></tr>
+<tr><td>Can tests depend on each other's order?</td><td>They shouldn't — each test should be independent and runnable on its own.</td></tr>
+<tr><td>What's the difference between a unit test and what the testing team does?</td><td>Unit tests verify individual methods/classes in isolation, written by the developer; the testing team tests the delivered build against requirements afterwards.</td></tr>
+<tr><td>What is mocking and why use it?</td><td>Replacing collaborators (database, services) with controllable fakes, so you can test your logic in isolation — Mockito/EasyMock.</td></tr>
+<tr><td>How do you know your tests are good enough?</td><td>Code coverage tooling shows how much of the code the tests exercise — the topic of the next class.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>📌 Lecture Takeaways</h2>
+<ul>
+<li><b>settings.xml</b> is one per system, in the common <code>.m2</code> directory; Maven build tools are unavoidable in Java jobs.</li>
+<li>Development = writing code from a requirement; <b>unit testing</b> happens <b>before</b> the testing team gets the code.</li>
+<li>The <b>developer who wrote the code</b> writes its unit tests, because they know the scenarios.</li>
+<li><b>JUnit</b> is the Java unit testing framework — add it as a Maven <b>dependency (a JAR)</b>.</li>
+<li>Write a test class, mark methods with <b><code>@Test</code></b>, call the method with a known input, and compare with <b><code>assertEquals(expected, actual)</code></b>.</li>
+<li>Run with <b>Run As → JUnit Test</b>; <b>green = passed</b>.</li>
+<li>Cover <b>positive and negative</b> scenarios.</li>
+<li>Unit tests <b>maintain code quality</b> and <b>protect existing code</b> from new changes.</li>
+<li>Whenever you change existing code, <b>re-run the unit tests</b>.</li>
+<li>Even a one-line change has tests — <b>standard practice</b>, nobody will remind you.</li>
+<li>For void/private methods and uncontrolled code, <b>Mockito / EasyMock</b> come later with Spring.</li>
+<li>When learning, use the <b>N-1 version</b> of a library; here, a 5.x JUnit.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🚧 Common Interview Traps</h2>
+<ul>
+<li><b>"Testing is the testing team's job, not mine."</b> Unit testing is the developer's responsibility, done before handover.</li>
+<li><b>"I wrote the code, so it works."</b> You only thought of one direction; tests expose the rest.</li>
+<li><b>"Nothing will break, I didn't touch that part."</b> That's exactly the assumption the GST story punishes — re-run the tests.</li>
+<li><b>Running tests with "Run as Java Application"</b> — use Run As → JUnit Test.</li>
+<li><b>Only writing positive scenarios</b> — add negative ones (invalid type, no discount).</li>
+<li><b>Wrong expectation = failing test</b> — a red result doesn't always mean the code is wrong; check your expected value too.</li>
+<li><b>Using the very latest library version while learning</b> — prefer N-1 (here, 5.x).</li>
+<li><b>Mixing up JUnit imports</b> — the wrong <code>@Test</code> / missing static import is a classic setup failure. <span class="pill add">Added</span></li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+
+<div class="card">
+<b>Assigned in the lecture</b>
+<ul style="margin-top:8px;">
+<li>Spend <b>5–10 minutes</b>: <b>create a new project</b> and add the JUnit Jupiter dependency — the same way the instructor did (Google it, open the Maven repository page, copy the block).</li>
+<li>Write <b>one test case</b> — for now you can use <b>exactly the same one the instructor wrote</b> — and later write your own.</li>
+<li>From tomorrow onward, <b>write JUnit test cases for every piece of code you write</b>.</li>
+<li><b>Practise JUnit and Maven every day</b> — the topic isn't "finished" just because the class moved on.</li>
+<li>If you hit problems, <b>talk to the instructor</b> / share your screen.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>Suggested extra practice (added — not assigned in the lecture):</b>
+<ul style="margin-top:8px;">
+<li>Write all three discount tests, run them, then deliberately break the code (e.g. change Gold's rate) and watch the failure message.</li>
+<li>Add a negative test for a <code>null</code> customer type and decide what the method <em>should</em> do.</li>
+<li>Rewrite the tests with <code>@BeforeEach</code> and try <code>assertThrows</code>.</li>
+<li>Explain "why unit tests?" out loud in under a minute, using the GST story.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>🧾 Transcript Clean-Up Map</h2>
+<p class="small">The recording was auto-transcribed with many errors (and Hindi words mixed in). This is how I interpreted the unclear terms. Several passages were too garbled to use and were left out rather than guessed.</p>
+<div class="tw">
+<table>
+<tr><th>Transcript wording</th><th>Interpreted as</th><th>Confidence</th></tr>
+<tr><td>"JNIT", "J unit", "Jamie test", "Jay unit"</td><td>JUnit</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Best" / "Test" (the annotation)</td><td><code>@Test</code></td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Asset equal", "Assert equal"</td><td><code>assertEquals</code></td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"JD Jupiter", "Fire Jupiter"</td><td>JUnit Jupiter (JUnit 5)</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"pound.xml"</td><td><code>pom.xml</code></td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Melon / Mammoth project", "Mavin"</td><td>Maven (project)</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Easy mock and mocking"</td><td>EasyMock and Mockito</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"M2 home", "M to home"</td><td>The <code>.m2</code> directory in the user's home directory</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Food quality", "product is food"</td><td>Code quality; the "product" in the analogy is the code</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>Update Project "click on the offline… force update"</td><td>Maven → Update Project with a force-update option (exact option name unclear)</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Wolfen" (the analogy product)</td><td>Unclear — scenarios suggest a fan; I avoided relying on it</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"Gold… 100% agree", Gold's discount rate</td><td>Rate not stated; 20% inferred from the expected 800</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>Currency/amount of the "call centre credit"</td><td>Transcript says "200 credit"; currency not stated</td><td><span class="pill low">Low</span></td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Classes:</b> The previous project used an <b>account and payment dependency</b> (a JAR in <code>pom.xml</code>) — the same concept used here for JUnit. The <code>.m2</code> / <code>settings.xml</code> question at the start was a follow-up to earlier Maven material (the transcript doesn't say which class).</li>
+<li><b>Upcoming (from the next class's recap):</b> <b>Code coverage</b> — how to prove your unit tests really exercise your code — followed by CI/CD pipelines and code review. See the separate notes for that class.</li>
+<li><b>Later in the course (per the instructor):</b> Mockito / EasyMock with the Spring framework.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+Section headings, card grouping, the flow diagrams, the terminology/comparison tables, the interview Q&amp;A, and the styling were added to match your earlier notes. The lecture content comes from your transcript. Because the transcript was auto-generated and often garbled, I corrected clear speech errors, flagged unclear ones in the clean-up map, and left out unreadable passages and side remarks (for example comments about interviews and job offers). Everything marked with a yellow dashed box or the "Added" tag — regression testing, JUnit 4 vs 5 notes, Surefire, delta in <code>assertEquals</code>, <code>@BeforeEach</code>, <code>assertThrows</code>, the void-method example and all follow-up questions — is my clarification, not something the instructor said, so verify it against the JUnit docs or your instructor before relying on it in an interview. All code is reconstructed from descriptions, not copied from the instructor's screen.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>

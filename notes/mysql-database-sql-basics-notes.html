@@ -1,0 +1,831 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Database Fundamentals, MySQL &amp; SQL Basics</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.pill{display:inline-block;padding:1px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;}
+.pill.lec{background:#e3f2fd;color:#0066ff;}
+.pill.add{background:#fff3cd;color:#a67c00;}
+.pill.hi{background:#e6f6ea;color:#1e8e3e;}
+.pill.med{background:#fff3cd;color:#a67c00;}
+.pill.low{background:#fdecea;color:#c62828;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Database Fundamentals, MySQL &amp; SQL Basics — Read/Write, Tables, Keys and Audit Columns</p>
+<p class="meta">Source: June 2026 offline class · Oct 14, 2026 · 44:14</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>The problem so far: standalone apps store data in memory (collections) and lose it on shutdown</li>
+<li><b>Database</b> — permanent storage; why applications use many databases</li>
+<li>Relational database basics: database → tables → columns; MySQL as the starting point</li>
+<li><b>Read vs write</b> operations — real-world examples and how a request flows (user → application → database)</li>
+<li><b>SQL</b> — the language a database understands, and how much of it a Java backend engineer needs</li>
+<li>MySQL server vs client, <code>localhost</code>, host / user / password / port, and the idea of a <b>connection</b></li>
+<li>Live demo: <code>show databases</code>, <code>create database</code>, <code>use</code>, <code>create table</code>, <code>describe</code>, <code>insert</code>, <code>select</code>, <code>update</code>, <code>delete</code></li>
+<li>Data persistence — the client is only a UI; data lives in the server</li>
+<li>Primary key (auto increment) and foreign key</li>
+<li><b>Audit columns</b> — why every table should have them</li>
+<li>Homework: install MySQL today (tomorrow starts with JDBC)</li>
+</ul>
+
+<div class="flag">
+<b>How to read these notes:</b> <b>Green-bordered cards</b> hold what the instructor taught. <b>Yellow dashed boxes</b> hold clarifications I added that the lecture did <em>not</em> state — verify them with your instructor if in doubt. <b>Orange 🔥 boxes</b> are interview alerts. The source is an <b>auto-generated transcript</b> (already lightly cleaned) that still contains speech-recognition errors — for example "my sequel / bicycle" for MySQL and "Banket" for delete. Where the intended term was clear I corrected it; where it was <em>not</em> I flagged it instead of guessing. See the clean-up map near the end.
+</div>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Instructor's Discipline Note</b>
+<p>The instructor stressed that the course is about <b>discipline</b>: <b>write code every day and develop the project every day</b>. He will move slowly and give time to try things out, but <b>if you miss one part, the future journey becomes really tough</b> — you'd then be relying on luck. (Several other remarks in this stretch of the recording were too garbled to use.)</p>
+</div>
+
+<div class="card">
+<b>Where We Are — The Standalone Application Problem</b>
+<ul style="margin-top:8px;">
+<li>So far we developed applications that were <b>standalone</b>: you run it, it performs some activity, then it <b>shuts down</b>. Run it again and it starts <b>from the beginning</b>.</li>
+<li>Think of an application that <b>takes your order</b> and, once the order is paid, <b>delivers it to your doorstep</b>.</li>
+<li>So far we were <b>not able to save data</b>. The application used an <b>in-memory mechanism</b> — the collection classes (<b>List, Set, Map</b>) — to hold data.</li>
+<li>When the application completes or you shut it down, <b>that data is destroyed</b>.</li>
+<li>But when the user comes back next time, he should know <b>how many orders he placed</b> and see his <b>transaction history</b> — we couldn't do that.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>What a Database Gives You — Permanent Storage</b>
+<p>A <b>database</b> lets you store data <b>permanently</b>. "Permanently" means: you shut down your system, you shut down your application, and when you start again <b>the data is still available</b>.</p>
+</div>
+
+<div class="card">
+<b>Many Databases, Learn a Few</b>
+<ul style="margin-top:8px;">
+<li>There are <b>hundreds of databases</b> in the market. You don't need to learn all of them — <b>learn one, two or three</b>. Every database has its own books/learning material.</li>
+<li>A real application uses <b>many different databases</b> — the instructor said <b>10 to 15</b>, and that <b>Amazon might use 20–30</b> (rough figures from class). <b>Each one has its own purpose.</b> Don't think Amazon runs on a single database.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Starting With a Relational Database — MySQL</b>
+<ul style="margin-top:8px;">
+<li>We start with a <b>relational database: MySQL</b>. From today onward, <b>our program will interact with a database</b>.</li>
+<li>For learning, you <b>install the database locally</b> on your own system.</li>
+<li>In a company it's different: <b>a team installs the databases on some other machine</b> and gives you the <b>host name, user ID and password</b>; you just connect.</li>
+<li>Relational basics (a subject you had in engineering): a database has <b>tables</b>, and a table has <b>fields</b> (columns).</li>
+<li>Your program <b>interacts</b> with the database, and the database <b>stores data permanently</b> — if you shut the application down and start it again tomorrow, you can <b>read the data</b> back.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Read vs Write — The Two Halves of Any System</b>
+<p>Whatever the database, your application does two things: it <b>reads</b> data from the database and it <b>writes</b> data to it. The instructor divided every system/functionality into <b>read</b> and <b>write</b> and asked the class for real-world examples:</p>
+<div class="tw">
+<table>
+<tr><th>Read (get data from the database)</th><th>Write (create / update data in the database)</th></tr>
+<tr>
+<td><ul style="margin:0;">
+<li>Viewing your <b>order history</b> (e.g. on Amazon)</li>
+<li><b>Tracking</b> an order's status</li>
+<li><b>PNR status</b> check</li>
+<li><b>Searching</b> for a product</li>
+<li><b>Login</b></li>
+<li>Viewing someone's <b>post</b> (e.g. Instagram) or <b>profile</b> (e.g. LinkedIn)</li>
+<li><b>Get balance</b> (the opposite of payment)</li>
+</ul></td>
+<td><ul style="margin:0;">
+<li><b>Placing an order</b>, <b>add to cart</b></li>
+<li><b>Pay</b> (payment)</li>
+<li><b>Create profile</b> / <b>sign-up</b></li>
+<li><b>Ticket booking</b></li>
+<li>A seller <b>creating / uploading a product</b></li>
+</ul></td>
+</tr>
+</table>
+</div>
+<p style="margin-top:10px;">The <b>application</b> does the reading and writing — against the database.</p>
+</div>
+
+<div class="card">
+<b>Who Talks to Whom — The Amazon Example</b>
+<ul style="margin-top:8px;">
+<li>The <b>user</b> uses the application; the application does the <b>read and write</b> to the database.</li>
+<li><b>Read:</b> I search for "iPhone 18 Pro" → my request goes to the <b>Amazon backend platform</b> ("can you give me the result for this?") → the backend <b>connects to the database, reads the data</b> and returns the result.</li>
+<li><b>Write:</b> when I <b>place an order</b> or <b>add to cart</b>, the backend <b>writes to the database</b>.</li>
+<li>"Everything will come from the databases."</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Why Real Applications Always Have Databases</b>
+<p>Until now we weren't interacting with anything external — we started the app, shut it down, and next time repeated the same activity (fine for learning). <b>Real-world applications have databases attached</b> — and <b>multiple databases, not only one</b>. The instructor's view: <b>"without databases you cannot even work for a day"</b>, apart from some small utilities. Enterprise applications always have them.</p>
+</div>
+
+<div class="hot">
+<b>🔥 Do Not Skip — Install MySQL Today</b>
+<p style="margin-top:6px;">The instructor repeated this several times: <b>do not leave the class today without installing MySQL and making sure it works.</b> Tomorrow's classes depend on it — there will be another minor project, an <b>extension of your previous project</b>, using <b>MySQL as permanent storage</b>, and another project is to start this weekend. Installation can take around <b>an hour</b> for some people. Details are in the homework section.</p>
+</div>
+
+<div class="card">
+<b>SQL — The Language the Database Understands</b>
+<ul style="margin-top:8px;">
+<li>To give instructions to a <b>computer</b>, you use a <b>programming language</b>. To give instructions to a <b>database</b>, you use <b>SQL — Structured Query Language</b>.</li>
+<li><b>A database doesn't understand Java.</b> It has its own language: SQL.</li>
+<li>As a <b>Java backend engineer</b> you must know the <b>minimum</b> of SQL; becoming an <b>expert</b> in SQL is a separate stream that takes <b>another couple of months</b>.</li>
+<li>If you don't know SQL: first learn the <b>basic concepts</b> — <b>what is a table, a database, a foreign key, a primary key</b>, data types. The instructor mentioned an online portal/course called <b>"Namaste SQL"</b> for the basics (spelling uncertain in the transcript), and suggested using ChatGPT to learn SQL today.</li>
+<li>His expectation: about <b>10% of SQL query knowledge</b> — what a <b>table</b>, <b>database</b>, <b>relationship</b>, <b>composite key</b>, <b>foreign key</b>, <b>primary key</b> and <b>data type</b> are; <b>indexing</b> will come as the course moves forward. You'll write queries every day, so learn alongside.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>MySQL Server and MySQL Client</b>
+<ul style="margin-top:8px;">
+<li>MySQL comes with a <b>MySQL server</b> and a <b>MySQL client</b>. Installing the server asks you to install the client as well.</li>
+<li>The <b>server</b> is a <b>Windows service</b> — it's <b>up and running automatically</b> when your Windows machine starts. You don't have to start it.</li>
+<li>The <b>client</b> is what you open to <b>connect to the database</b> and give instructions: <b>read or write</b> instructions ("insert data", "give me data"), and you get a <b>response</b> back.</li>
+<li>In the instructor's diagram, <b>both are on one machine</b> (his computer): a database symbol (the cylinder used to represent a database) and the MySQL client.</li>
+<li>The <b>client is just a kind of UI</b>. The <b>server stores the data</b> — it holds the tables and all the data. Same as Amazon: the app is the client/UI; the request goes to the Amazon server (backend), then to the database. Client and server are both running on the backend system, and you interact through the client.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>localhost, Host, User, Password, Port — and the Connection</b>
+<ul style="margin-top:8px;">
+<li>If you connect from the <b>same computer</b> the database runs on, you're connecting to <b>localhost</b> — the host of the same computer.</li>
+<li>To connect, the client needs the <b>host, username, password and port</b>.</li>
+<li>Using these you create a <b>connection</b> — "this client is connected to the database".</li>
+<li><b>Analogy:</b> to talk to a friend over the phone you dial a number; it connects to the nearest tower, then onward through other towers. <b>Without a connection you cannot communicate at all.</b></li>
+</ul>
+</div>
+
+<div class="card">
+<b>Connecting From the Command Prompt</b>
+<p>Instead of the client window, open <b>CMD</b> and type <code>mysql -u root -p</code> (<code>-u</code> = user; the instructor's user was <code>root</code>), then <b>enter the password</b> you set. Now this CMD window is <b>connected to the database</b>, and you can send instructions written in SQL — the language the database understands.</p>
+</div>
+
+<div class="card">
+<b>The Hierarchy — Server → Databases → Tables → Columns</b>
+<ul style="margin-top:8px;">
+<li>The <b>database server</b> contains <b>databases</b>; a database contains <b>tables</b>; a table contains <b>columns</b> (fields).</li>
+<li>A <b>database</b> is a <b>name under which you segregate data</b> — an <b>order database</b>, a <b>payment database</b>, etc.</li>
+<li>Under the order database you might have tables such as <b>order history, order failed, order passed, order unpaid, order canceled</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Demo — Commands in the Order the Instructor Used Them</b>
+<div class="tw">
+<table>
+<tr><th>#</th><th>Goal</th><th>Command</th><th>Notes from class</th></tr>
+<tr><td>1</td><td>See which databases exist</td><td><code>show databases;</code></td><td>Lists everything already created on the MySQL server. <b>A semicolon ends the command</b> — it's required.</td></tr>
+<tr><td>2</td><td>Create a database for the batch</td><td><code>create database &lt;name&gt;;</code></td><td>Reply "<b>1 row affected</b>" means it was created. Listing again shows it.</td></tr>
+<tr><td>3</td><td>Point to that database</td><td><code>use &lt;name&gt;;</code></td><td>With 20 databases around, you must say which one you work in — otherwise where would a new table go? After <code>use</code>, <b>all your instructions apply to that database</b>.</td></tr>
+<tr><td>4</td><td>List tables</td><td><code>show tables;</code></td><td>Shows <b>Empty set</b> at first — nothing created yet.</td></tr>
+<tr><td>5</td><td>Create a table</td><td><code>create table &lt;table&gt;(...);</code></td><td>Standard syntax: table name, then each <b>field name + data type</b>.</td></tr>
+<tr><td>6</td><td>See the table's structure</td><td><code>describe &lt;table&gt;;</code></td><td>Shows what the <b>table structure</b> looks like.</td></tr>
+<tr><td>7</td><td>Read data</td><td><code>select * from &lt;table&gt;;</code></td><td><code>*</code> = all fields. Empty at first because we <b>just created an empty table</b>.</td></tr>
+<tr><td>8</td><td>Add records</td><td><code>insert into &lt;table&gt;(fields) values(...);</code></td><td>"One row affected" = record inserted. <code>select *</code> now shows it; he inserted <b>two records</b>.</td></tr>
+<tr><td>9</td><td>Change a record</td><td><code>update &lt;table&gt; set &lt;field&gt; = &lt;value&gt; where &lt;condition&gt;;</code></td><td>The reply showed <b>1 matched, 1 changed</b>. In the demo an order's status changed from <b>hold to paid</b> ("this person also paid").</td></tr>
+<tr><td>10</td><td>Remove data</td><td><code>delete …</code></td><td>Afterwards "nothing is there, all removed" — see the clarification box about what exactly was deleted.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card">
+<b>The Table He Created — Order History</b>
+<ul style="margin-top:8px;">
+<li>Table name: <b>order history</b>.</li>
+<li><b>ID</b> — data type <b>integer</b> (the equivalent of Java's int).</li>
+<li><b>Item name</b> — a <b>string</b>; in the database this is <b>VARCHAR</b>, here with a <b>maximum length of 100</b> (the equivalent of Java's String).</li>
+<li><b>Price</b> — a numeric field (the exact type isn't clear in the transcript).</li>
+<li><b>Status</b> — a <b>VARCHAR of size 25</b>.</li>
+</ul>
+<p class="small" style="margin-top:6px;">The inserted values were garbled in the transcript; the sample data in the visual and code sections is my own example.</p>
+</div>
+
+<div class="card">
+<b>Data Really Is Persistent — The Client Is Just a UI</b>
+<p>The instructor <b>closed the client</b>, then started it again with <code>mysql -u root -p</code> and the password, ran <code>show databases</code>, selected his database with <code>use</code>, ran <code>show tables</code> — and the table and its data were <b>still there</b>. Don't think the data lives in the client: <b>the data is stored inside the MySQL database (server)</b>, which is why you can see it again. That is permanent storage in action.</p>
+</div>
+
+<div class="card">
+<b>Reading Only What You Need — Filters and Columns</b>
+<ul style="margin-top:8px;">
+<li><b>Filter rows with <code>where</code>:</b> to see only the <b>paid</b> orders, add <code>where status = 'paid'</code> to the select — in the demo that returned <b>the only one paid record</b>.</li>
+<li><b>Pick columns:</b> instead of <code>select *</code>, name just the fields you want — e.g. <b>item name and price</b> — and only those come back.</li>
+<li>Why: a real-world table might have <b>200 columns</b>; you don't need to read everything — only the columns you're interested in.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Primary Key</b>
+<ul style="margin-top:8px;">
+<li>A <b>primary key</b> <b>uniquely identifies a particular record</b>. You choose it <b>while creating the table</b>. (The demo table had no primary key yet.)</li>
+<li>If you declare a column as the primary key and mark it <b>auto increment</b>, the <b>database server increases the ID automatically</b> — so while inserting you <b>don't have to supply the ID again and again</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Foreign Key</b>
+<p>The <b>primary key of one table sits inside another table</b> as a reference — that is a <b>foreign key</b>. It is the <b>connection / parent-child relationship</b> you create between tables. The instructor noted that these fundamentals were already taught in one engineering semester, and <b>now is the right time to revise them</b>.</p>
+</div>
+
+<div class="card">
+<b>Audit Columns — Always Add Them</b>
+<ul style="margin-top:8px;">
+<li>Whenever you create a table, <b>include audit columns</b> — as part of the <b>database design</b>. Examples he gave: <b>created date</b> (when the record was created), <b>updated date</b> (when it was updated), and when it was deleted; the transcript also lists <b>status</b> among them.</li>
+<li><b>Why?</b> Without them, <b>you don't know who updated a record — the user, the system, or somebody else</b>.</li>
+<li><b>Debugging story:</b> a profile shows as deleted. Maybe the user himself asked to <b>deactivate</b> it; maybe a friend did it, and the person is calling the <b>call centre</b> saying "my data got deleted". With audit columns you can <b>investigate</b>. If your code marks, at delete/deactivate time, that it was <b>deleted by the user</b> (with the person's name), you can say: <em>"the request came from your mobile — we don't know where your mobile was, but the request to deactivate came from your account."</em></li>
+<li><b>Without audit columns, investigation is really tough</b> — you can't tell who deleted what.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Client vs Server (Q&amp;A) and the Workbench Advice</b>
+<ul style="margin-top:8px;">
+<li><b>MySQL client</b> and <b>MySQL server</b>: the server stores the data (tables, all data); the client is <b>only the UI</b> through which you interact with MySQL.</li>
+<li><b>Workbench:</b> there is also a <b>MySQL Workbench</b> tool, but the instructor said <b>please do not install it</b> for now — he said it would <b>slow down your system</b> (and noted it "corrects queries automatically" — part of that remark is garbled). <b>Start with the command prompt (CMD)</b>.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification — terms and details the lecture didn't spell out:</b>
+<ul style="margin-top:8px;">
+<li><b>Read/write is often called CRUD:</b> <b>C</b>reate, <b>R</b>ead, <b>U</b>pdate, <b>D</b>elete. In SQL: <code>insert</code> = create, <code>select</code> = read, <code>update</code> = update, <code>delete</code> = delete. "Write" in the lecture covers insert, update and delete.</li>
+<li><b><code>delete</code> vs <code>drop</code> vs <code>truncate</code>:</b> <code>delete</code> removes <em>rows</em> (all rows if there is no <code>where</code>); <code>drop table</code> removes the <em>table itself</em>; <code>truncate table</code> quickly empties all rows. In the transcript the instructor says the delete command "can delete the table as well" and also shows deleting data — the recording doesn't make clear whether he deleted one row or all rows (data is present again later in the demo), so check these three statements yourself.</li>
+<li><b>Always use <code>where</code> with <code>update</code> and <code>delete</code>:</b> without it, <em>every</em> row is changed or removed. A safe habit is to run a <code>select … where …</code> first and reuse the same condition.</li>
+<li><b>Syntax details:</b> SQL keywords aren't case-sensitive; text values go in <b>single quotes</b> (<code>'paid'</code>); a table name can't contain spaces, so "order history" becomes <code>order_history</code>.</li>
+<li><b>Data types:</b> <code>varchar(100)</code> = variable-length text up to 100 characters. For money, <code>decimal(10,2)</code> is usually preferred over floating-point types like <code>double</code> because of rounding errors.</li>
+<li><b>Composite key:</b> a primary key made of <em>two or more</em> columns together. The lecture only listed the term.</li>
+<li><b>Auto-increment syntax:</b> <code>id int primary key auto_increment</code>. Auto-generated IDs come from the server, so you leave <code>id</code> out of the insert.</li>
+<li><b>Foreign key syntax:</b> <code>foreign key (customer_id) references customer(customer_id)</code> — and the referenced (parent) table must exist first.</li>
+<li><b>Typical audit columns:</b> <code>created_date</code>, <code>created_by</code>, <code>updated_date</code>, <code>updated_by</code>, and for deletions <code>deleted_date</code>, <code>deleted_by</code> or a <code>status</code>/flag column. Marking a record as deleted instead of physically removing it is called a <b>soft delete</b> — it is what makes "who deleted this?" answerable.</li>
+<li><b>Port and JDBC (preview):</b> MySQL's default port is <b>3306</b>, and <code>root</code> is the default administrator account. The lecture didn't give the port number; tomorrow's JDBC topic is where host/port/user/password get used from Java, typically in a URL like <code>jdbc:mysql://localhost:3306/&lt;database&gt;</code>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Terminology Cheat-Sheet</b>
+<p class="small" style="margin-top:4px;">Blue tag = defined in the lecture · Yellow tag = detail added by me.</p>
+<div class="tw">
+<table>
+<tr><th>Term</th><th>Meaning</th><th>Source</th></tr>
+<tr><td><b>Database</b></td><td>Permanent storage for data; also a named container that segregates data (e.g. order DB, payment DB).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Relational database</b></td><td>Database organised as tables with fields/columns; MySQL is one.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Table / column (field)</b></td><td>A table holds records; columns are its fields (id, item name, price, status).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>In-memory storage</b></td><td>Data held in collections (List/Set/Map); lost when the application ends.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Read / write</b></td><td>Getting data from the database / creating or updating data in it.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>SQL</b></td><td>Structured Query Language — the language databases understand.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>MySQL server / client</b></td><td>Server stores data and runs as a service; client is the UI you use to send SQL.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>localhost</b></td><td>The host name for "this same computer".</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Connection</b></td><td>The link between client and database, made using host, username, password and port.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>VARCHAR(n)</b></td><td>Text field with a maximum length n (Java String equivalent).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Primary key</b></td><td>Uniquely identifies a record; can be auto-incremented.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Foreign key</b></td><td>A primary key of one table placed in another as a reference — a parent-child link.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Audit columns</b></td><td>Columns recording when/who created, updated or deleted a record.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>CRUD</b></td><td>Create, Read, Update, Delete.</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><b>Soft delete</b></td><td>Marking a record deleted (flag/date/by) instead of physically removing it.</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><b>Composite key</b></td><td>A key made of multiple columns together.</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><b>JDBC</b></td><td>The Java API for talking to databases — the next topic.</td><td><span class="pill lec">Lecture</span> (named) + <span class="pill add">Added</span> (definition)</td></tr>
+</table>
+</div>
+</div>
+
+</div>
+
+<div class="section">
+<h2>🖼️ Visual Flows</h2>
+
+<h3 style="margin-top:6px;color:#0066ff;font-size:17px;">In-memory vs database</h3>
+
+<div class="lane">
+<div class="label">Standalone app with collections</div>
+<div class="flowbox">
+<div class="fstep">run app</div>
+<div class="farrow">→</div>
+<div class="fstep">orders stored in List / Set / Map</div>
+<div class="farrow">→</div>
+<div class="fstep wait">app shuts down → data destroyed</div>
+<div class="farrow">→</div>
+<div class="fstep wait">next run starts from the beginning</div>
+</div>
+</div>
+
+<div class="lane">
+<div class="label">App with a database</div>
+<div class="flowbox">
+<div class="fstep">run app</div>
+<div class="farrow">→</div>
+<div class="fstep notify">orders written to the database</div>
+<div class="farrow">→</div>
+<div class="fstep">app shuts down</div>
+<div class="farrow">→</div>
+<div class="fstep notify">next run: order history is still there</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">A read and a write request</h3>
+
+<div class="lane">
+<div class="label">Read — searching "iPhone 18 Pro"</div>
+<div class="flowbox">
+<div class="fstep">User</div>
+<div class="farrow">→ request →</div>
+<div class="fstep">Application backend</div>
+<div class="farrow">→ connects, reads →</div>
+<div class="fstep notify">Database</div>
+<div class="farrow">→ data →</div>
+<div class="fstep">Backend</div>
+<div class="farrow">→ result →</div>
+<div class="fstep">User</div>
+</div>
+</div>
+
+<div class="lane">
+<div class="label">Write — place order / add to cart</div>
+<div class="flowbox">
+<div class="fstep">User</div>
+<div class="farrow">→ request →</div>
+<div class="fstep">Application backend</div>
+<div class="farrow">→ writes →</div>
+<div class="fstep notify">Database stores the new record</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">MySQL client and server</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">MySQL client (CMD)</div>
+<div class="farrow">→ connection: host + port + user + password →</div>
+<div class="fstep notify">MySQL server (Windows service, always running)</div>
+<div class="farrow">→</div>
+<div class="fstep">databases</div>
+<div class="farrow">→</div>
+<div class="fstep">tables</div>
+<div class="farrow">→</div>
+<div class="fstep">columns</div>
+</div>
+</div>
+<p class="small">The client is only a UI; the data lives in the server. Closing the client doesn't touch the data.</p>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">The demo's command sequence</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">show databases</div>
+<div class="farrow">→</div>
+<div class="fstep">create database</div>
+<div class="farrow">→</div>
+<div class="fstep notify">use</div>
+<div class="farrow">→</div>
+<div class="fstep">show tables (empty)</div>
+<div class="farrow">→</div>
+<div class="fstep">create table</div>
+<div class="farrow">→</div>
+<div class="fstep">describe</div>
+<div class="farrow">→</div>
+<div class="fstep">insert</div>
+<div class="farrow">→</div>
+<div class="fstep">select</div>
+<div class="farrow">→</div>
+<div class="fstep">update</div>
+<div class="farrow">→</div>
+<div class="fstep wait">delete</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">What the demo table looks like (sample data is my own)</h3>
+<div class="tw">
+<table>
+<tr><th colspan="4" style="text-align:center;">order_history — after the two inserts</th></tr>
+<tr><th>id</th><th>item_name</th><th>price</th><th>status</th></tr>
+<tr><td>1</td><td>Laptop</td><td>55000</td><td>hold</td></tr>
+<tr><td>2</td><td>Headphones</td><td>2500</td><td>hold</td></tr>
+</table>
+<table>
+<tr><th colspan="4" style="text-align:center;">after <code>update … set status='paid' where id=1</code></th></tr>
+<tr><th>id</th><th>item_name</th><th>price</th><th>status</th></tr>
+<tr><td>1</td><td>Laptop</td><td>55000</td><td><b>paid</b></td></tr>
+<tr><td>2</td><td>Headphones</td><td>2500</td><td>hold</td></tr>
+</table>
+<table>
+<tr><th colspan="2" style="text-align:center;">after <code>select item_name, price … where status='paid'</code></th></tr>
+<tr><th>item_name</th><th>price</th></tr>
+<tr><td>Laptop</td><td>55000</td></tr>
+</table>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Primary key and foreign key (illustrative)</h3>
+<div class="tw">
+<table>
+<tr><th colspan="2" style="text-align:center;">customer (parent) — PRIMARY KEY: customer_id</th></tr>
+<tr><th>customer_id (PK)</th><th>name</th></tr>
+<tr><td>101</td><td>Asha</td></tr>
+<tr><td>102</td><td>Ravi</td></tr>
+</table>
+<table>
+<tr><th colspan="4" style="text-align:center;">order_history (child) — customer_id is a FOREIGN KEY pointing to customer</th></tr>
+<tr><th>id (PK)</th><th>customer_id (FK)</th><th>item_name</th><th>status</th></tr>
+<tr><td>1</td><td>101</td><td>Laptop</td><td>paid</td></tr>
+<tr><td>2</td><td>102</td><td>Headphones</td><td>hold</td></tr>
+</table>
+</div>
+<p class="small">The lecture explained the idea ("primary key of one table sits inside another table as a reference"); these two tables are my example.</p>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Why audit columns matter — the deleted-profile story</h3>
+
+<div class="lane">
+<div class="label">With audit columns</div>
+<div class="flowbox">
+<div class="fstep">customer calls: "my data got deleted"</div>
+<div class="farrow">→</div>
+<div class="fstep notify">check deleted-by / dates on the record</div>
+<div class="farrow">→</div>
+<div class="fstep notify">"deactivation request came from your account/mobile"</div>
+<div class="farrow">→</div>
+<div class="fstep">issue explained</div>
+</div>
+</div>
+<div class="lane">
+<div class="label">Without audit columns</div>
+<div class="flowbox">
+<div class="fstep">customer calls: "my data got deleted"</div>
+<div class="farrow">→</div>
+<div class="fstep wait">no record of who/when</div>
+<div class="farrow">→</div>
+<div class="fstep wait">user? system? someone else? — can't tell</div>
+<div class="farrow">→</div>
+<div class="fstep wait">investigation is really tough</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Server → database → tables</h3>
+<div class="tw">
+<table>
+<tr><th>Level</th><th>What it is</th><th>Example from class</th></tr>
+<tr><td>Database server</td><td>The MySQL server running on a machine</td><td>MySQL on the instructor's computer</td></tr>
+<tr><td>Database</td><td>A named container that segregates data</td><td>order database, payment database</td></tr>
+<tr><td>Table</td><td>Holds records of one kind</td><td>order history, order failed, order passed, order unpaid, order canceled</td></tr>
+<tr><td>Column / field</td><td>One attribute of a record, with a data type</td><td>id (int), item name (varchar 100), price, status (varchar 25)</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the instructor typed the commands on screen and the transcript only describes them. The commands below are <b>my reconstruction</b> of the demo — the command names and structure come from the lecture, but the <b>database name</b> (<code>first_june</code>), the <b>price type</b> and the <b>inserted values</b> are my own choices because those parts were garbled. Examples marked "added" were not shown in class.
+</div>
+
+<p><b>1. Connect from CMD (the <code>-u</code> / <code>-p</code> flags), then list databases:</b></p>
+<pre><code>C:\&gt; mysql -u root -p
+Enter password: ********
+
+mysql&gt; show databases;        -- semicolon ends the command
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| ...                |
++--------------------+</code></pre>
+
+<p><b>2. Create a database, switch to it, and look for tables:</b></p>
+<pre><code class="language-sql">create database first_june;     -- "Query OK, 1 row affected" = created
+show databases;                 -- now lists first_june as well
+
+use first_june;                 -- all following work applies to this database
+show tables;                    -- Empty set (nothing created yet)</code></pre>
+
+<p><b>3. Create the order-history table and look at its structure:</b></p>
+<pre><code class="language-sql">create table order_history (
+    id         int,             -- Java's int
+    item_name  varchar(100),    -- Java's String, max 100 characters
+    price      double,          -- type was unclear in class; my choice
+    status     varchar(25)
+);
+
+describe order_history;         -- shows the table structure (can be shortened to desc)</code></pre>
+<pre><code>mysql&gt; describe order_history;
++-----------+--------------+------+-----+---------+-------+
+| Field     | Type         | Null | Key | Default | Extra |
++-----------+--------------+------+-----+---------+-------+
+| id        | int          | YES  |     | NULL    |       |
+| item_name | varchar(100) | YES  |     | NULL    |       |
+| price     | double       | YES  |     | NULL    |       |
+| status    | varchar(25)  | YES  |     | NULL    |       |
++-----------+--------------+------+-----+---------+-------+</code></pre>
+
+<p><b>4. Insert, read, update (values are my examples):</b></p>
+<pre><code class="language-sql">select * from order_history;                       -- empty: we just created the table
+
+insert into order_history (id, item_name, price, status)
+values (1, 'Laptop', 55000, 'hold');               -- Query OK, 1 row affected
+insert into order_history (id, item_name, price, status)
+values (2, 'Headphones', 2500, 'hold');
+
+select * from order_history;                       -- both records are back
+
+update order_history
+set status = 'paid'
+where id = 1;                                      -- Rows matched: 1  Changed: 1  Warnings: 0</code></pre>
+
+<p><b>5. Filtering rows and picking columns:</b></p>
+<pre><code class="language-sql">-- only the paid orders
+select * from order_history where status = 'paid';
+
+-- only the columns you care about (real tables may have 200 columns)
+select item_name, price from order_history;
+
+-- both together
+select item_name, price from order_history where status = 'paid';</code></pre>
+
+<p><b>6. Removing data — three different statements (added; the transcript doesn't show exactly which was run):</b></p>
+<pre><code class="language-sql">delete from order_history where id = 2;   -- removes ONE row
+delete from order_history;                 -- removes ALL rows (no WHERE) -- the table stays
+truncate table order_history;              -- empties all rows quickly -- the table stays
+drop table order_history;                  -- removes the TABLE itself</code></pre>
+
+<p><b>7. Persistence check — close the client, reconnect, the data is still there:</b></p>
+<pre><code>mysql&gt; exit
+Bye
+
+C:\&gt; mysql -u root -p
+Enter password: ********
+
+mysql&gt; show databases;
+mysql&gt; use first_june;
+mysql&gt; show tables;           -- order_history is still listed
+mysql&gt; select * from order_history;   -- and so are the rows: they live in the SERVER, not the client</code></pre>
+
+<p><b>8. Primary key with auto increment, plus audit columns (added — the lecture described these ideas, not this code):</b></p>
+<pre><code class="language-sql">create table order_history (
+    id            int primary key auto_increment,   -- unique ID, generated by the server
+    item_name     varchar(100),
+    price         decimal(10,2),                    -- decimal is usually preferred for money
+    status        varchar(25),
+    created_date  timestamp default current_timestamp,
+    created_by    varchar(50),
+    updated_date  timestamp default current_timestamp on update current_timestamp,
+    updated_by    varchar(50)
+);
+
+-- no id in the insert: the server generates 1, 2, 3 ...
+insert into order_history (item_name, price, status, created_by)
+values ('Laptop', 55000, 'hold', 'system');</code></pre>
+
+<p><b>9. Foreign key — the parent table must exist first (added; mirrors the diagram above):</b></p>
+<pre><code class="language-sql">create table customer (
+    customer_id  int primary key auto_increment,
+    name         varchar(100)
+);
+
+create table order_history (
+    id           int primary key auto_increment,
+    customer_id  int,
+    item_name    varchar(100),
+    status       varchar(25),
+    foreign key (customer_id) references customer(customer_id)   -- the reference to the parent table
+);</code></pre>
+
+<p><b>10. A "deleted by" mark so you can investigate later — soft delete (added; the idea comes from the audit-column story):</b></p>
+<pre><code class="language-sql">update profile
+   set status       = 'DEACTIVATED',
+       deleted_by   = 'USER_REQUEST',      -- who asked for it
+       deleted_date = now()                -- when it happened
+ where id = 101;
+-- Later: "who deactivated profile 101, and when?" has an answer.</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question / Point</th><th>Answer Given in Class</th></tr>
+<tr><td>Does anyone not know SQL / RDBMS?</td><td>Several raised hands. Learn the basics first (table, database, primary key, foreign key, data types) — e.g. the "Namaste SQL" material or by using ChatGPT — and write queries daily; expert-level SQL takes another couple of months.</td></tr>
+<tr><td>Give real-world examples of read and write.</td><td>Class examples: read — order history, order tracking, PNR status, product search, login, viewing posts/profiles, get balance; write — place order, pay, create profile/sign-up, ticket booking, uploading a product.</td></tr>
+<tr><td>Is this the right client? (MySQL client and server)</td><td>Yes — the server stores data and tables; the client is just the UI to interact with it, like the Amazon app talking to the Amazon backend and database.</td></tr>
+<tr><td>Where is the data when I close the client?</td><td>In the MySQL server/database, not in the client — that's why it's visible again after reconnecting.</td></tr>
+<tr><td>Should we install MySQL Workbench?</td><td>Not now — it slows down the system; start with CMD.</td></tr>
+<tr><td>How long will installation take?</td><td>Possibly an hour for some people — start immediately and ask for help if it fails.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>💼 Likely Interview Questions From This Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>Why do applications need a database? Why not just collections?</td><td>Collections keep data in memory and it's destroyed when the application ends; a database stores data permanently, so it's available after shutdown and restart.</td></tr>
+<tr><td>Does an application use a single database?</td><td>No — real applications use many (the instructor said 10–15, Amazon maybe 20–30), each for its own purpose.</td></tr>
+<tr><td>What is a relational database?</td><td>A database that stores data in tables made of rows and columns (fields); MySQL is an example.</td></tr>
+<tr><td>What is the structure of a database server?</td><td>Server → databases → tables → columns.</td></tr>
+<tr><td>What are read and write operations? Give examples.</td><td>Read: order history, search, login, get balance. Write: place order, pay, sign-up, ticket booking.</td></tr>
+<tr><td>Describe the flow when a user searches for a product.</td><td>The request goes to the application backend, which connects to the database, reads the data and returns the result to the user.</td></tr>
+<tr><td>What is SQL? Why can't Java talk to the database directly?</td><td>Structured Query Language is the language databases understand; a database doesn't understand Java.</td></tr>
+<tr><td>MySQL client vs server?</td><td>The server stores and manages the data (runs as a service); the client is the UI you use to connect and send SQL.</td></tr>
+<tr><td>What is localhost? What do you need to connect to a database?</td><td>localhost is the same computer; you need host, username, password and port to create a connection.</td></tr>
+<tr><td>How do you connect to MySQL from the command prompt?</td><td><code>mysql -u root -p</code>, then enter the password.</td></tr>
+<tr><td>How do companies give you database access?</td><td>A team installs the database on another machine and gives you the host name, user ID and password.</td></tr>
+<tr><td>What do <code>show databases</code>, <code>use</code> and <code>show tables</code> do?</td><td>List existing databases; select the database to work in; list the tables in the current database.</td></tr>
+<tr><td>Basic syntax to create a table?</td><td><code>create table name(field datatype, …)</code> — e.g. id int, item_name varchar(100).</td></tr>
+<tr><td>How do you see a table's structure?</td><td><code>describe table_name;</code></td></tr>
+<tr><td>How do you insert, update and read data?</td><td><code>insert into … values …</code>; <code>update … set … where …</code>; <code>select … from … [where …]</code>.</td></tr>
+<tr><td>Why select specific columns instead of <code>*</code>?</td><td>Real tables can have hundreds of columns; you read only what you need.</td></tr>
+<tr><td>What is a primary key? What does auto increment do?</td><td>A primary key uniquely identifies a record; auto increment makes the server generate the ID so you needn't supply it.</td></tr>
+<tr><td>What is a foreign key?</td><td>A primary key of one table sitting in another table as a reference — the parent-child relationship.</td></tr>
+<tr><td>What are audit columns and why do we need them?</td><td>Columns like created date, updated date, deleted-by that record when/who changed a record — essential for debugging and investigating complaints.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🎤 Likely Interviewer Follow-Up Questions (Added)</h2>
+<p class="small">These go beyond what the lecture said — expect them in Java backend interviews.</p>
+<div class="tw">
+<table>
+<tr><th>Follow-up</th><th>Short answer</th></tr>
+<tr><td>DELETE vs TRUNCATE vs DROP?</td><td>DELETE removes selected (or all) rows and can use WHERE; TRUNCATE empties the whole table quickly; DROP removes the table itself.</td></tr>
+<tr><td>What happens if you run UPDATE or DELETE without WHERE?</td><td>It applies to every row in the table — so check with a SELECT using the same condition first.</td></tr>
+<tr><td>Primary key vs foreign key vs composite key?</td><td>Primary: unique row identifier; foreign: reference to another table's primary key; composite: a key made of multiple columns.</td></tr>
+<tr><td>Can a table have more than one primary key?</td><td>No — only one primary key per table (it can be composite, i.e. several columns together).</td></tr>
+<tr><td>What is a soft delete and why use it?</td><td>Mark a row as deleted (flag/date/by) instead of removing it, so you can audit, investigate and even restore.</td></tr>
+<tr><td>VARCHAR vs CHAR?</td><td>VARCHAR is variable-length up to a limit; CHAR is fixed-length.</td></tr>
+<tr><td>Why use DECIMAL for money?</td><td>Floating-point types can introduce rounding errors; DECIMAL stores exact values.</td></tr>
+<tr><td>What is an index?</td><td>A structure that speeds up lookups on a column (the instructor said indexing comes later in the course).</td></tr>
+<tr><td>What's the default MySQL port?</td><td>3306.</td></tr>
+<tr><td>How will Java connect to MySQL?</td><td>Through JDBC (tomorrow's topic) using a connection with host, port, database, user and password, plus the MySQL driver JAR on the class path.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>📌 Lecture Takeaways</h2>
+<ul>
+<li>Standalone apps with <b>collections lose data</b> on shutdown; <b>databases store data permanently</b>.</li>
+<li>Learn <b>one to three</b> databases; real applications use <b>many</b>, each with its own purpose.</li>
+<li>We start with the relational database <b>MySQL</b>, installed locally; in companies you get host, user ID and password.</li>
+<li>Every system divides into <b>read</b> and <b>write</b>; the application does both against the database.</li>
+<li>The database understands <b>SQL</b>, not Java; a Java backend engineer needs at least basic SQL (~10%).</li>
+<li>MySQL = <b>server</b> (stores data, always running) + <b>client</b> (UI); you connect with <b>host, user, password, port</b>.</li>
+<li>Structure: <b>server → databases → tables → columns</b>.</li>
+<li>Commands: <code>show databases</code>, <code>create database</code>, <code>use</code>, <code>show tables</code>, <code>create table</code>, <code>describe</code>, <code>select</code>, <code>insert</code>, <code>update … where</code>, <code>delete</code>; end with a <b>semicolon</b>.</li>
+<li>Use <code>where</code> to filter rows and name columns to read only what you need.</li>
+<li><b>Primary key</b> uniquely identifies a record (auto increment generates IDs); a <b>foreign key</b> links tables.</li>
+<li>Always add <b>audit columns</b> (created/updated/deleted info) — vital for investigating issues.</li>
+<li>Use the <b>command prompt</b> first; skip Workbench for now.</li>
+<li><b>Install MySQL today</b> — tomorrow starts with JDBC.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🚧 Common Interview Traps</h2>
+<ul>
+<li><b>"Collections are fine for storing data."</b> Only while the application runs; they're not permanent.</li>
+<li><b>"One database per application."</b> Real systems use many databases for different purposes.</li>
+<li><b>Thinking data lives in the client.</b> It's in the server; closing the client changes nothing.</li>
+<li><b>Forgetting the semicolon</b> — the command won't execute.</li>
+<li><b>Forgetting <code>use &lt;database&gt;</code></b> — your table could end up in (or be searched in) the wrong database.</li>
+<li><b><code>select *</code> everywhere.</b> Read only the columns you need.</li>
+<li><b>Update/delete without <code>where</code>.</b> <span class="pill add">Added</span> It affects every row.</li>
+<li><b>Mixing up delete, truncate and drop.</b> <span class="pill add">Added</span></li>
+<li><b>Skipping audit columns</b> — you'll be unable to say who changed or deleted data.</li>
+<li><b>Skipping the MySQL installation</b> — tomorrow's JDBC session depends on it.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+
+<div class="card">
+<b>Assigned in the lecture</b>
+<ul style="margin-top:8px;">
+<li><b>Install MySQL on your machine today</b> — go to the <b>download installer</b> page, choose <b>your operating system</b>, download and install. Don't skip it; it can take about an hour.</li>
+<li>Before you leave, <b>make sure MySQL is up and running</b> and that you can <b>write queries like the demo</b> (create a database, a table, insert, select, update).</li>
+<li><b>Learn basic SQL</b> alongside the course — table, database, relationship, composite key, foreign key, primary key, data types (indexing later).</li>
+<li><b>Be active in the group</b>: the instructor will post polls — vote and respond to his messages.</li>
+<li><b>Tomorrow</b> the class starts with <b>JDBC</b>, and another <b>minor project</b> (an extension of your previous project, with MySQL as permanent storage) begins around this weekend.</li>
+<li>Use the <b>command prompt</b>, not Workbench, for now. If you hit installation problems, <b>tell the instructor</b>.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>Suggested extra practice (added — not assigned in the lecture):</b>
+<ul style="margin-top:8px;">
+<li>Redo the whole demo from memory: create a database, <code>use</code> it, create a table, insert three rows, update one, select with and without <code>where</code>.</li>
+<li>Close the client, reconnect, and confirm the data survived.</li>
+<li>Recreate the table with a primary key + auto increment, and insert without giving an ID.</li>
+<li>Add <code>created_date</code> and <code>updated_date</code> columns and watch them fill themselves.</li>
+<li>Create a second table with a foreign key to the first and try inserting a row that violates it.</li>
+<li>List five read and five write operations from apps you use, and say which table(s) each would touch.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>🧾 Transcript Clean-Up Map</h2>
+<p class="small">The recording was auto-transcribed with errors (and Hindi words mixed in). This is how I interpreted unclear terms. Several passages — including the opening remarks and a long digression about phone filters and social media — were too garbled or off-topic and were left out.</p>
+<div class="tw">
+<table>
+<tr><th>Transcript wording</th><th>Interpreted as</th><th>Confidence</th></tr>
+<tr><td>"my sequel", "bicycle", "bicycle client / bicycle server"</td><td>MySQL; MySQL client / MySQL server</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"period table", "Clear the table"</td><td><code>create table</code></td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Worker", "welfare" (with size 100 / 25)</td><td>VARCHAR(100), VARCHAR(25)</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Structured query language"</td><td>SQL</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Banket"</td><td><code>delete</code></td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"DSC", "evening"</td><td><code>describe</code> (short form <code>desc</code>)</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"mysql minus U … minus B"</td><td><code>mysql -u root -p</code></td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"matches one, change one, one in zero"</td><td>Rows matched: 1  Changed: 1  Warnings: 0</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"from hold to bid"</td><td>Status changed from hold to <b>paid</b></td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Pnr check", "Ina"</td><td>PNR status check</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"GitHub? Jet? Balance"</td><td>"Get balance"</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Namaste Sikhu", "Pankit Agarwala"</td><td>An online SQL portal/course called "Namaste SQL" — the person's name is unclear</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"Sarvechis. Jewel? 1st June"</td><td>The batch's database name — unclear; I used <code>first_june</code></td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"Price and?" / "double 0 1" / the inserted values</td><td>Price data type and the sample values — unclear; my own examples used</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"Orange column are status. Created it. Updated date."</td><td>Audit columns such as status, created date and updated date</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>The delete demo ("Nothing is there. All removed.")</td><td>Unclear whether one row or all rows were deleted; data appears again later</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"Start using Pro. Dot I O in your interview"</td><td>Unclear; left out</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"10 to 15 different databases", "20, 30" for Amazon</td><td>Rough figures quoted by the instructor, not verified facts</td><td><span class="pill med">Medium</span></td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Classes:</b> The earlier standalone applications that stored data in <b>List / Set / Map</b>. The <b>Maven</b> class also made the point that a Java program <b>can't connect to MySQL until it uses the MySQL JAR</b> — that's the dependency you'll add to talk to this database. The Maven, JUnit and CI/CD classes are in the separate notes.</li>
+<li><b>Upcoming Topics:</b> <b>JDBC</b> starts tomorrow; a <b>minor project</b> extending your previous project with MySQL as permanent storage; <b>indexing</b> and more database concepts "when we move forward".</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+Section headings, card grouping, the flow diagrams, the terminology/comparison tables, the interview Q&amp;A, and the styling were added to match your earlier notes. The lecture content comes from your transcript. Because the transcript still contains speech-recognition errors, I corrected clear ones, flagged unclear ones in the clean-up map, and left out unreadable passages and off-topic remarks. Everything marked with a yellow dashed box or the "Added" tag — CRUD, delete/truncate/drop, safe use of <code>where</code>, DECIMAL for money, composite keys, auto-increment and foreign-key syntax, typical audit columns, soft delete, the default port and JDBC URL preview, the follow-up questions, the extra SQL examples and the practice list — is my clarification, not something the instructor said, so verify it against the MySQL documentation or your instructor before relying on it in an interview. All SQL is reconstructed from descriptions, not copied from the instructor's screen.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+</body>
+</html>
