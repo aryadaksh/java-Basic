@@ -80,7 +80,7 @@ public class OrderMgmt {
 	 * Update
 	 */
 
-	public void updateDetails(String _id, String _status) throws ClassNotFoundException, SQLException {
+	public void updateDetails(int _id, String _status) throws ClassNotFoundException, SQLException {
 
 		Class.forName("com.mysql.cj.jdbc.Driver");
 		
