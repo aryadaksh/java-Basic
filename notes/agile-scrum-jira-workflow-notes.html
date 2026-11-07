@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Waterfall, Agile, Scrum &amp; Jira</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+code{font-size:14px;}
+p code,li code,td code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Software Development Process — Waterfall, Agile, Scrum and Jira</p>
+<p class="meta">Source: Kodewala class · Oct 30, 2026 · 1:11:31</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>How a team decides, tracks and delivers work — a non-technical session</li>
+<li>Waterfall: phases, the testing loop, why it struggles with change</li>
+<li>Agile and Scrum: roles, daily stand-up, sprint events, backlog, capacity, story points</li>
+<li>Jira, Confluence and how the tools connect</li>
+</ul>
+<div class="flag">
+<b>How to read these notes:</b> green cards = taught in class; <b>yellow dashed boxes</b> = my additions, not said in class; orange boxes = interview angles. The source transcript was already cleaned and marks unclear passages instead of guessing, so nothing here is reconstructed from garbled audio.
+</div>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>How Work Is Managed in a Company</b>
+<p>After joining, a developer becomes part of a team of perhaps <b>10, 20 or 30 people</b>. The team has to decide what is done first, what comes later, and how the work is tracked. Work doesn't arrive as an informal instruction from one person — companies use a <b>defined process and tools</b>. The class covered the project-management methodology and a developer's day-to-day activities; there are two broad approaches: <b>Waterfall</b> and <b>Agile</b>.</p>
+</div>
+
+<div class="card">
+<b>The Waterfall Model</b>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">Requirement gathering</div>
+<div class="farrow">→</div>
+<div class="fstep">Requirement analysis</div>
+<div class="farrow">→</div>
+<div class="fstep">Design</div>
+<div class="farrow">→</div>
+<div class="fstep">Development</div>
+<div class="farrow">→</div>
+<div class="fstep">Testing</div>
+<div class="farrow">→</div>
+<div class="fstep">Deployment (SIT / pre-prod / prod)</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Maintenance</div>
+</div>
+</div>
+<ul>
+<li>The <b>customer/client provides the requirements</b>; the <b>architect/design team</b> analyses them and prepares the design; developers <b>implement</b> it; the build goes to the <b>testing team</b>; after testing it moves to a higher environment and finally to production. Later changes and fixes are <b>maintenance</b>.</li>
+<li>The <b>developer's role</b> here is mainly <b>implementation</b> — the architect says what to build. Code review and code coverage belong to implementation.</li>
+<li><b>The testing loop:</b> software can still have bugs. If testing finds a blocker, the build goes back to development, the developer supplies a <b>new build</b>, and testing runs again — until the build is stable.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Why Waterfall Becomes Difficult — and How Agile Differs</b>
+<p>Waterfall expects <b>all requirements up front</b>. In the instructor's example the customer spends months on a requirements document, the architect designs, developers spend even longer implementing — and meanwhile the customer's needs change, or the architect misunderstood part of a product that was hard to picture in advance. His analogy: the customer wants one thing, and after all those phases the product delivered turns out to be something different.</p>
+<p style="margin-top:8px;"><b>Agile</b> is a flexible, iterative way of working: instead of every requirement at the start, the team picks a <b>smaller set it can finish in a short period</b>. The team may work together for a long time but plans and delivers a manageable slice each cycle.</p>
+<div class="tw">
+<table>
+<tr><th>Aspect</th><th>Waterfall</th><th>Agile</th></tr>
+<tr><td>Requirements</td><td>Finalised early, expected in full</td><td>A small set chosen for each short cycle</td></tr>
+<tr><td>Change</td><td>Inflexible; expensive once development is far along</td><td>Welcomed — flexible, iterative</td></tr>
+<tr><td>Customer feedback</td><td>Delayed — result seen after a long time</td><td>Early — after each working increment; the customer can suggest changes or new features</td></tr>
+<tr><td>Releases</td><td>One large release</td><td>Smaller, more frequent releases</td></tr>
+<tr><td>Risk</td><td>A misunderstanding can affect the whole project</td><td>Found early, so there is less to redo</td></tr>
+<tr><td>Suits</td><td>Stable, well-defined requirements</td><td>Fast-changing or innovative projects</td></tr>
+</table>
+</div>
+<p style="margin-top:10px;">An Agile cycle: understand the requirement → design → develop → verify → <b>demo to the customer</b>. It lasts <b>one, two or three weeks</b>; many companies use two-week sprints, which means <b>10 working days</b>, not 14 calendar days.</p>
+<div class="hot" style="margin-bottom:0;">
+<b>🔥 Interview angle:</b> "Waterfall vs Agile?" — answer with the table: requirements up front vs per cycle, late vs early feedback, one big release vs frequent ones.
+</div>
+</div>
+
+<div class="card">
+<b>Scrum — the Framework Used Under Agile</b>
+<p><b>Scrum</b> is a framework under Agile; <b>Kanban</b> was mentioned as another approach, and the class focuses on Scrum. A Scrum team plans only the work it believes it can finish within a <b>sprint</b> (one to four weeks; the example was two weeks / 10 working days).</p>
+<div class="tw">
+<table>
+<tr><th>Role</th><th>Responsibility</th></tr>
+<tr><td><b>Product Owner (PO)</b></td><td>Main point of contact for product requirements: collects them from customers, users, stakeholders and the business, and communicates priorities to the technical team.</td></tr>
+<tr><td><b>Scrum Master</b></td><td>Facilitates the Scrum process and the daily stand-up. May or may not be technical — the role is to facilitate the process and meetings, not necessarily to build the software.</td></tr>
+<tr><td><b>Development Team</b></td><td>Carries out the work — developers, architects and QA/testing participants.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card">
+<b>The Daily Stand-up (DSM)</b>
+<ul style="margin-top:8px;">
+<li>Held <b>every working day</b>, short — about <b>15–20 minutes</b> (up to 30 at the extreme). Standing keeps it short instead of becoming a long seated meeting.</li>
+<li>Each member says: <b>(1) what I did yesterday, (2) what I'll do today, (3) any blockers.</b></li>
+<li><b>Example:</b> yesterday you finished an API; today you'll integrate it with the database; if the database server isn't available, that is a <b>blocker</b> and you raise it in the meeting.</li>
+<li>The instructor stressed <b>communicating blockers</b>: if a dependency is missing or another team hasn't responded, say it clearly. Don't wait silently or assume someone else knows.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Communication and Professional Behaviour</b>
+<ul style="margin-top:8px;">
+<li><b>Ask when you don't know</b> — raise your hand; don't keep blockers to yourself. Ask through the company/team, not through friends outside it.</li>
+<li><b>Answer emails promptly.</b> If you aren't the right contact, reply and point the sender to the right person; don't leave mails unanswered for days.</li>
+<li><b>Be transparent:</b> if a colleague promised to share database details, mention that update in the team meeting. Managers and teammates need visibility into progress and blockers.</li>
+<li><b>Prepare a few notes</b> before the stand-up so your update is clear.</li>
+<li><b>Don't say "yes" to every task at once.</b> If you need to investigate, ask for time to research and then give a realistic commitment — don't promise a delivery time before you understand the task.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Scrum Events</b>
+<div class="tw">
+<table>
+<tr><th>Event</th><th>When</th><th>What happens</th></tr>
+<tr><td><b>Sprint Planning</b></td><td>Start of the sprint</td><td>The team reviews the requirements and decides what it can realistically complete; the PO helps prioritise. Capacity, holidays, leave and other commitments are considered.</td></tr>
+<tr><td><b>Daily Stand-up</b></td><td>Every day</td><td>Yesterday, today, blockers.</td></tr>
+<tr><td><b>Sprint Review</b></td><td>End of the sprint</td><td>The team demonstrates the completed work to the PO/customer. Not every selected item may be finished; <b>incomplete work moves to a later sprint — "spillover"</b>.</td></tr>
+<tr><td><b>Sprint Retrospective</b></td><td>After the sprint</td><td>What went well? What didn't? How can we improve? Every member takes part — e.g. good teamwork, a delayed database dependency, work that spilled over — and the team picks improvements for the next sprint.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card">
+<b>Product Backlog, User Stories and Sprint Backlog</b>
+<ul style="margin-top:8px;">
+<li>The <b>Product Backlog</b> is the list of product requirements, collected and organised by the Product Owner.</li>
+<li>Requirements are often written as <b>user stories</b>: <em>"As a user, I want to log in with my user ID and password so that the system lets me in"</em>; <em>"As a user, I should be able to search for products on the platform"</em>; <em>"As a customer, I want to add a product to my cart so that I can purchase it."</em></li>
+<li>The team doesn't take everything into one sprint — it selects what it can finish. That selection is the <b>Sprint Backlog</b>; the team then breaks the stories into technical tasks and plans the implementation.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Sprint Capacity — Count Real Hours</b>
+<div class="tw">
+<table>
+<tr><th>Step</th><th>Example from class</th></tr>
+<tr><td>Team and sprint</td><td>10 members, 10 working days</td></tr>
+<tr><td>Hours per person per day</td><td>8-hour day, but count only <b>6 productive hours</b> — meetings, support and other non-development work take the rest</td></tr>
+<tr><td>Per day</td><td>10 × 6 = <b>60 hours</b></td></tr>
+<tr><td>Per sprint</td><td>60 × 10 = <b>600 hours</b></td></tr>
+<tr><td>Then</td><td>Subtract holidays and team members' leave; pick only work that fits the <b>actual</b> availability</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card">
+<b>Epics, Stories and Tasks</b>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">Epic — a large area, e.g. Order Management</div>
+<div class="farrow">→</div>
+<div class="fstep">Story — a user-facing requirement</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Tasks — the technical work for the story</div>
+</div>
+</div>
+<p>A story may have several tasks (roughly 5–10 as an example). For a product-search story: enable caching, query the database, format the results, apply filters.</p>
+</div>
+
+<div class="card">
+<b>Story Points</b>
+<ul style="margin-top:8px;">
+<li>Agile teams don't simply say "this takes N days". <b>Story points</b> estimate <b>relative complexity or effort</b>.</li>
+<li>Example values: <b>1</b> = very easy, <b>3</b> = medium, <b>5</b> = complex, <b>8</b> = very complex — based on the <b>Fibonacci</b> sequence (13 also mentioned).</li>
+<li>The team compares its capacity with the points it believes it can complete, keeping some <b>buffer</b> for helping others or unexpected work.</li>
+<li>Closing example: a user can calculate a discount, and if a coupon is already applied the system reports the coupon as invalid / only one coupon per user. A small task might get 1 point; a more complex one a larger estimate.</li>
+</ul>
+<div class="hot" style="margin-bottom:0;">
+<b>🔥 Interview angle:</b> a story point is <b>not officially a number of days</b>. People loosely say "one point ≈ one day" when explaining, but the real idea is relative complexity — the instructor repeated this twice.
+</div>
+</div>
+
+<div class="card">
+<b>The Agile Workflow, End to End</b>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">Stakeholders / customers / users</div>
+<div class="farrow">→</div>
+<div class="fstep">Product Owner collects + prioritises</div>
+<div class="farrow">→</div>
+<div class="fstep">Product Backlog (user stories)</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Sprint Planning</div>
+<div class="farrow">→</div>
+<div class="fstep">Sprint Backlog</div>
+<div class="farrow">→</div>
+<div class="fstep">Stories → tasks</div>
+</div>
+</div>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">Develop + test (daily stand-ups)</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Sprint Review</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Retrospective</div>
+<div class="farrow">→</div>
+<div class="fstep wait">unfinished work → spillover to the next sprint</div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<b>Jira and Confluence</b>
+<ul style="margin-top:8px;">
+<li><b>Jira</b> is a project-management and issue-tracking tool used to track the work assigned to each person; managers check Jira for status instead of asking everyone informally.</li>
+<li>Basic workflow: <b>To Do</b> (assigned, not started) → <b>In Progress</b> → <b>Done</b>.</li>
+<li>Tickets carry comments and updates. <b>Record blockers and dependencies in the ticket</b> — e.g. "waiting for another team to provide a database" — so there is a history of why work was delayed and what is pending.</li>
+<li><b>Confluence</b> is for documentation and collaboration — project documents live there rather than only in local Word files. Some companies use SharePoint or other tools instead.</li>
+<li>Jira, Confluence, GitHub/Bitbucket and Jenkins can be <b>integrated</b> as part of the development workflow.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Q&amp;A — Certifications</b>
+<p>A student asked about certifications. Some companies or clients look for certifications such as <b>AWS or Azure</b>; they can help demonstrate or compare knowledge, but the instructor stressed they are <b>not enough on their own — practical expertise matters</b>.</p>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification:</b>
+<ul style="margin-top:8px;">
+<li><b>Velocity and planning poker:</b> teams usually track how many story points they complete per sprint (<b>velocity</b>) and use it to decide how much to take next time; estimating by discussion with cards is called <b>planning poker</b>.</li>
+<li><b>The official Scrum Guide</b> sets the Daily Scrum at <b>15 minutes</b>, and the three questions are a popular format rather than a rule; the class's 15–20 (up to 30) minutes is the practical range.</li>
+<li><b>Kanban</b> isn't built on sprints: work flows continuously across a board (To Do → In Progress → Done), usually with a limit on work in progress.</li>
+</ul>
+</div>
+
+</div>
+
+<div class="section">
+<h2>✅ Action Items</h2>
+<div class="flag" style="margin-top:0;">
+<b>Suggested practice (added — no homework was assigned in this recording):</b>
+<ul style="margin-top:8px;">
+<li>Write three user stories for your e-commerce project in the "As a … I want … so that …" form, and break one into tasks.</li>
+<li>Work out the capacity of a team of 6 over a two-week sprint with one person on leave for 3 days.</li>
+<li>Write a 30-second stand-up update (yesterday / today / blockers) for the work you did this week.</li>
+<li>Explain "Waterfall vs Agile" and "why a story point isn't a day" out loud in under two minutes.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Builds on:</b> the earlier software-engineer-workflow class (Product Owner, sprints, bugs tracked in Jira, the Local → Prod environments) — this class adds the methodology, roles, events, backlog, capacity and story points around it. Jira here is the same tool where QA logged bugs.</li>
+<li><b>Related:</b> code review and code coverage (part of Waterfall's implementation phase) and Jenkins, from the CI/CD class.</li>
+<li><b>Later:</b> not specified in this recording.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+Layout, comparison tables and diagrams are my additions; the lecture content comes from your transcript. Yellow dashed boxes mark everything the instructor didn't say. Student chatter at the start of the recording (microphones, muting) was left out.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - JDBC Transactions, PreparedStatement &amp; Batching</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.pill{display:inline-block;padding:1px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;}
+.pill.lec{background:#e3f2fd;color:#0066ff;}
+.pill.add{background:#fff3cd;color:#a67c00;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>JDBC — Transactions (Commit &amp; Rollback), PreparedStatement and Batch Processing</p>
+<p class="meta">Source: "9th March" offline batch · Class 1: Jul 13, 2026 (54:42) · Class 2: Jul 14, 2026 (39:27)</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li><b>Class 1 — Transactions:</b> why multi-step updates must be all-or-nothing · commit, rollback and the temporary log · auto-commit · transaction boundaries in JDBC</li>
+<li><b>Class 2 — PreparedStatement &amp; batching:</b> the 10,000-product upload problem · reducing database hits with batches · Statement vs PreparedStatement · batch size and the leftover batch</li>
+</ul>
+<div class="flag">
+<b>How to read these notes:</b> green cards = taught in class; <b>yellow dashed boxes</b> = my additions, not said in class; orange boxes = interview alerts. Your source file lists the PreparedStatement class first, but the recording dates show <b>transactions came first (Jul 13)</b>, so the notes follow the dates. The transcript is auto-generated and noisy in places; unclear details are flagged where they matter.
+</div>
+</div>
+
+<!-- ===================== CLASS 1 ===================== -->
+<div class="section">
+<h2>🔁 Class 1 — Transactions: Commit and Rollback</h2>
+
+<div class="card">
+<b>Why Take JDBC Seriously</b>
+<p>The instructor's push: understand JDBC properly, because every program ends up interacting with a database. Later tools — <b>Hibernate and Spring Data</b> — use JDBC internally; JDBC needs a lot of code while Hibernate automates much of it (and is easy to start with, "one program in half an hour"). Skipping JDBC means you can write programs but don't know what happens internally.</p>
+</div>
+
+<div class="card">
+<b>Why a Transaction? — The Order-Placement Scenario</b>
+<p>Placing an order is not one query. The application updates the <b>orders</b> table with status <em>created</em> → <b>initiates payment</b> (a hit to a third party) → <b>confirms payment</b> and marks the order <em>paid</em> → maybe applies a reward such as free delivery on the first order, which updates a delivery charge to 0 somewhere. Each is an individual query.</p>
+<p style="margin-top:8px;">If one step fails, the earlier ones must be undone too. Otherwise the order exists but the payment failed — and anyone pulling a report <b>gets wrong data</b>. This is a <b>database concept (commit and rollback)</b>, not something specific to JDBC.</p>
+</div>
+
+<div class="card">
+<b>Commit and Rollback — Data Doesn't Go Straight to the Tables</b>
+<ul style="margin-top:8px;">
+<li>Don't assume the data you write is stored permanently at once — you might make an accidental update. If every write were permanent, that would be a problem.</li>
+<li>In any database's design there is a <b>temporary storage before the tables</b>, inside the database server. The instructor called it the <b>write-ahead log</b> (also mentioning commit/audit logs).</li>
+<li>Your data is written there first. <b>Commit</b> moves it permanently into the tables. <b>Rollback</b> simply removes it from the log — it never reaches the tables.</li>
+<li>Databases work this way to give the user the option to discard changes.</li>
+</ul>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">write / insert / update</div>
+<div class="farrow">→</div>
+<div class="fstep notify">temporary storage (write-ahead log)</div>
+<div class="farrow">→ commit →</div>
+<div class="fstep">permanent tables</div>
+</div>
+</div>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep notify">temporary storage (write-ahead log)</div>
+<div class="farrow">→ rollback →</div>
+<div class="fstep wait">discarded — never reaches the tables</div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<b>Auto-Commit</b>
+<ul style="margin-top:8px;">
+<li>The MySQL command-line client has <b>auto-commit on</b>: every statement is flushed to permanent storage immediately, so other people can see it.</li>
+<li>To get transaction behaviour you <b>set auto-commit to false</b>: the system stops committing by itself and leaves the choice to you.</li>
+<li>In JDBC, a connection is <b>auto-commit true by default</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Two-Client Demo — Who Sees What</b>
+<p>The instructor opened a second command-prompt client; <b>both were connected to the same MySQL server</b>.</p>
+<div class="tw">
+<table>
+<tr><th>#</th><th>Action (Client 1)</th><th>Client 1 sees it?</th><th>Client 2 sees it?</th></tr>
+<tr><td>1</td><td>Auto-commit ON: insert record 23</td><td>Yes</td><td>Yes — flushed immediately</td></tr>
+<tr><td>2</td><td><code>set autocommit</code> false, insert record 24</td><td>Yes — own session, from the log</td><td><b>No</b> — Client 2 reads permanent storage, so only 23</td></tr>
+<tr><td>3</td><td><code>commit</code></td><td>Yes</td><td>Yes — 24 moves from the log to permanent storage</td></tr>
+<tr><td>4</td><td>Insert another record (not committed)</td><td>Yes</td><td>No</td></tr>
+<tr><td>5</td><td><code>rollback</code></td><td>No — discarded</td><td>No — it never arrived</td></tr>
+</table>
+</div>
+<p class="small" style="margin-top:8px;">The instructor stressed the practical point: you must disable auto-commit first — with it on, data is written the instant it arrives and there is no chance to roll back. Record 24 and the second insert's id are as heard in the recording; the transcript's later id is unclear.</p>
+</div>
+
+<div class="card">
+<b>What Is a Transaction? — The Boundary</b>
+<p>A transaction is <b>multiple database updates happening as one unit</b>; if any one query fails, the earlier ones are rolled back.</p>
+<ul style="margin-top:8px;">
+<li>Picture Query 1 and Query 2 succeeding and Query 3 failing. Run as individual queries, you can't undo 1 and 2.</li>
+<li>So you create a <b>transaction boundary, decided programmatically</b>: it starts here and ends there. Everything inside is one transaction.</li>
+<li>All succeed → <b>commit</b>. Any fails → <b>rollback</b>, and the data returns to its original state. Transactions are handled with commit and rollback.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Doing It in JDBC — The Demo</b>
+<ul style="margin-top:8px;">
+<li><b>Setup:</b> a new Maven project with just the MySQL connector dependency; two tables, <code>orders</code> and <code>payment</code>. <b>Don't name a table <code>order</code></b> — it is a reserved keyword in MySQL.</li>
+<li><b>The three queries</b> (all with <code>executeUpdate</code>, ids hard-coded to 1 for the demo): create the order record → create the payment record (initiated) → payment fails because the user has no balance, so update the payment status.</li>
+<li><b>Without a transaction:</b> the instructor forced an exception (calling <code>.length()</code> on a null string) just before the third query. Result: the order and payment rows were created, but the update never happened — inconsistent data.</li>
+<li><b>With a transaction</b> — only two extra ideas: <code>setAutoCommit(false)</code> at the start (what you did in the command prompt), and <code>commit()</code> at the end of the <code>try</code>, with <code>rollback()</code> in the <code>catch</code>.</li>
+<li>Reaching the commit line means no exception occurred; any exception jumps straight to the <code>catch</code>, where everything rolls back. With the forced exception the tables stayed <b>empty</b>; with it removed, the commit went through and the rows persisted.</li>
+</ul>
+<div class="lane">
+<div class="label">Transaction boundary in code</div>
+<div class="flowbox">
+<div class="fstep">setAutoCommit(false) — boundary starts</div>
+<div class="farrow">→</div>
+<div class="fstep">query 1</div>
+<div class="farrow">→</div>
+<div class="fstep">query 2</div>
+<div class="farrow">→</div>
+<div class="fstep">query 3</div>
+<div class="farrow">→</div>
+<div class="fstep notify">commit() — boundary ends</div>
+</div>
+</div>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep wait">exception in any query</div>
+<div class="farrow">→ jumps to catch →</div>
+<div class="fstep wait">rollback() — everything undone</div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<b>Instructor's Non-Technical Advice (Opening of Class 1)</b>
+<p>Getting a job is a beginning, not the finish: keep learning, and once you have an offer start revising concepts daily so you can follow the conversations in your new team. Be a good listener — ignoring things is dangerous once you're in a company. The instructor's point: this is the best time to learn, because after joining there is only time to deliver.</p>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification (Class 1):</b>
+<ul style="margin-top:8px;">
+<li><b>The log is a simplified model.</b> Real engines (e.g. MySQL's InnoDB) use redo/undo logs and buffers, but "write to temporary space → commit moves it to the tables → rollback discards it" is the intended mental picture. Other clients not seeing uncommitted rows is the engine's default isolation behaviour.</li>
+<li><b>Atomicity:</b> "all or nothing" is the <b>A</b> in <b>ACID</b> (Atomicity, Consistency, Isolation, Durability).</li>
+<li><b><code>start transaction</code></b> (or <code>begin</code>) opens a transaction in the MySQL client without switching auto-commit off for the session.</li>
+<li><b>Restore auto-commit</b> after you're done (<code>set autocommit = 1</code> / <code>setAutoCommit(true)</code>), especially on a connection that gets reused.</li>
+<li><b>DDL commits implicitly in MySQL:</b> statements like <code>create table</code> or <code>truncate</code> can't be rolled back — which is why truncating the tables between demo runs worked regardless of the transaction.</li>
+</ul>
+</div>
+
+</div>
+
+<!-- ===================== CLASS 2 ===================== -->
+<div class="section">
+<h2>⚡ Class 2 — PreparedStatement and Batch Processing</h2>
+
+<div class="card">
+<b>The Problem Statement — Upload 10,000 Products</b>
+<p>An e-commerce application: sellers want to upload <b>10,000 products</b>. The UI is built; the data arrives in a <b>CSV file</b> (comma-separated values — one product per line). The class had 10–15 minutes, <b>no ChatGPT</b>, to write a <b>5–6 step approach</b> on paper — not code.</p>
+<p style="margin-top:8px;">The instructor's hint: <em>how many database hits?</em> The naive answer is <b>one per record — 10,000</b>. With 1 lakh products that's 1 lakh queries: "that's not going to work."</p>
+</div>
+
+<div class="card">
+<b>Why Every Hit Is Expensive</b>
+<ul style="margin-top:8px;">
+<li>Each hit means the program <b>connects to the database and executes a query</b>; the database lives elsewhere, so every hit also crosses the <b>network</b>.</li>
+<li>10,000 continuous hits can take minutes, and meanwhile <b>the database responds slowly to other queries</b>. Time is cost to the company.</li>
+<li><b>Rule:</b> whenever you develop an application, <b>minimise database hits</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Batching — The Solution, With Everyday Analogies</b>
+<ul style="margin-top:8px;">
+<li><b>100 family members visiting a temple:</b> hire 100 cars (100 drivers, 100 petrol bills) or <b>4 buses of 25</b>? The buses are cheaper.</li>
+<li><b>Dmart:</b> buy tea powder, then sugar, then milk on separate trips — or everything in one trip. Your time counts as cost too.</li>
+<li>For the upload: collect <b>1,000 records per batch</b> and hit the database once per batch → <b>10 hits instead of 10,000</b>.</li>
+<li>"Batching is everywhere" — it isn't a Java invention. Programming optimisations mirror daily-life ones.</li>
+<li><b>Is the database time the same?</b> Possibly, at the database level. But from the application side you stop repeating connect → build query → execute for every record, so the total is less. <b>Batch writes are always optimised on the database side</b>: one insert of 1,000 records beats 1,000 separate inserts.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>💡 A 5-step approach for the CSV upload (my reconstruction of the exercise — the instructor asked for it but the transcript doesn't give a model answer):</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li>Read the CSV file line by line.</li>
+<li>Split each line into product fields.</li>
+<li>Bind the fields into a <b>PreparedStatement</b> and add the row to a <b>batch</b>.</li>
+<li>Every N rows (say 1,000) <b>execute the batch</b>.</li>
+<li>After the last row, execute the <b>leftover batch</b>, then commit — rolling back if anything failed.</li>
+</ol>
+</div>
+
+<div class="card">
+<b>Statement vs PreparedStatement</b>
+<ul style="margin-top:8px;">
+<li>"In industry we will not be using Statement" — use <b>PreparedStatement</b>.</li>
+<li><b>"Compile" here means the database compiling the SQL query</b>, not Java compilation.</li>
+<li><b>Statement:</b> the query is hard-coded text, so every different value is a different query and gets compiled again — update a record 1,000 times and it compiles 1,000 times.</li>
+<li><b>PreparedStatement:</b> write the query once with <b>question marks</b> (wildcards), set the values, and the query text stays the same → <b>compiled only once</b>. You keep changing the values.</li>
+</ul>
+<p style="margin-top:8px;"><b>The demo</b> (updating a payment's status): load the driver, create the connection, call <code>prepareStatement</code> with <code>update payment set status = ? where id = ?</code>, set the values <b>by position</b> (first <code>?</code>, second <code>?</code>), and call <code>executeUpdate</code>. The returned count tells you whether it worked — greater than 0 means updated, otherwise "unable to update". He set the status of id 1 to <em>blocked</em> and verified it in MySQL.</p>
+</div>
+
+<div class="card">
+<b>Class Loading Revisited</b>
+<p>The instructor re-asked it while writing the driver line. <code>Class.forName(...)</code> loads the class <b>dynamically</b> and throws <code>ClassNotFoundException</code>, a <b>checked exception</b>. The other way is creating an object with <code>new</code> — <b>static</b> loading, where the class is fixed at compile time. Dynamic means the name can come from a property file, so you can change the class tomorrow and it still works. He asked for some research on "static vs dynamic class loading". (Full comparison is in your JDBC introduction notes.)</p>
+</div>
+
+<div class="card">
+<b>Batch Insert Demo</b>
+<ul style="margin-top:8px;">
+<li>The query has <b>three placeholders</b>: <code>insert into payment</code> with id, ref id and status. The goal in the demo: insert about 100 products.</li>
+<li>Inside a loop, set the values for each record (status <em>init</em> for all) and call <b><code>addBatch()</code></b>. <b>Nothing executes yet</b> — each record is just added to the batch.</li>
+<li>After the loop, call <b><code>executeBatch()</code></b>: all the records go to the database in <b>one hit</b>. Auto-commit was set to false first, with a commit once the batch executed.</li>
+<li><b>Batch size:</b> add a counter — with a batch size of 10, execute the batch whenever the record number is a multiple of 10 (<code>%</code> and <code>== 0</code>). That's <b>10 database hits for 100 records</b>. Choose whatever size suits you.</li>
+<li><b>The leftover batch:</b> if the record count isn't a multiple of the batch size, the last few never reach the condition. The instructor saw 90 rows, realised the last 9 were still sitting in the batch, and added one more <code>executeBatch()</code> after the loop — then all 99 appeared.</li>
+</ul>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">setInt / setString</div>
+<div class="farrow">→</div>
+<div class="fstep">addBatch()</div>
+<div class="farrow">→</div>
+<div class="fstep notify">record number % batchSize == 0 ?</div>
+<div class="farrow">→ yes →</div>
+<div class="fstep notify">executeBatch() — 1 hit</div>
+</div>
+</div>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">loop ends</div>
+<div class="farrow">→</div>
+<div class="fstep notify">executeBatch() for the leftover</div>
+<div class="farrow">→</div>
+<div class="fstep">commit()</div>
+</div>
+</div>
+<p class="small" style="margin-top:6px;">The exact row counts in the transcript (ids starting at 10, 90 vs 99) are muddled; the logic above is what the demo showed.</p>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification (Class 2):</b>
+<ul style="margin-top:8px;">
+<li><b>"Compiled once" depends on the driver.</b> MySQL Connector/J prepares statements on the client side by default (server-side preparation is a separate setting, <code>useServerPrepStmts</code>). What you always get from <code>?</code> placeholders: values are sent as data rather than glued into the SQL string, which <b>prevents SQL injection</b>, plus cleaner, reusable code.</li>
+<li><b>Make batching really pay off in MySQL:</b> add <code>rewriteBatchedStatements=true</code> to the JDBC URL so the driver rewrites batched inserts into multi-row inserts. Without it the gain can be small — which is why the homework says to <b>measure</b>.</li>
+<li><code>executeBatch()</code> returns an <code>int[]</code> of update counts and clears the batch. On failure it may throw <code>BatchUpdateException</code>.</li>
+<li><b>Link to Class 1:</b> run the batch with auto-commit off and you get all-or-nothing for the whole upload — a failure lets you roll back every batch.</li>
+</ul>
+</div>
+
+</div>
+
+<!-- ===================== CODE ===================== -->
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the instructor typed the code live; the transcript only describes it. These programs are <b>my reconstruction</b>. The ideas come from the lectures (placeholders, <code>addBatch</code> / <code>executeBatch</code>, <code>setAutoCommit(false)</code>, commit / rollback, ids 23 and 24); the database name, password, column names, constants and the loop range are my choices. Nothing was run against a real database.
+</div>
+
+<p><b>1. Auto-commit, commit and rollback with two clients (Class 1 — two command-prompt windows on the same server):</b></p>
+<pre><code class="language-sql">-- Client 1 (auto-commit is ON by default)
+insert into payment (id, ref_id, status) values (23, 1, 'init');
+-- Client 2: select * from payment;      -&gt; shows 23 immediately
+
+-- Client 1
+set autocommit = 0;                       -- stop committing automatically
+insert into payment (id, ref_id, status) values (24, 2, 'init');
+select * from payment;                    -- Client 1 sees 23 and 24
+-- Client 2: select * from payment;      -&gt; only 23
+
+commit;                                   -- 24 moves to the permanent tables
+-- Client 2: select * from payment;      -&gt; 23 and 24
+
+insert into payment (id, ref_id, status) values (25, 3, 'init');
+rollback;                                 -- discarded: no client will ever see 25
+set autocommit = 1;                       -- restore the default for this client</code></pre>
+
+<p><b>2. A JDBC transaction — commit at the end, rollback in the catch (Class 1):</b></p>
+<pre><code class="language-java">public void placeOrder() {
+    Connection con = null;
+    try {
+        Class.forName("com.mysql.cj.jdbc.Driver");
+        con = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/your_database", "root", "your_password");
+
+        con.setAutoCommit(false);                // transaction boundary STARTS here
+
+        Statement stmt = con.createStatement();
+
+        // 1. create the order record
+        stmt.executeUpdate("insert into orders (id, item, status) values (1, 'Laptop', 'created')");
+        // 2. create the payment record
+        stmt.executeUpdate("insert into payment (id, ref_id, status) values (1, 1, 'initiated')");
+
+        // String name = null; name.length();    // uncomment to force an exception and test the rollback
+
+        // 3. payment failed (no balance): update the payment status
+        stmt.executeUpdate("update payment set status = 'failed' where id = 1");
+
+        con.commit();                            // reached only if nothing above threw
+        System.out.println("Committed");
+
+    } catch (Exception e) {
+        System.out.println("Problem: " + e + " -&gt; rolling back");
+        try {
+            if (con != null) con.rollback();     // undo queries 1 and 2 as well
+        } catch (SQLException ex) {
+            ex.printStackTrace();
+        }
+    }
+}</code></pre>
+
+<p><b>3. PreparedStatement — one query, new values each time (Class 2):</b></p>
+<pre><code class="language-java">private static final String URL = "jdbc:mysql://localhost:3306/your_database";
+private static final String USER = "root";
+private static final String PASSWORD = "your_password";
+
+public void updatePayment(String status, int id) throws ClassNotFoundException, SQLException {
+    Class.forName("com.mysql.cj.jdbc.Driver");                      // dynamic class loading
+    Connection con = DriverManager.getConnection(URL, USER, PASSWORD);
+
+    String sql = "update payment set status = ? where id = ?";     // the query text never changes
+    PreparedStatement ps = con.prepareStatement(sql);
+
+    ps.setString(1, status);     // first ?
+    ps.setInt(2, id);            // second ?
+
+    int rows = ps.executeUpdate();
+    System.out.println(rows &gt; 0 ? "Record updated" : "Unable to update the record");
+}
+// updatePayment("blocked", 1);   -&gt; check in MySQL: id 1 now has status blocked</code></pre>
+
+<p><b>4. Batch insert with a batch size and the leftover batch (Class 2):</b></p>
+<pre><code class="language-java">// added: rewriteBatchedStatements makes MySQL batching genuinely faster
+Connection con = DriverManager.getConnection(
+        URL + "?rewriteBatchedStatements=true", USER, PASSWORD);
+con.setAutoCommit(false);
+
+String sql = "insert into payment (id, ref_id, status) values (?, ?, ?)";   // three placeholders
+PreparedStatement ps = con.prepareStatement(sql);
+
+int batchSize = 10;
+for (int i = 1; i &lt;= 99; i++) {
+    ps.setInt(1, i);                 // id
+    ps.setInt(2, i);                 // ref id (illustrative)
+    ps.setString(3, "init");         // status "init" for all, as in class
+    ps.addBatch();                   // only queued -- NOT executed yet
+
+    if (i % batchSize == 0) {        // every 10th record
+        ps.executeBatch();           // one database hit for 10 records
+    }
+}
+ps.executeBatch();                   // leftover: the last 9 never reached a multiple of 10
+con.commit();                        // commit once everything has executed</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question</th><th>Answer Given in Class</th></tr>
+<tr><td>Is <code>setAutoCommit(false)</code> a database-wide setting?</td><td>No — it applies to that client/connection only. Another client or another class can keep auto-commit true.</td></tr>
+<tr><td>Can we roll back after we have committed?</td><td>No — once committed, the data is in the permanent tables. You'd need a backup/checkpoint (say, a backup taken up to 12 PM) and restore that snapshot. Manual deletion isn't realistic with millions of transactions, though a small program could delete a single record.</td></tr>
+<tr><td>If auto-commit stays on, can we still roll back?</td><td>No — each statement is written the moment it arrives, so you get no chance. Disable auto-commit first.</td></tr>
+<tr><td>After the demo, do we set auto-commit back?</td><td>Yes — set it back to true afterwards.</td></tr>
+<tr><td>If the database time is the same, how does batching help?</td><td>The application stops repeating connect, build query and execute for every record, so the overall time is less; batch writes are also optimised on the database side.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>💼 Interview Questions &amp; Traps</h2>
+<p class="small">Blue tag = from the classes · yellow tag = added. Answers are kept short — the explanations are in the cards above.</p>
+<div class="tw">
+<table>
+<tr><th>Question</th><th>Answer</th><th></th></tr>
+<tr><td>What is a transaction? Why do we need one?</td><td>Multiple database updates executed as one unit; if one fails, the earlier ones are rolled back — otherwise you get cases like an order created with its payment failed.</td><td><span class="pill lec">Class 1</span></td></tr>
+<tr><td>How do you handle transactions in JDBC?</td><td><code>setAutoCommit(false)</code>, then <code>commit()</code> at the end of the try, <code>rollback()</code> in the catch.</td><td><span class="pill lec">Class 1</span></td></tr>
+<tr><td>What do commit and rollback do?</td><td>Commit moves data from temporary storage (write-ahead log) into the permanent tables; rollback discards it from the log.</td><td><span class="pill lec">Class 1</span></td></tr>
+<tr><td>What is auto-commit and what is its default?</td><td>Every statement is committed immediately; it is on by default (MySQL client and JDBC connection) and must be switched off to control the transaction.</td><td><span class="pill lec">Class 1</span></td></tr>
+<tr><td>Why can't another client see uncommitted data?</td><td>It sits in the writer's session/log; other clients read permanent storage until the commit.</td><td><span class="pill lec">Class 1</span></td></tr>
+<tr><td><b>Trap:</b> can you roll back after commit?</td><td>No. Recovery needs a backup/snapshot restore.</td><td><span class="pill lec">Class 1</span></td></tr>
+<tr><td>How does the code know when to commit or roll back?</td><td>Reaching the commit line means no exception was thrown; an exception skips to the catch, which rolls back.</td><td><span class="pill lec">Class 1</span></td></tr>
+<tr><td>What are the ACID properties?</td><td>Atomicity, Consistency, Isolation, Durability — "all or nothing" is atomicity.</td><td><span class="pill add">Added</span></td></tr>
+<tr><td>How would you upload 10,000 products from a CSV?</td><td>Read and parse, bind to a PreparedStatement, <code>addBatch</code>, <code>executeBatch</code> every N rows, flush the remainder, commit.</td><td><span class="pill lec">Class 2</span></td></tr>
+<tr><td>Why is one query per record a problem?</td><td>Each hit connects and executes over the network, is expensive, and slows the database for everyone else.</td><td><span class="pill lec">Class 2</span></td></tr>
+<tr><td>How do you improve database performance?</td><td>Minimise hits — batching is one of the answers. Interviewers rarely ask "what is batching" directly; anyone with ~3 years' experience should know its advantage.</td><td><span class="pill lec">Class 2</span></td></tr>
+<tr><td>Statement vs PreparedStatement?</td><td>PreparedStatement uses <code>?</code> placeholders and the query is compiled once, so it is faster; Statement compiles each distinct query every time.</td><td><span class="pill lec">Class 2</span></td></tr>
+<tr><td><b>Trap:</b> what does "compiled" mean there?</td><td>Database-level query compilation, not Java compilation.</td><td><span class="pill lec">Class 2</span></td></tr>
+<tr><td>How does JDBC batching work?</td><td><code>addBatch()</code> only queues the statement; nothing runs until <code>executeBatch()</code>.</td><td><span class="pill lec">Class 2</span></td></tr>
+<tr><td><b>Trap:</b> what happens to the records left after the last full batch?</td><td>They stay unexecuted unless you call <code>executeBatch()</code> once more after the loop.</td><td><span class="pill lec">Class 2</span></td></tr>
+<tr><td>Where have you used a checked exception?</td><td>JDBC — <code>Class.forName</code> throws <code>ClassNotFoundException</code>.</td><td><span class="pill lec">Class 2</span></td></tr>
+<tr><td>What does <code>executeBatch()</code> return, and what if one statement fails?</td><td>An <code>int[]</code> of update counts; failure may throw <code>BatchUpdateException</code> — with auto-commit off you can roll back the whole upload.</td><td><span class="pill add">Added</span></td></tr>
+<tr><td>Why does MySQL batching sometimes show little gain?</td><td>Without <code>rewriteBatchedStatements=true</code> the driver may not combine the inserts.</td><td><span class="pill add">Added</span></td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<div class="card">
+<b>From the classes</b>
+<ul style="margin-top:8px;">
+<li><b>Class 1:</b> within the next hour, repeat the exercise — understand commit and rollback. (The instructor checked in his code and notes.)</li>
+<li><b>Class 2:</b> write the Statement-vs-PreparedStatement program (5–10 minutes), then do the PreparedStatement and JDBC-batch practicals and <b>conclude your findings on how batching improves performance</b>.</li>
+</ul>
+</div>
+<div class="flag">
+<b>Suggested extra practice (added):</b>
+<ul style="margin-top:8px;">
+<li>Time inserting 10,000 rows one by one, then in batches of 1,000, then with <code>rewriteBatchedStatements=true</code> — put the three timings side by side.</li>
+<li>Reproduce the two-client demo and watch an uncommitted row stay invisible.</li>
+<li>Run the order/payment method with and without the forced exception and compare the tables.</li>
+<li>Wrap a batch upload in a transaction and force a failure halfway to see everything roll back.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Builds on:</b> the JDBC introduction (the four steps, <code>Statement</code>, <code>executeUpdate</code>) — PreparedStatement replaces <code>Statement</code> in practice — and the MySQL basics class, where the console and the Java program were both clients of one database; the two-client demo extends that idea.</li>
+<li><b>Later:</b> Hibernate and Spring Data, which use JDBC internally (per the instructor).</li>
+<li><b>Dates:</b> these recordings are dated Jul 13–14, 2026, earlier than the Oct 15, 2026 JDBC introduction in your other notes, so treat the order across files as topic order rather than date order.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+Layout, diagrams and the interview table are my additions; the lecture content comes from your transcript. Yellow dashed boxes and "Added" tags mark everything the instructor didn't say. The code is reconstructed from his descriptions and wasn't run against a real database. The long opening of Class 1 (a career talk) is summarised in one card.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+</body>
+</html>

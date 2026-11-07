@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+    xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+    xsi:schemaLocation="
+        http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd">
+
+    <!-- bean definitions here -->
+    
+    <bean id= "add1" class="com.spingbeanxml.pojoclass.Address">
+    	
+    	<property name="line1" value="Btm"/>
+    	<property name="line2" value="BLR"/>
+    
+    </bean>
+    
+    <bean id= "add2" class="com.spingbeanxml.pojoclass.Address">
+    	
+    	<property name="line1" value="BSF"/>
+    	<property name="line2" value="BIH"/>
+    
+    </bean>
+    
+    <bean id="emp1" class="com.spingbeanxml.pojoclass.Employee">
+    <property name="id"  value="emp123" />
+    <property name="name"  value="Daksh" />
+    <property name="address" ref="add1"/>
+    </bean>
+    
+    <bean id="emp2" class="com.spingbeanxml.pojoclass.Employee">
+    <property name="id"  value="emp124" />
+    <property name="name"  value="Arya" />
+    <property name="address" ref="add2"/>
+    </bean>
+
+</beans>

@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - E-Commerce Project Review (Oct 26 &amp; 27)</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.pill{display:inline-block;padding:1px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;margin-right:3px;}
+.pill.d26{background:#e3f2fd;color:#0066ff;}
+.pill.d27{background:#efe9ff;color:#5b3fd1;}
+.pill.add{background:#fff3cd;color:#a67c00;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>E-Commerce Mini-Project Review — Instructor Feedback on the Student Demos</p>
+<p class="meta">Source: June 2026 offline class · two reviews combined — <b style="color:#fff;">Oct 26, 2026</b> (1:46:52) and <b style="color:#fff;">Oct 27, 2026</b> (1:25:38)</p>
+</div>
+
+<div class="section">
+<h2>🎯 About These Reviews</h2>
+<div class="card" style="margin-top:0;">
+<p>Over two days students presented their E-Commerce mini-projects: they ran the application, showed the package structure, code and coverage report, and the instructor interrupted with interview-style questions. His reason: <em>"in the company you won't feel awkward when somebody asks you to review your code."</em> The demos showed admin and customer roles, search by name / brand / price range / category, add to cart, place and cancel order, order history, profile/address update and seller flows.</p>
+<p style="margin-top:8px;">The same feedback came up in demo after demo, so the notes are <b>grouped by theme</b> instead of by day, with tags showing when it was said: <span class="pill d26">Oct 26</span> <span class="pill d27">Oct 27</span>. Student names are left out, and the recordings are noisy, so student-specific details are summarised only where the transcript is clear.</p>
+</div>
+<div class="flag">
+<b>How to read these notes:</b> green cards = what the instructor said; <b>yellow dashed boxes</b> and <span class="pill add">Added</span> tags = my additions, not said in class; orange boxes = interview alerts (each appears once, inside its topic). Code is my reconstruction.
+</div>
+</div>
+
+<div class="section">
+<h2>📋 Quick Review Checklist</h2>
+<p class="small">Short items, each listed once. The longer topics have their own cards below.</p>
+<div class="tw">
+<table>
+<tr><th>Theme</th><th>What the instructor flagged</th><th>Fix</th></tr>
+<tr>
+<td><b>One giant class</b><br><span class="pill d26">Oct 26</span><span class="pill d27">Oct 27</span></td>
+<td>Everything written in one class ("you should have 20 to 30 classes"). On Oct 27 he contrasted a 50-class project with one finished in 3 classes: <em>"which approach is modular?"</em></td>
+<td>Split by responsibility — product, cart, order history, place order, login, invoice, delivery — plus service / repository / exception layers.</td>
+</tr>
+<tr>
+<td><b><code>main</code> in every class</b><br><span class="pill d26">Oct 26</span></td>
+<td>Several classes had their own <code>main</code> only to call a method while testing. "Do we need a main method in every class?"</td>
+<td>One entry point per project. Remove the rest and test through test classes.</td>
+</tr>
+<tr>
+<td><b>Class naming &amp; empty classes</b><br><span class="pill d26">Oct 26</span></td>
+<td>A class named with the word "logic" was questioned (the exact name is unclear in the recording); a product service class sat empty.</td>
+<td>Name classes by responsibility (customer service / management); give every class a purpose or delete it.</td>
+</tr>
+<tr>
+<td><b>Private constructors</b><br><span class="pill d26">Oct 26</span><span class="pill d27">Oct 27</span></td>
+<td>Asked repeatedly: why private? Answer: <b>nobody can create an object outside the class</b>. Removing it changed nothing in behaviour. On Oct 27 it was on a static-method utility class (invoice printing); he accepted it if the class will always stay a pure utility, but asked where the idea came from — it also blocks creating objects later.</td>
+<td>Use it deliberately for utility classes, not out of habit.</td>
+</tr>
+<tr>
+<td><b>Connection never closed</b><br><span class="pill d26">Oct 26</span></td>
+<td>"You're opening the connection — where are you closing it?" A student's DB-helper class on Oct 27 used try-with-resources, so resources close automatically — he approved.</td>
+<td>Close the ResultSet, Statement and Connection every time (snippet 3).</td>
+</tr>
+<tr>
+<td><b>Guest cart in memory</b><br><span class="pill d27">Oct 27</span></td>
+<td>A guest repository kept guest users and their carts in RAM. Good idea, but a restart wipes it, whereas a real cart is still there a month later.</td>
+<td>Store the guest cart in the database.</td>
+</tr>
+<tr>
+<td><b>Stock check too late</b><br><span class="pill d26">Oct 26</span></td>
+<td>A customer added 12 units to the cart although only 10 existed; the order failed only at "place order". The product page should show the available quantity.</td>
+<td>Check and show stock at add-to-cart; consider a maximum order quantity per customer.</td>
+</tr>
+<tr>
+<td><b>Validation</b><br><span class="pill d27">Oct 27</span></td>
+<td>Praised: product validation (brand not null/empty, price above zero, valid quantity, category, email/mobile format). Criticised: addresses accepted like "XYZ".</td>
+<td>Keep checks in one place; set a minimum address length (about 25–50 characters).</td>
+</tr>
+<tr>
+<td><b>Unique constraints</b><br><span class="pill d27">Oct 27</span></td>
+<td>A second registration with the same email was rejected — email is a unique constraint. Good.</td>
+<td>Keep unique constraints in the table design (the CSV upload below needs the same).</td>
+</tr>
+<tr>
+<td><b>Parent / child delete</b><br><span class="pill d27">Oct 27</span></td>
+<td>A customer with orders can't be deleted — the orders (child rows) reference the customer.</td>
+<td>Delete the child records first, then the parent.</td>
+</tr>
+<tr>
+<td><b>Generated order ID</b><br><span class="pill d26">Oct 26</span><span class="pill d27">Oct 27</span></td>
+<td>He asked what return-generated-keys is, and questioned a "select last insert ID" approach used to fetch the new order's ID (the details are unclear in the recording).</td>
+<td>Ask JDBC for the generated key when you insert (snippet 3).</td>
+</tr>
+<tr>
+<td><b>Java comments</b><br><span class="pill d27">Oct 27</span></td>
+<td>Nobody had written any. People won't have time to read line by line, and complicated logic stays unclear even then.</td>
+<td>Write what each class is responsible for and what the critical methods do — "that's what industry expects".</td>
+</tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🧠 Detailed Feedback</h2>
+
+<div class="card">
+<b>Keep Configuration Outside the Code</b> <span class="pill d26">Oct 26</span><span class="pill d27">Oct 27</span>
+<ul style="margin-top:8px;">
+<li><b>What was hard-coded:</b> database name, URL, port, username, password — and also the <b>SQL queries</b> and table names, and values like a GST rate. Port 3306 isn't guaranteed on other systems either.</li>
+<li><b>Why move it out:</b> when the project goes to QA and later production, the database name differs. Changing Java code means <b>recompile, redeploy and a fresh test cycle</b> — risky. A property file lives outside the code, so you change it <b>without rebuilding</b>, and only minimal (end-to-end) testing is needed.</li>
+<li>A property file is just <b>key = value</b> — e.g. <code>query1 = select * from …</code> — and you read the keys into variables. You can keep separate property files for the database and for the SQL.</li>
+<li>Passing credentials from the environment was accepted. Later in the course database credentials move to a <b>secure wallet</b>; storing them in a property file is only for now.</li>
+<li>Don't copy-paste settings around — use a utility to read them. Several students had hard-coded values and fixed them overnight.</li>
+</ul>
+<div class="hot" style="margin-bottom:0;">
+<b>🔥 Interview line:</b> asked "what best practice do you follow?" — <em>"We separate code and configuration."</em> Researching "code plus configuration" was suggested homework.
+</div>
+</div>
+
+<div class="card">
+<b>Statement vs PreparedStatement — The Instructor's Correction</b> <span class="pill d26">Oct 26</span>
+<ul style="margin-top:8px;">
+<li>He first checked the class knew a <b>DAO</b> is a <b>Data Access Object</b>, then asked why PreparedStatement was used.</li>
+<li>Students answered in terms of hitting the database once or many times. He corrected that: <b>it isn't about how many times you hit the database — it's about query compilation.</b></li>
+<li><b>Statement:</b> run it 100 times and the query is compiled 100 times. <b>PreparedStatement:</b> with <code>?</code> placeholders the query is static — <b>compiled once and reused 100 times</b>. Compilation takes time, so it is faster, and it is also more secure.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Transactions in Place-Order</b> <span class="pill d26">Oct 26</span><span class="pill d27">Oct 27</span>
+<ul style="margin-top:8px;">
+<li><b>Oct 26:</b> he asked who had turned off auto-commit for flows with several queries (updating the cart, then the stock, then marking the order paid). No clear taker; he stressed it isn't only about rollback — related updates should be one unit.</li>
+<li><b>Oct 27:</b> a student's place-order method — "the main complex method of this project" — used <b>a single connection</b> for the whole order, set auto-commit to false before the transaction, and set it back to true once the order completed so other transactions don't interfere. That makes rollback possible if something fails. The instructor moved on with approval.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Bulk CSV Upload — Batching and Duplicates</b> <span class="pill d26">Oct 26</span><span class="pill d27">Oct 27</span>
+<ul style="margin-top:8px;">
+<li>Product import from a CSV file: "are you using <b>JDBC batch</b>?" He later explained why big uploads on real sites say the data will be available "after 5 minutes" — it is batching and updating in the background.</li>
+<li><b>The duplicate problem:</b> the project used the file's own key as the product ID, so <b>uploading the same CSV a second time added every product again</b>. Who decides the product ID? Define what makes a product unique — he called for a <b>composite key</b> (or unique constraint) — otherwise a repeated upload duplicates the data.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Who Gets the Last Items? — Optimistic Locking</b> <span class="pill d26">Oct 26</span><span class="pill d27">Oct 27</span>
+<p style="margin-top:6px;">Scenario: 15 items in stock, 20 customers ordering (think "only 3 donuts left, 100 people trying"). Class answers: whoever clicked first; a SQL lock (he called that "a little bit correct"). His point: <b>it doesn't matter who clicked first — whoever completes the transaction first gets the product.</b></p>
+<div class="tw">
+<table>
+<tr><th>Step</th><th>What happens</th></tr>
+<tr><td>1</td><td>Every buyer reads the record: <b>version 1</b>, with the stock.</td></tr>
+<tr><td>2</td><td>Everyone goes off to pay. The <b>first to pay</b> comes back, finds the version still 1 → updates the stock; the record becomes <b>version 2</b>.</td></tr>
+<tr><td>3</td><td>The others come back expecting version 1 but find 2 → <b>optimistic locking exception</b>: someone else got the product.</td></tr>
+<tr><td>4</td><td>They are <b>refunded</b> — within 24 hours, or "3 to 5 business working days" — with an email, or credited to a wallet, depending on the requirement.</td></tr>
+</table>
+</div>
+<ul style="margin-top:10px;">
+<li>Holding the stock in case someone cancels adds complexity and a bad experience ("waiting for other customers to cancel"), so it isn't done.</li>
+<li>A stock check before payment still belongs in the cart flow.</li>
+<li>Spring Data JPA/Hibernate have a built-in version concept — covered later; he told them now because the question is famous.</li>
+</ul>
+<div class="hot" style="margin-bottom:0;">
+<b>🔥 Interview question:</b> "15 in stock, 20 buyers — who gets it?" He said it <em>"will be asked to each and every one"</em>.
+</div>
+</div>
+
+<div class="card">
+<b>Audit Columns — A Minimum Requirement</b> <span class="pill d26">Oct 26</span><span class="pill d27">Oct 27</span>
+<ul style="margin-top:8px;">
+<li>Every table needs: <b>created by, created date, updated by, updated date, deleted by, deleted date</b> — "that's the minimum requirement".</li>
+<li><b>Why:</b> a user says "I did not place this order" — check who placed it: if it shows his username, he did; if the system placed it, the column says <b>system</b>; if someone else deleted a record, that person is recorded. Without these columns you can't tell whether a record was deleted by the system, a user or a developer — whether you delete or update, record who did it.</li>
+<li>Audit means the data is used to audit reports and activity.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Code Coverage and Test Structure</b> <span class="pill d26">Oct 26</span><span class="pill d27">Oct 27</span>
+<ul style="margin-top:8px;">
+<li><b>Numbers seen</b> in the demos ranged from the teens to the mid-70s (for example 16%, 25%, 62% for source only, 73%, 74%, 76%, 80%). The target is a <b>minimum of 85%</b>; below it the pipeline rejects the build and emails the whole engineering team, so you can't hand it to testing.</li>
+<li><b>Measure the source only:</b> close the test folder — only <code>src</code> matters. One project showed 62% for source against a higher figure overall.</li>
+<li><b>Keep tests out of the source code:</b> test classes placed inside the main source drag coverage down (one project was at about 25%). Tests live in the test folder.</li>
+<li><b>Too few tests:</b> a project with 9 source classes and only a handful of tests — "this is a standard process, you cannot ignore it".</li>
+<li><b>Test exceptions too</b> — he reminded students to write tests that expect an exception class.</li>
+<li><b>Private methods:</b> students made methods public so they could test them. Don't. Design classes with focused methods so they're easy to test, but <b>don't cut required functionality just to make tests easy</b>.</li>
+<li><b>Real-world cost:</b> a small use case already has hundreds of tests, and a test run can take about an hour in a company — which is why there is an option to <b>skip tests/coverage temporarily</b> while you experiment.</li>
+</ul>
+<div class="hot" style="margin-bottom:0;">
+<b>🔥 Interview line:</b> asked about coverage, one student said 84%; his advice: <em>"85 is our requirement."</em> To reach it, write all the possible test cases — and stop treating this exercise as optional.
+</div>
+</div>
+
+<div class="card">
+<b>Exceptions — Know Where Each One Is Thrown</b> <span class="pill d26">Oct 26</span><span class="pill d27">Oct 27</span>
+<ul style="margin-top:8px;">
+<li>He asked students to explain why a custom exception exists and to <b>reproduce the scenario</b> that throws it — including where an invalid-order exception was used in a project (one student first answered "when stock is exceeded", which is not what the code did).</li>
+<li><b>Product not found:</b> a product that isn't in the database never appears in search, so the exception belongs where a product is looked up directly (get product by ID). One project had only two custom exceptions and used built-in ones (<code>SQLException</code>, <code>IllegalArgumentException</code>) elsewhere.</li>
+<li><b>Find usages fast:</b> right-click the class → <b>References → Workspace</b> shows every place it is used — "this is how you want to track your code".</li>
+</ul>
+<div class="hot" style="margin-bottom:0;">
+<b>🔥 Interview line:</b> "What custom exceptions did you define in your product?" Anyone with real project experience can list them — remember <b>10 to 20 exceptions</b> of your own product.
+</div>
+</div>
+
+<div class="card">
+<b>What If the Database Goes Down?</b> <span class="pill d27">Oct 27</span>
+<ul style="margin-top:8px;">
+<li><b>The demo:</b> he had a student stop the MySQL service from Windows Services and run the application again. The JDBC connection failed with the message that the last packet was sent successfully but the driver received nothing back from the server. Restarting the service fixed it (it is a Windows service and starts with the computer).</li>
+<li><b>Real systems:</b> a database is software too, so it will go down. The application should <b>send a notification</b> and <b>fall back to a secondary server</b>. This is advanced — "just make a note": what happens to your application when the primary server goes down?</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Using AI Wisely</b> <span class="pill d26">Oct 26</span>
+<ul style="margin-top:8px;">
+<li><b>Think first:</b> use your own thought process, then tell the AI "I have this idea, help me — what's the best approach?" instead of just asking it to write the project. He asked students how much AI they had used and told them to be honest.</li>
+<li><b>Don't upload documents.</b> He said that when he searched, AI handed back a document someone had uploaded.</li>
+<li><b>Don't give AI your whole project.</b> A student asked AI to generate tests for the data-access code and the AI kept dropping the database/tables. Be explicit: <em>"write tests for this code only — do not delete anything without my permission."</em></li>
+<li><b>It shows:</b> when copied or AI-generated code breaks and a student can't say why, it's obvious. His upside: "at least you learned how to check the code."</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Instructor's Expectations (Non-Technical) and the Next Class</b>
+<ul style="margin-top:8px;">
+<li>The purpose of the project was <b>process</b> — Maven, the database connection, test cases, coverage — not clever logic.</li>
+<li>Students were given 5–6 days; the instructor said placement will be better if the project is done seriously, and that anyone who did it properly "can get a job easily". He urged students to come every day and present whatever they have: <em>"you are not losing anything."</em></li>
+<li>Next session: the <b>logging framework</b> (the recording says "Log 40. J", read here as Log4j — unclear).</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification:</b>
+<ul style="margin-top:8px;">
+<li><b>Optimistic vs pessimistic locking:</b> pessimistic locks the row while someone works on it (e.g. <code>select … for update</code>), blocking others; optimistic lets everyone proceed and detects the conflict at update time with a version check — snippet 2. The student's "SQL lock" answer was the pessimistic kind.</li>
+<li><b>Credentials:</b> a plain property file is fine for learning; real projects keep passwords in environment variables or a secrets manager, consistent with the "secure wallet" he mentioned.</li>
+<li><b>Skipping tests:</b> in Maven that is <code>-DskipTests</code>, and your coverage plugin has its own skip switch — only for experiments, since the pipeline will still enforce 85%.</li>
+</ul>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the instructor reviewed students' code on screen and the transcript doesn't contain it, so these are <b>my illustrations</b> of the ideas he described — the names, tables and values are mine. Nothing was run against a database.
+</div>
+
+<p><b>1. Configuration outside the code (property file + loader):</b></p>
+<pre><code class="language-properties"># db.properties — outside the Java code; change values without recompiling
+db.url=jdbc:mysql://localhost:3306/ecommerce
+db.user=app_user
+db.password=change_me
+query.getProduct=select * from product where id = ?
+query.updateStock=update product set stock = ? where id = ?</code></pre>
+<pre><code class="language-java">Properties props = new Properties();
+try (InputStream in = getClass().getClassLoader().getResourceAsStream("db.properties")) {
+    props.load(in);
+}
+String url = props.getProperty("db.url");
+String sql = props.getProperty("query.getProduct");     // change the query without touching Java code</code></pre>
+
+<p><b>2. Optimistic locking — the version check decides who gets the product:</b></p>
+<pre><code class="language-sql">-- the product table has a version column; 'version' below is the value the buyer read earlier
+update product
+   set stock = stock - ?, version = version + 1
+ where id = ? and version = ?;</code></pre>
+<pre><code class="language-java">int rows = ps.executeUpdate();
+if (rows == 0) {
+    // someone else updated the row first: this buyer lost -> roll back, refund, notify
+    throw new ProductAlreadySoldException("Product was bought by someone else");   // your own exception
+}</code></pre>
+
+<p><b>3. try-with-resources and the generated order ID in one insert:</b></p>
+<pre><code class="language-java">String sql = "insert into orders (customer_id, status) values (?, ?)";
+
+try (Connection con = DriverManager.getConnection(url, user, password);
+     PreparedStatement ps = con.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+    ps.setInt(1, customerId);
+    ps.setString(2, "CREATED");
+    ps.executeUpdate();
+
+    try (ResultSet keys = ps.getGeneratedKeys()) {
+        if (keys.next()) {
+            long orderId = keys.getLong(1);       // the new order's ID, needed by later queries
+        }
+    }
+}   // ResultSet, PreparedStatement and Connection are closed automatically</code></pre>
+
+<p><b>4. Testing that an exception is thrown:</b></p>
+<pre><code class="language-java">@Test
+void getProduct_unknownId_throwsProductNotFound() {
+    assertThrows(ProductNotFoundException.class, () -&gt; productService.getProductById(999));
+}
+// JUnit 4 style: @Test(expected = ProductNotFoundException.class)</code></pre>
+
+<p><b>5. Audit columns on a table:</b></p>
+<pre><code class="language-sql">create table orders (
+    id            int primary key auto_increment,
+    customer_id   int,
+    status        varchar(25),
+    created_by    varchar(50),
+    created_date  timestamp default current_timestamp,
+    updated_by    varchar(50),
+    updated_date  timestamp null,
+    deleted_by    varchar(50),
+    deleted_date  timestamp null
+);</code></pre>
+
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Applies these classes:</b> JDBC and <b>PreparedStatement</b> (the correction above), <b>transactions</b> (auto-commit off, commit, rollback), <b>batching</b> (the CSV import), <b>code coverage and the 85% pipeline rule</b>, and the MySQL basics of foreign keys and <b>audit columns</b>.</li>
+<li><b>Builds on:</b> the earlier E-Commerce mini-project demos, where the same layering (model / repository / service / exception) and custom exceptions were first reviewed.</li>
+<li><b>Later:</b> Spring Data JPA/Hibernate version fields for optimistic locking, the secure wallet for credentials, and the logging framework next session.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+The two recordings are combined by theme: items raised on both days appear once, with tags showing the day. Layout and the checklist table are my additions; the feedback comes from your transcripts, which are very noisy (the Oct 27 recording was about 1.5 hours of mostly live code review), so I kept only points that were clear. Yellow dashed boxes and "Added" tags mark everything the instructor didn't say. The code is illustrative.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-sql.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-properties.min.js"></script>
+</body>
+</html>

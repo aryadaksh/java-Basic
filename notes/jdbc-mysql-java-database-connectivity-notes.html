@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - JDBC: Connecting Java to MySQL</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.note{background:#fff8e6;border-left:6px solid orange;padding:18px;border-radius:10px;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.pill{display:inline-block;padding:1px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;}
+.pill.lec{background:#e3f2fd;color:#0066ff;}
+.pill.add{background:#fff3cd;color:#a67c00;}
+.pill.hi{background:#e6f6ea;color:#1e8e3e;}
+.pill.med{background:#fff3cd;color:#a67c00;}
+.pill.low{background:#fdecea;color:#c62828;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>JDBC — Connecting Java to MySQL: Driver, Connection, Statement, ResultSet &amp; CRUD</p>
+<p class="meta">Source: June 2026 offline class · Oct 15, 2026 · 1:15:21</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li><b>JDBC</b> — Java Database Connectivity: why a Java program needs a "translator" to talk to a database</li>
+<li>The <b>driver</b> idea (mouse, game and sound-card analogies) and the vendor's <b>connector JAR</b> (MySQL Connector/J)</li>
+<li>Adding the connector as a <b>Maven dependency</b></li>
+<li>The <b>four JDBC steps</b>: register the driver → create a connection → create a statement → execute SQL</li>
+<li><code>Class.forName(...)</code> and <b>static vs dynamic class loading</b> (an interview favourite) and <code>ClassNotFoundException</code></li>
+<li>Connection details: host, port, database, username, password</li>
+<li><code>executeQuery</code> and the <code>ResultSet</code> — looping with <code>next()</code> and reading columns by index</li>
+<li><code>executeUpdate</code> — updating an order's status from the Java program</li>
+<li>CRUD — what every system ends up doing</li>
+<li>Q&amp;A: MySQL server as a Windows service, who provides <code>Class</code>, deprecated driver classes</li>
+</ul>
+
+<div class="flag">
+<b>How to read these notes:</b> <b>Green-bordered cards</b> hold what the instructor taught. <b>Yellow dashed boxes</b> hold clarifications I added that the lecture did <em>not</em> state — verify them with your instructor if in doubt. <b>Orange 🔥 boxes</b> are interview alerts. The source is an <b>auto-generated transcript</b> with many speech-recognition errors (for example "Rajeshwari" for <em>register</em>, "Class.formnet" for <code>Class.forName</code>), and <b>roughly the second half of the recording is a career/mindset talk</b> (mixed Hindi) that is not about JDBC. Where the intended term was clear I corrected it; where it was <em>not</em> I flagged it instead of guessing. See the clean-up map near the end.
+</div>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>What Is JDBC? — The Bank-Statement Example</b>
+<p><b>JDBC = Java Database Connectivity.</b> Picture a <b>backend system</b> — the <b>application</b>, which means <b>Java code</b>. When that Java code wants to interact with <b>databases</b>, JDBC is involved. A database's purpose is to <b>store data</b> so that when the application needs it in the future, the database can provide it.</p>
+<ol style="padding-left:20px;margin-top:8px;">
+<li>The <b>user</b> hits a request on the system — say, for a <b>bank statement</b>.</li>
+<li>The application knows he wants a bank statement, and knows <b>where the statement is: inside the database</b>.</li>
+<li>It asks the database: <em>"Can you please provide the bank statement for this user?"</em> The database searches and gives it back.</li>
+<li>The <b>backend processes</b> the data again and gives the final statement to the user.</li>
+</ol>
+<p style="margin-top:8px;">To show anything meaningful, applications use databases.</p>
+</div>
+
+<div class="card">
+<b>You Are a Database User, Not a Database Expert</b>
+<p>There are <b>100+ different databases</b>. The instructor's advice: <b>don't try to become a database expert — you are a database user</b>. Every database has its own language, <b>SQL</b>.</p>
+</div>
+
+<div class="card">
+<b>The Problem — Java and the Database Don't Share a Language</b>
+<ul style="margin-top:8px;">
+<li><b>The database doesn't understand Java</b>, and <b>Java doesn't understand SQL</b>.</li>
+<li>That is where <b>JDBC comes in between</b>: <em>"I will be helping you both."</em></li>
+<li><b>JDBC allows a Java program to interact with databases</b> — that's all. Problem simplified.</li>
+<li><b>Analogy:</b> when two people have no common language they need an <b>intermediary / translator</b>. As of now, that translator is JDBC. Inside it sits a <b>connector</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Driver Idea — Why Every Database Needs One</b>
+<ul style="margin-top:8px;">
+<li>Connect a <b>wireless mouse</b> and the system first installs a <b>driver</b>; the driver <b>translates the signals</b> the mouse sends to the computer.</li>
+<li>Games, <b>sound</b>, a <b>digital pen</b> — everything has a driver, installed so that the computer understands your instructions.</li>
+<li>In the same way, <b>whenever you interact with a database you need the database driver</b>.</li>
+<li><b>Every database vendor releases its own driver</b>, and it is <b>language-specific</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>MySQL Connector/J — The Java Driver Is Just a JAR</b>
+<ul style="margin-top:8px;">
+<li>On MySQL's website there are <b>connectors for every language MySQL supports</b>: .NET people install the .NET one, C++ people use the C++ one, and for Java it's <b>Connector/J</b> — the one we use.</li>
+<li><b>A connector is nothing but a JAR file</b> containing the <b>classes</b> that let your application interact with the database.</li>
+<li>The instructor downloaded it, extracted the JAR and ran <code>jar -tvf</code> on it: <b>many classes</b> inside — <b>one JAR doing this much work</b>. (He remarked that a JAR can easily hold 500+ classes.)</li>
+<li>That JAR is <b>added as a dependency</b> in whichever program uses JDBC. Remember: you already know what a dependency is and how to add one — <b>now we use it for real</b>.</li>
+<li>It's the same story for other databases: <b>MongoDB, Oracle, Cassandra</b> each have a connector released by their own company, which you provide as a dependency.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Adding the Connector With Maven</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li>Create the Maven project (the instructor created a new one, like the earlier projects). He removed the default JUnit dependency because there was no testing yet.</li>
+<li><b>From today onward, any JAR you want to add — go to the Maven repository website.</b> Search "MySQL Java connector Maven dependency".</li>
+<li>Pick an <b>8.x version</b>, copy the dependency snippet, and paste it <b>inside <code>pom.xml</code></b>.</li>
+<li><b>Save.</b> The MySQL dependency appears under Maven Dependencies — and <b>one more dependency came automatically</b> because the connector needs it.</li>
+<li>As you know: Maven <b>first checks the local <code>.m2</code> folder</b>; if the JAR is there it uses it, otherwise it goes to the central repository and drops the JAR into that location.</li>
+</ol>
+<p style="margin-top:8px;">In the snippet, the <b>group</b> is MySQL, the <b>artifact</b> is the connector project, plus the <b>version</b>. (The instructor also mentioned a scope-like line for the compile phase — the exact words were garbled.)</p>
+</div>
+
+<div class="hot">
+<b>🔥 The Four Steps of JDBC (Standard — Memorise)</b>
+<ol style="padding-left:20px;margin-top:6px;">
+<li><b>Register the driver</b> — tell the program which driver you will use.</li>
+<li><b>Create the connection</b> — your application is talking to someone who is somewhere else, so first connect to that database.</li>
+<li><b>Create a statement</b> — somebody has to carry your data/query to the database.</li>
+<li><b>Execute the SQL</b> — send the query and get the result.</li>
+</ol>
+<p style="margin-top:6px;">The instructor said registering the driver "might not be required — it's optional — but better to do it". He told the class: <b>"from today onward, every day we interact with the database."</b></p>
+</div>
+
+<div class="card">
+<b>Step 1 — Register the Driver: Class.forName(...)</b>
+<ul style="margin-top:8px;">
+<li>There is a class in Java called <b><code>Class</code></b> (capital C — it's the name of the class itself, in the <b><code>java.lang</code></b> package). It has a <b>static method <code>forName</code></b> that <b>loads a class into memory</b>.</li>
+<li>You give it the <b>name of the driver class</b>. To find the name, look inside the JAR with <code>jar -tvf</code>: the connector contains <b>two driver classes</b> — a <b>newer</b> one under <code>mysql/cj</code> and an <b>older</b> one. Use the latest.</li>
+<li>Write the name with <b>dots, not slashes</b>, even though the JAR listing shows slashes.</li>
+<li><code>Class.forName</code> <b>throws a checked exception</b> — <b>ClassNotFoundException</b> (which you know from exception handling). If the class isn't found you get it.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Warning When Using the Old Driver Class — "Deprecated"</b>
+<p>The first run used the <b>older driver class</b>: the program <b>worked but printed a warning</b>. <b>Deprecated means outdated</b> — the library is telling you to use the latest class. The instructor then switched to the newer class. Later he deliberately changed the class name <em>back</em> to the old one to prove that <b>you can supply a different class name and the program still runs</b> — that's the next concept.</p>
+</div>
+
+<div class="hot">
+<b>🔥 Interview Question — Static vs Dynamic Class Loading</b>
+<p style="margin-top:6px;">The instructor: <em>"This will be an interview question — don't blame me later. People with 3 to 20 years' experience get asked about it."</em></p>
+</div>
+
+<div class="card">
+<b>Static vs Dynamic Class Loading</b>
+<div class="tw">
+<table>
+<tr><th>Aspect</th><th>Static class loading</th><th>Dynamic class loading</th></tr>
+<tr><td>How</td><td>Using the <b><code>new</code></b> keyword — e.g. <code>Employee e = new Employee();</code> or <code>new OrderHistory()</code></td><td>Using <b><code>Class.forName("...")</code></b> — the class is given by <b>name</b></td></tr>
+<tr><td>When the class is decided</td><td><b>At compile time</b> — you wrote the class name in the code</td><td><b>At runtime</b> — the name can be supplied from outside</td></tr>
+<tr><td>Can you change it after compiling?</td><td><b>No</b> — once compiled, it will always load that class</td><td><b>Yes</b> — pass it as a <b>command-line argument</b> or read it from a <b>property file</b> outside the application and keep changing it</td></tr>
+<tr><td>Checked exception</td><td>—</td><td><b>ClassNotFoundException</b></td></tr>
+<tr><td>Used by</td><td>Normal object creation</td><td><b>JDBC</b> driver loading</td></tr>
+</table>
+</div>
+<ul style="margin-top:10px;">
+<li>Even with <code>new</code>, the <b>runtime object is created and the class loaded at runtime</b> — but <b>the decision was made at compile time</b>.</li>
+<li><b>In both cases the class is loaded into memory.</b> The difference is <em>when and how the class is chosen</em>, so if asked "how do you load a class?", mention both ways.</li>
+<li>The instructor suggested researching "static vs dynamic class loading" on your own, as much as you like.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Step 2 — Create the Connection</b>
+<ul style="margin-top:8px;">
+<li>To connect to somebody you need to know <b>where they are</b> and the <b>credentials</b>. For a database that means: the <b>host / URL</b> (where the database is), a <b>username</b> and a <b>password</b>.</li>
+<li>Call <b><code>DriverManager.getConnection(...)</code></b> with those. It <b>throws <code>SQLException</code></b>, another <b>checked exception</b> that forces you to handle it at compile time. In the demo the instructor simply declared <code>throws</code> to keep the code short (an IDE can generate the handling).</li>
+<li>The URL has the form <b><code>jdbc:mysql://</code> + host + port + database name</b>: here <b>localhost</b>, port <b>3306</b>, and the database we created earlier. Username <b>root</b> and the password set during MySQL installation.</li>
+<li>You <b>don't have to remember</b> the <code>jdbc:mysql://…</code> format — <b>copy and paste it</b> from the reference and correct it. The instructor's advice for advanced Java: <b>copy-paste configuration as much as possible; type only the code.</b></li>
+<li>If the database server runs on <b>some remote machine</b>, give the <b>IP address / host of that machine</b> instead of localhost.</li>
+<li>Once this line runs, <b>your program is connected to the database</b>.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Step 3 — Create a Statement (the Data Carrier)</b>
+<p>We're connected, but <b>somebody needs to carry your data/query to the database</b> and bring data back. That carrier is the <b>Statement</b>: on the connection call <b><code>createStatement()</code></b>. What you did in the MySQL console is now done through this object.</p>
+</div>
+
+<div class="card">
+<b>Step 4 — Execute the Query and Read the ResultSet</b>
+<ul style="margin-top:8px;">
+<li>On the statement you call an execute method. There are <b>multiple methods</b> depending on your requirement; to <b>read all records</b> the instructor used <b><code>executeQuery</code></b> with the <b>same SQL you ran in the console</b>: <code>select * from &lt;table&gt;</code>. (Copy it if you're not comfortable writing it.)</li>
+<li><b>It always returns a <code>ResultSet</code></b> — all the returned rows are part of <b>one object</b>: the first record, the second record, and so on. <b>You have to loop over it.</b></li>
+<li>We don't know how many records there will be — two now, 10 or 1,000 tomorrow — so use <b><code>rs.next()</code></b> in a loop: it checks <b>whether the next record exists</b>.</li>
+<li>Inside the loop read each column with <b><code>rs.getXxx(position)</code></b> chosen by the column's <b>data type</b> (<code>getInt</code>, <code>getString</code>, <code>getBoolean</code>…). <b>The index starts from 1</b>: in the demo table, position 1 = ID (int), 2 = item (String), 3 = price (int, as taught), 4 = status (String). If unsure of the order, run <code>describe</code> on the table in the console.</li>
+<li>Print the values to see them. That's how you iterate a result set.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Demo Run</b>
+<ul style="margin-top:8px;">
+<li>He added a main class ("my driver class, which will start the program") that creates an <code>OrderHistory</code> object and calls the method; exceptions were simply thrown from main.</li>
+<li>Output: <b>both records</b> from the database were printed — <b>"this record available in the database, I write the SQL, and my Java program gives these records."</b></li>
+<li>Then, from the <b>MySQL command prompt</b>, he <b>inserted another record</b> (a "Mouse" order). Re-running showed the new data too.</li>
+<li><b>Key insight:</b> the console is <b>one client</b> of the database, and <b>the Java program is also a client</b>. Both talk to the same database, so a change made by one is visible to the other. (The instructor said it would then show "four records"; with two original rows plus one insert that doesn't add up, so the count is unclear.)</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Recap of the Four Steps (Instructor's Walk-Through)</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li><b>Register the driver</b> — tell the program <em>which</em> driver you're going to use.</li>
+<li><b>Create the connection</b> — the program is now connected to the MySQL server; the server runs locally on this port, with this database. For a remote machine use its IP/host. Username and password go here.</li>
+<li><b>Create the statement object</b> — somebody has to carry the data for query execution.</li>
+<li><b>Execute the query</b> — a select definitely returns data, stored in the <b>ResultSet</b>; loop and read by index and type.</li>
+</ol>
+</div>
+
+<div class="card">
+<b>Q&amp;A — Do We Start MySQL Ourselves?</b>
+<p>A student wasn't sure whether MySQL had to be started. <b>No.</b> On a local Windows machine the MySQL server is a <b>Windows service</b> — it starts automatically when the computer starts and stops when it shuts down. <b>You don't start MySQL locally.</b></p>
+</div>
+
+<div class="card">
+<b>Q&amp;A — Who Provides Class.forName? Who Provides the Driver?</b>
+<p>A student asked whether the thing used to register the driver comes from Java or from the database. <b><code>Class</code> is provided by Java itself (<code>java.lang</code>)</b> — its static <code>forName</code> loads a class into memory. The <b>driver class that you name</b> comes from <b>MySQL's connector JAR</b>. (The instructor also made a remark about the package name being the "reverse of the domain" — the details were garbled.)</p>
+</div>
+
+<div class="card">
+<b>Updating Data From Java — executeUpdate</b>
+<p>Next the instructor wanted to <b>update an order's status</b>: a new method (<code>updateOrder</code>) in a new class (<code>OrderManagement</code>, not the history class).</p>
+<ul style="margin-top:8px;">
+<li><b>Steps 1–3 are common</b> — register the driver, connect, create the statement (copy them; you could move them into one shared method).</li>
+<li><b>Step 4 changes</b>: the query is an <b>update</b> — <code>update &lt;table&gt; set status = 'paid' where id = …</code> — to make an order paid.</li>
+<li>Use <b><code>executeUpdate</code></b>. It returns an <b>int: the number of records updated</b> — "how many records did this query update?" In the demo: <b>one record updated</b>.</li>
+<li>Checking in the console (without running the SQL there): the status that was <b>on hold had changed to paid</b> — <em>this is how, when you place an e-commerce order, the status keeps changing.</em></li>
+<li>He then made the method take the <b>id</b> and the <b>status</b> as parameters (instead of hard-coding) and updated another order — to <b>canceled</b>. In real life this data comes from the UI or other methods.</li>
+<li>He admitted the code is simplified: <em>"I'm not interested in the best way of writing code, I'm interested in the JDBC concept."</em></li>
+</ul>
+</div>
+
+<div class="card">
+<b>CRUD — "Everything Is CRUD"</b>
+<ul style="margin-top:8px;">
+<li>The instructor's message: whether you have <b>1, 20 or 30 years of experience</b>, developers end up doing <b>CRUD</b> only — <b>C</b>reate, <b>R</b>ead, <b>U</b>pdate, <b>D</b>elete.</li>
+<li>Examples: <b>placing an order</b> creates a record in the database; <b>viewing history</b> reads; <b>deactivating the app/account</b> deletes; <b>on hold → paid</b> is an update.</li>
+<li><em>"End of the day, all systems are doing CRUD only."</em> If you know this, he said, you can understand almost any system.</li>
+</ul>
+<div class="tw">
+<table>
+<tr><th>Operation</th><th>SQL</th><th>JDBC method (in this class)</th><th>Example from class</th></tr>
+<tr><td><b>C</b>reate</td><td><code>insert</code></td><td><code>executeUpdate</code> <span class="pill add">added</span></td><td>Placing an order (he inserted the Mouse record from the console)</td></tr>
+<tr><td><b>R</b>ead</td><td><code>select</code></td><td><code>executeQuery</code> → <code>ResultSet</code></td><td>Order history</td></tr>
+<tr><td><b>U</b>pdate</td><td><code>update</code></td><td><code>executeUpdate</code> → count of rows</td><td>On hold → paid / canceled</td></tr>
+<tr><td><b>D</b>elete</td><td><code>delete</code></td><td><code>executeUpdate</code> <span class="pill add">added</span></td><td>Deactivating / removing</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card">
+<b>Instructor's Closing Remarks (Non-Technical)</b>
+<p>About half the recording is a career and mindset talk, mostly in mixed Hindi and badly garbled, so only the clear points are summarised here — they are the instructor's opinions, not statistics:</p>
+<ul style="margin-top:8px;">
+<li><b>Technology plays only about 10–20% of the role in getting a job</b>; the rest is positivity, continuity, confidence and self-belief.</li>
+<li><b>Write code regularly and keep some discipline</b> — he values the hours you actually sit and work.</li>
+<li>Be ready for <b>face-to-face interviews</b> rather than relying only on remote roles.</li>
+<li>Focus on your own learning instead of comparing yourself with others.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification — terms and details the lecture didn't spell out:</b>
+<ul style="margin-top:8px;">
+<li><b>JDBC is an API, the driver is the implementation:</b> JDBC is a set of interfaces in the <code>java.sql</code> package (<code>Connection</code>, <code>Statement</code>, <code>ResultSet</code>…) plus <code>DriverManager</code>. The vendor's driver (Connector/J) supplies the classes that implement them for MySQL. The lecture called JDBC the "translator" with a "connector" inside it.</li>
+<li><b>Driver registration is usually automatic:</b> with JDBC 4.0 and later, a driver JAR on the class path is discovered automatically, so <code>Class.forName</code> is often optional — matching what the instructor said. He kept it because it shows dynamic class loading.</li>
+<li><b>Driver class names:</b> the current MySQL 8.x driver class is <code>com.mysql.cj.jdbc.Driver</code>; the older <code>com.mysql.jdbc.Driver</code> still exists but is deprecated (it prints the warning seen in class). The transcript doesn't spell either name out clearly, so I'm inferring them.</li>
+<li><b>Maven coordinates:</b> the instructor said the group is "MySQL". That matches <code>mysql:mysql-connector-java</code> (up to 8.0.33); newer releases are published as <code>com.mysql:mysql-connector-j</code>. Copy the snippet from the repository site, as he said, rather than typing it.</li>
+<li><b>Why <code>ClassNotFoundException</code> shows up in JDBC:</b> the usual causes are a misspelled class name (slashes instead of dots) or the connector JAR missing from the project's dependencies.</li>
+<li><b>executeQuery vs executeUpdate vs execute:</b> <code>executeQuery</code> is for <code>select</code> and returns a <code>ResultSet</code>; <code>executeUpdate</code> is for <code>insert / update / delete</code> (and table-changing statements) and returns an int; <code>execute</code> is the general-purpose method. The lecture showed the first two.</li>
+<li><b>ResultSet cursor:</b> it starts <em>before</em> the first row; <code>next()</code> moves to the next row and returns false when there are none. Columns can be read by <b>1-based index</b> (as taught) or by <b>column name</b>, which survives column-order changes.</li>
+<li><b>Match the getter to the column type:</b> the demo read price with <code>getInt</code>; if your column is <code>double</code> or <code>decimal</code>, use <code>getDouble</code> / <code>getBigDecimal</code>.</li>
+<li><b>Close your resources:</b> <code>ResultSet</code>, <code>Statement</code> and <code>Connection</code> should be closed — ideally with try-with-resources. The lecture skipped this to stay focused.</li>
+<li><b>Don't build SQL by string concatenation:</b> making the update method take <code>id</code> and <code>status</code> is the right idea, but gluing them into the SQL string opens the door to <b>SQL injection</b>. <code>PreparedStatement</code> with <code>?</code> placeholders is the safe way (not covered in this lecture).</li>
+<li><b>Credentials:</b> the demo hard-codes the username and password for simplicity; real projects keep them in configuration, not in source code.</li>
+<li><b>Two meanings of "driver class":</b> the JDBC <em>driver class</em> (<code>com.mysql.cj.jdbc.Driver</code>) vs the class with <code>main</code> that the instructor also called "my driver class". Don't mix them up.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Terminology Cheat-Sheet</b>
+<p class="small" style="margin-top:4px;">Blue tag = defined in the lecture · Yellow tag = detail added by me.</p>
+<div class="tw">
+<table>
+<tr><th>Term</th><th>Meaning</th><th>Source</th></tr>
+<tr><td><b>JDBC</b></td><td>Java Database Connectivity — lets a Java program interact with databases; the translator between Java and SQL.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>SQL</b></td><td>The language databases understand.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Driver</b></td><td>Software that translates between your program and the database; each vendor releases one per language.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>MySQL Connector/J</b></td><td>MySQL's Java driver — a JAR of classes, added as a dependency.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Driver class</b></td><td>The class named in <code>Class.forName</code> that gets loaded to register the driver.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Class.forName</b></td><td>Static method of <code>java.lang.Class</code> that loads a class by name at runtime.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Static class loading</b></td><td>Class chosen at compile time (<code>new</code>).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Dynamic class loading</b></td><td>Class chosen at runtime (<code>Class.forName</code>, name supplied from outside).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>ClassNotFoundException</b></td><td>Checked exception thrown when the named class can't be found.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Connection</b></td><td>The link from the Java program to the database (host, port, database, user, password).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>DriverManager</b></td><td>Class whose <code>getConnection</code> creates the connection.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>SQLException</b></td><td>Checked exception for database errors.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Statement</b></td><td>The carrier that sends the SQL to the database.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>executeQuery / executeUpdate</b></td><td>Run a select (returns a ResultSet) / run an update (returns the number of records changed).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>ResultSet</b></td><td>The object holding the returned rows; loop with <code>next()</code>, read with <code>getXxx(index)</code> (index starts at 1).</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>CRUD</b></td><td>Create, Read, Update, Delete.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>Deprecated</b></td><td>Outdated — still works but you're told to use the newer one.</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td><b>PreparedStatement</b></td><td>Statement with <code>?</code> placeholders; safer and reusable.</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><b>SQL injection</b></td><td>Attack where user input changes the meaning of a query built by string concatenation.</td><td><span class="pill add">Added</span></td></tr>
+</table>
+</div>
+</div>
+
+</div>
+
+<div class="section">
+<h2>🖼️ Visual Flows</h2>
+
+<h3 style="margin-top:6px;color:#0066ff;font-size:17px;">Why JDBC sits in the middle</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">Java application (speaks Java)</div>
+<div class="farrow">⇄</div>
+<div class="fstep notify">JDBC + MySQL driver (the translator)</div>
+<div class="farrow">⇄</div>
+<div class="fstep">MySQL database (speaks SQL)</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">A request: the bank statement</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">User requests bank statement</div>
+<div class="farrow">→</div>
+<div class="fstep">Application (Java)</div>
+<div class="farrow">→ JDBC →</div>
+<div class="fstep notify">Database searches</div>
+<div class="farrow">→ data →</div>
+<div class="fstep">Application processes it</div>
+<div class="farrow">→</div>
+<div class="fstep">Statement shown to user</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">From pom.xml to a loaded driver</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">dependency in pom.xml</div>
+<div class="farrow">→</div>
+<div class="fstep">Maven checks .m2</div>
+<div class="farrow">→ not found →</div>
+<div class="fstep notify">downloads from the central repo</div>
+<div class="farrow">→</div>
+<div class="fstep">connector JAR on the class path</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Class.forName(...) loads the driver class</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">The four JDBC steps</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">1. Register driver<br>Class.forName</div>
+<div class="farrow">→</div>
+<div class="fstep">2. Connection<br>DriverManager.getConnection</div>
+<div class="farrow">→</div>
+<div class="fstep">3. Statement<br>createStatement</div>
+<div class="farrow">→</div>
+<div class="fstep notify">4a. executeQuery → ResultSet</div>
+<div class="farrow">||</div>
+<div class="fstep notify">4b. executeUpdate → int</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">The ResultSet loop</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">executeQuery(select …)</div>
+<div class="farrow">→</div>
+<div class="fstep">ResultSet</div>
+<div class="farrow">→</div>
+<div class="fstep">rs.next() ?</div>
+<div class="farrow">→ true →</div>
+<div class="fstep notify">getInt(1) · getString(2) · getInt(3) · getString(4)</div>
+<div class="farrow">→ loop back to rs.next()</div>
+</div>
+</div>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">rs.next() ?</div>
+<div class="farrow">|| false →</div>
+<div class="fstep wait">no more rows — loop ends</div>
+</div>
+</div>
+
+<div class="tw">
+<table>
+<tr><th>Position (starts at 1)</th><th>Column</th><th>Getter used in class</th></tr>
+<tr><td>1</td><td>id</td><td><code>getInt(1)</code></td></tr>
+<tr><td>2</td><td>item name</td><td><code>getString(2)</code></td></tr>
+<tr><td>3</td><td>price</td><td><code>getInt(3)</code> (price treated as an integer)</td></tr>
+<tr><td>4</td><td>status</td><td><code>getString(4)</code></td></tr>
+</table>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Two clients, one database</h3>
+
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">MySQL command prompt (client 1)</div>
+<div class="farrow">→</div>
+<div class="fstep notify">MySQL server + database</div>
+<div class="farrow">←</div>
+<div class="fstep">Java program (client 2, via JDBC)</div>
+</div>
+</div>
+<p class="small">An insert made from the console shows up the next time the Java program runs its select — and an update made by the Java program is visible in the console.</p>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Static vs dynamic class loading</h3>
+
+<div class="lane">
+<div class="label">Static</div>
+<div class="flowbox">
+<div class="fstep">new Employee()</div>
+<div class="farrow">→</div>
+<div class="fstep">class decided at compile time</div>
+<div class="farrow">→</div>
+<div class="fstep wait">can't change without recompiling</div>
+</div>
+</div>
+<div class="lane">
+<div class="label">Dynamic</div>
+<div class="flowbox">
+<div class="fstep">class name in args / property file</div>
+<div class="farrow">→</div>
+<div class="fstep notify">Class.forName(name) at runtime</div>
+<div class="farrow">→</div>
+<div class="fstep">change the name without recompiling</div>
+<div class="farrow">→</div>
+<div class="fstep wait">wrong name → ClassNotFoundException</div>
+</div>
+</div>
+
+<h3 style="margin-top:26px;color:#0066ff;font-size:17px;">Read vs update in JDBC</h3>
+<div class="tw">
+<table>
+<tr><th>Aspect</th><th>Read (order history)</th><th>Update (order status)</th></tr>
+<tr><td>Steps 1–3</td><td>Register, connect, create statement</td><td>Identical — "common steps"</td></tr>
+<tr><td>SQL</td><td><code>select * from …</code></td><td><code>update … set status = … where id = …</code></td></tr>
+<tr><td>Method</td><td><code>executeQuery</code></td><td><code>executeUpdate</code></td></tr>
+<tr><td>Returns</td><td><code>ResultSet</code> — loop over it</td><td><code>int</code> — number of records updated</td></tr>
+<tr><td>Check</td><td>Print the rows</td><td>Look at the table in the console: on hold → paid</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the instructor typed the code live and the transcript only describes it. Every program below is <b>my reconstruction</b> from his description. What the lecture supports: the four steps, <code>Class.forName</code>, <code>DriverManager.getConnection</code>, <code>createStatement</code>, <code>executeQuery</code>, the <code>rs.next()</code> loop with index-based getters, and <code>executeUpdate</code> returning a count. The <b>class names</b> (<code>OrderHistory</code>, <code>OrderManagement</code>, <code>App</code>), the <b>database name</b> (<code>first_june</code>), the <b>password</b>, the <b>table name</b> (<code>order_history</code>) and the <b>sample ids/values</b> are my choices.
+</div>
+
+<p><b>1. The Maven dependency (example version — copy the current snippet from the Maven repository site):</b></p>
+<pre><code class="language-markup">&lt;dependencies&gt;
+    &lt;!-- MySQL Connector/J: a JAR of classes that lets Java talk to MySQL --&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;mysql&lt;/groupId&gt;
+        &lt;artifactId&gt;mysql-connector-java&lt;/artifactId&gt;
+        &lt;version&gt;8.0.33&lt;/version&gt;   &lt;!-- an 8.x version, as in class; newer releases use com.mysql:mysql-connector-j --&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;</code></pre>
+
+<p><b>2. Finding the driver class inside the connector JAR:</b></p>
+<pre><code># list the JAR's contents and look for the Driver classes
+jar -tvf mysql-connector-java-8.0.33.jar | findstr "jdbc/Driver"     # Windows
+jar -tvf mysql-connector-java-8.0.33.jar | grep "jdbc/Driver"        # Linux / macOS
+
+# you'll see two driver classes in 8.x, with SLASHES:
+#   com/mysql/cj/jdbc/Driver.class     &lt;-- newer: use this one
+#   com/mysql/jdbc/Driver.class        &lt;-- older: deprecated
+# in Class.forName you write the name with DOTS: "com.mysql.cj.jdbc.Driver"</code></pre>
+
+<p><b>3. Reading data — the four steps and the ResultSet loop (OrderHistory):</b></p>
+<pre><code class="language-java">import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+
+public class OrderHistory {
+
+    public void getOrders() throws ClassNotFoundException, SQLException {
+
+        // Step 1: register the driver (dynamic class loading; throws ClassNotFoundException)
+        Class.forName("com.mysql.cj.jdbc.Driver");
+
+        // Step 2: create the connection (host, port, database, username, password; throws SQLException)
+        Connection con = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/first_june", "root", "your_password");
+
+        // Step 3: create the statement - the carrier that sends the SQL
+        Statement stmt = con.createStatement();
+
+        // Step 4: execute the query - a select always gives a ResultSet
+        ResultSet rs = stmt.executeQuery("select * from order_history");
+
+        while (rs.next()) {                       // is there another record?
+            int id        = rs.getInt(1);         // index starts at 1
+            String item   = rs.getString(2);
+            int price     = rs.getInt(3);         // price treated as an integer in class
+            String status = rs.getString(4);
+            System.out.println(id + " | " + item + " | " + price + " | " + status);
+        }
+    }
+}</code></pre>
+
+<p><b>4. The class that starts the program (the instructor called this "my driver class" — not the JDBC driver!):</b></p>
+<pre><code class="language-java">public class App {
+    public static void main(String[] args) throws Exception {   // throwing keeps the demo short
+        OrderHistory history = new OrderHistory();
+        history.getOrders();
+    }
+}
+// Sample output (values are examples):
+// 1 | Laptop | 55000 | paid
+// 2 | Headphones | 2500 | hold
+// 3 | Mouse | 800 | hold      &lt;-- a record inserted from the MySQL console also shows up</code></pre>
+
+<p><b>5. Static vs dynamic class loading:</b></p>
+<pre><code class="language-java">// STATIC: the class is decided at compile time - you can't change it without recompiling
+Employee e = new Employee();
+
+// DYNAMIC: the class name is just a String - it can come from outside at runtime
+String className = args[0];                       // or read it from a property file
+Class&lt;?&gt; loaded = Class.forName(className);       // throws ClassNotFoundException (checked)
+
+// In JDBC the driver class is loaded dynamically, so you could even swap the driver name
+// (e.g. the old, deprecated class) without touching the rest of the program.</code></pre>
+
+<p><b>6. Updating data — executeUpdate returns how many records changed (OrderManagement):</b></p>
+<pre><code class="language-java">public class OrderManagement {
+
+    public void updateOrder() throws ClassNotFoundException, SQLException {
+        Class.forName("com.mysql.cj.jdbc.Driver");                       // steps 1-3 are common
+        Connection con = DriverManager.getConnection(
+                "jdbc:mysql://localhost:3306/first_june", "root", "your_password");
+        Statement stmt = con.createStatement();
+
+        // step 4: an update query -> executeUpdate (not executeQuery)
+        int rows = stmt.executeUpdate("update order_history set status = 'paid' where id = 2");
+        System.out.println(rows + " record(s) updated");                 // 1 record(s) updated
+    }
+}
+// In the MySQL console: select * from order_history;  -> the status has changed from hold to paid.</code></pre>
+
+<p><b>7. The same method with id and status as parameters (as in class — simple, but see the warning below):</b></p>
+<pre><code class="language-java">public void updateOrder(String id, String status) throws ClassNotFoundException, SQLException {
+    // ... steps 1-3 as above ...
+    String sql = "update order_history set status = '" + status + "' where id = " + id;
+    int rows = stmt.executeUpdate(sql);
+    System.out.println(rows + " record(s) updated");
+}
+
+// new OrderManagement().updateOrder("3", "canceled");</code></pre>
+
+<p><b>8. A safer version with PreparedStatement and try-with-resources (added — not shown in class):</b></p>
+<pre><code class="language-java">import java.sql.PreparedStatement;
+
+public int updateOrder(int id, String status) throws SQLException {
+    String sql = "update order_history set status = ? where id = ?";   // ? = placeholders, no string gluing
+
+    try (Connection con = DriverManager.getConnection(
+                 "jdbc:mysql://localhost:3306/first_june", "root", "your_password");
+         PreparedStatement ps = con.prepareStatement(sql)) {
+
+        ps.setString(1, status);          // first ?
+        ps.setInt(2, id);                 // second ?
+        return ps.executeUpdate();        // number of records updated
+    }                                     // connection and statement are closed automatically
+}</code></pre>
+
+<p><b>9. Create and delete go through executeUpdate too (added — values are my examples):</b></p>
+<pre><code class="language-java">// Create (the instructor did this one from the MySQL console)
+stmt.executeUpdate("insert into order_history (id, item_name, price, status) values (3, 'Mouse', 800, 'hold')");
+
+// Delete
+stmt.executeUpdate("delete from order_history where id = 3");</code></pre>
+
+<p><b>10. Anatomy of the connection URL (added):</b></p>
+<pre><code>jdbc:mysql://localhost:3306/first_june
+|    |       |         |    |
+|    |       |         |    +-- database name
+|    |       |         +------- port (MySQL default: 3306)
+|    |       +----------------- host: localhost = this computer; a remote server = its IP / host name
+|    +------------------------- the database vendor
++------------------------------ the protocol: JDBC</code></pre>
+
+</div>
+
+<div class="section">
+<h2>❓ Doubts / Questions Raised in Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question / Point</th><th>Answer Given in Class</th></tr>
+<tr><td>Do we have to start the MySQL server ourselves?</td><td>No — on a local Windows machine it's a Windows service that starts when the computer starts; no need to start it.</td></tr>
+<tr><td>Is the thing used to register the driver provided by Java or by the database?</td><td><code>Class</code> is in <code>java.lang</code> (capital C), and its static <code>forName</code> loads the class; the driver class you name comes from the MySQL connector JAR.</td></tr>
+<tr><td>Why is it called dynamic class loading?</td><td>Because the class name can be supplied at runtime (command-line argument, property file), so you don't decide at compile time which class loads.</td></tr>
+<tr><td>Isn't a class also loaded when we use <code>new</code>?</td><td>Yes — in both cases the class is loaded into memory. With <code>new</code> the decision was made at compile time, so it's static loading.</td></tr>
+<tr><td>What does "deprecated" mean?</td><td>Outdated — the old driver class still worked but printed a warning telling you to use the newer class.</td></tr>
+<tr><td>What is the exception thrown by <code>Class.forName</code>?</td><td><code>ClassNotFoundException</code>, a checked exception.</td></tr>
+<tr><td>Are the steps the same for every query?</td><td>Steps 1–3 (driver, connection, statement) are common; only the query/execute step changes — they can be moved into one method.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>💼 Likely Interview Questions From This Class</h2>
+<div class="tw">
+<table>
+<tr><th>Question</th><th>Answer</th></tr>
+<tr><td>What is JDBC?</td><td>Java Database Connectivity — it allows a Java program to interact with databases.</td></tr>
+<tr><td>Why can't Java talk to a database directly?</td><td>The database speaks SQL and doesn't understand Java; Java doesn't understand SQL. JDBC sits in between as the translator.</td></tr>
+<tr><td>What is a database driver? Why does every database have its own?</td><td>Software that translates between your program and the database (like a mouse or sound driver). Each vendor releases a language-specific driver for its database.</td></tr>
+<tr><td>What is MySQL Connector/J and how do you use it?</td><td>MySQL's Java driver — a JAR of classes. You add it as a dependency (Maven: paste the snippet in <code>pom.xml</code>).</td></tr>
+<tr><td>What are the steps to connect to a database with JDBC?</td><td>1) register the driver, 2) create the connection, 3) create a statement, 4) execute the SQL (and read the results).</td></tr>
+<tr><td>What does <code>Class.forName</code> do? What exception can it throw?</td><td>Loads the named class (the driver) into memory at runtime; throws the checked <code>ClassNotFoundException</code>.</td></tr>
+<tr><td>What is the difference between static and dynamic class loading?</td><td>Static: using <code>new</code>, the class is decided at compile time and can't change. Dynamic: <code>Class.forName(name)</code>, the name can be supplied at runtime (args / property file).</td></tr>
+<tr><td>When do you get ClassNotFoundException?</td><td>When the class name given for dynamic loading can't be found — e.g. a wrong driver class name.</td></tr>
+<tr><td>What do you need to create a database connection?</td><td>The host/URL (where the database is — localhost or a remote IP, plus port and database name), a username and a password.</td></tr>
+<tr><td>Which method creates the connection? Which exception does it throw?</td><td><code>DriverManager.getConnection(url, user, password)</code>; it throws the checked <code>SQLException</code>.</td></tr>
+<tr><td>What is a Statement?</td><td>The object created from the connection that carries the SQL to the database and brings back the result.</td></tr>
+<tr><td>What is the difference between <code>executeQuery</code> and <code>executeUpdate</code>?</td><td><code>executeQuery</code> runs a select and returns a ResultSet; <code>executeUpdate</code> runs an update and returns the number of records updated.</td></tr>
+<tr><td>What is a ResultSet and how do you iterate it?</td><td>An object holding the returned rows. Loop with <code>while (rs.next())</code> and read columns with <code>getInt/getString…(index)</code>, where the index starts at 1.</td></tr>
+<tr><td>Is registering the driver mandatory?</td><td>The instructor said it's optional, but better to do it.</td></tr>
+<tr><td>What is CRUD? How does it relate to what developers do?</td><td>Create, Read, Update, Delete — every system ends up doing these operations on a database.</td></tr>
+<tr><td>Do you have to start the MySQL server manually on your machine?</td><td>No — locally it runs as a Windows service that starts with the computer.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🎤 Likely Interviewer Follow-Up Questions (Added)</h2>
+<p class="small">These go beyond what the lecture said — expect them in Java backend interviews.</p>
+<div class="tw">
+<table>
+<tr><th>Follow-up</th><th>Short answer</th></tr>
+<tr><td>Statement vs PreparedStatement?</td><td>PreparedStatement uses <code>?</code> placeholders, is safer against SQL injection and can be reused/precompiled; Statement takes a complete SQL string.</td></tr>
+<tr><td>What is SQL injection and how do you prevent it?</td><td>Malicious input altering a query built by string concatenation; prevent it with PreparedStatement parameters.</td></tr>
+<tr><td>Why close the connection, statement and result set? How?</td><td>They hold database and memory resources; use try-with-resources so they're closed automatically.</td></tr>
+<tr><td>Is <code>Class.forName</code> still required in modern JDBC?</td><td>Usually not — JDBC 4.0+ drivers on the class path register themselves — but it's harmless and shows dynamic loading.</td></tr>
+<tr><td>ClassNotFoundException vs NoClassDefFoundError?</td><td>ClassNotFoundException: loading a class by name fails (checked). NoClassDefFoundError: a class that was available at compile time is missing at runtime (an error).</td></tr>
+<tr><td>Can you read ResultSet columns by name?</td><td>Yes — <code>rs.getString("status")</code>; it's more robust than positions.</td></tr>
+<tr><td>What does <code>executeUpdate</code> return for an update that matches no rows?</td><td>0.</td></tr>
+<tr><td>Where should the database URL and password live?</td><td>In configuration (a property file or environment variables), not hard-coded in source code.</td></tr>
+<tr><td>What is connection pooling?</td><td>Reusing a set of open connections instead of creating a new one for every request — creating connections is expensive (a later topic).</td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>📌 Lecture Takeaways</h2>
+<ul>
+<li><b>JDBC</b> lets a Java program interact with databases — a translator between Java and SQL.</li>
+<li>You're a <b>database user</b>, not a database expert; there are 100+ databases, each with its own SQL-speaking server.</li>
+<li>Every database vendor releases a <b>language-specific driver</b>; for MySQL + Java it's <b>Connector/J — a JAR</b>.</li>
+<li>Add it as a <b>Maven dependency</b>; from now on <b>any JAR you add comes from the Maven repository site</b>.</li>
+<li>The <b>four steps</b>: register the driver → create the connection → create a statement → execute SQL.</li>
+<li><code>Class.forName("…driver class…")</code> loads the driver dynamically (dots, not slashes); it throws the checked <code>ClassNotFoundException</code>.</li>
+<li><b>Static loading</b> (<code>new</code>) is decided at compile time; <b>dynamic loading</b> (<code>Class.forName</code>) at runtime — a classic interview question.</li>
+<li><code>DriverManager.getConnection</code> needs host, port, database, username and password; it throws the checked <code>SQLException</code>.</li>
+<li><code>executeQuery</code> returns a <b>ResultSet</b>: loop with <code>next()</code> and read columns by <b>index starting at 1</b>.</li>
+<li><code>executeUpdate</code> returns the <b>number of records updated</b>.</li>
+<li>The console and your Java program are <b>both clients</b> of the same database.</li>
+<li>The MySQL server runs as a <b>Windows service</b> — no need to start it.</li>
+<li>Everything is <b>CRUD</b>.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>🚧 Common Interview Traps</h2>
+<ul>
+<li><b>"Java can run SQL directly" / "the database understands Java."</b> Neither — JDBC translates.</li>
+<li><b>Using slashes in <code>Class.forName</code>.</b> The JAR listing shows slashes; the class name uses dots.</li>
+<li><b>Forgetting to add the connector dependency.</b> The driver class can't be found and you get <code>ClassNotFoundException</code>.</li>
+<li><b>Starting the ResultSet index at 0.</b> JDBC column indexes start at 1.</li>
+<li><b>Forgetting <code>rs.next()</code></b> — you must advance the cursor to read each row.</li>
+<li><b>Thinking <code>new</code> doesn't load the class.</b> Both ways load it; the difference is when the class is decided.</li>
+<li><b>Ignoring the deprecation warning.</b> It works, but switch to the newer driver class.</li>
+<li><b>Using <code>executeQuery</code> for an update (or vice-versa).</b> Select → <code>executeQuery</code> / ResultSet; update → <code>executeUpdate</code> / int.</li>
+<li><b>Mixing up "driver class" and the class with <code>main</code>.</b> The instructor used the word for both.</li>
+<li><b>Building SQL with string concatenation.</b> <span class="pill add">Added</span> It enables SQL injection; use PreparedStatement.</li>
+<li><b>Never closing connections.</b> <span class="pill add">Added</span> Use try-with-resources.</li>
+<li><b>Trying to "start MySQL" before running the program.</b> It's already a Windows service.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+
+<div class="card">
+<b>From the lecture</b>
+<ul style="margin-top:8px;">
+<li><b>Spend a few minutes understanding the four steps</b> — the instructor gave the class two to three minutes to absorb the program before moving on, and called this "really critical" concept; ask if anything is unclear.</li>
+<li>Recreate the demo: a Maven project with the <b>MySQL connector dependency</b>, a method that <b>reads all records</b> from your table, and a method that <b>updates a record's status</b>.</li>
+<li>Try the <b>"some more methods"</b> the instructor mentioned (other execute/get methods) and be comfortable with CRUD.</li>
+<li>Research <b>static vs dynamic class loading</b> on your own.</li>
+<li><b>Interact with the database every day</b> from now on; copy-paste the configuration (URL, class name) and type only the code.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>Suggested extra practice (added — not assigned in the lecture):</b>
+<ul style="margin-top:8px;">
+<li>Run <code>jar -tvf</code> on the connector JAR and find both driver classes; run the program with each and compare the output.</li>
+<li>Move the class name, URL, username and password into a property file and load them — then change the class name without recompiling.</li>
+<li>Deliberately misspell the driver class name and read the <code>ClassNotFoundException</code>; remove the dependency from <code>pom.xml</code> and read the error again.</li>
+<li>Add <code>insert</code> and <code>delete</code> methods so you have all four CRUD operations.</li>
+<li>Insert a row from the MySQL console, then run your read method to see it.</li>
+<li>Rewrite <code>updateOrder</code> with <code>PreparedStatement</code> and try-with-resources.</li>
+<li>Explain "why JDBC and what are the four steps?" out loud in under two minutes.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>🧾 Transcript Clean-Up Map</h2>
+<p class="small">The recording was auto-transcribed with many errors (and Hindi words mixed in). This is how I interpreted the unclear terms. A long career/mindset talk in the second half and several unreadable lines were left out rather than guessed.</p>
+<div class="tw">
+<table>
+<tr><th>Transcript wording</th><th>Interpreted as</th><th>Confidence</th></tr>
+<tr><td>"JAWA database", "JDBC stands for Java Eat this Connectivity"</td><td>Java Database Connectivity</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Rajeshtadi", "Rajeshwari", "Rajesh" (the first step)</td><td>Register (the driver)</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Class.formnet", "Dot, formula", "for them", "class.form there"</td><td><code>Class.forName</code></td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Execute QSL", "Execute Ruth"</td><td>Execute SQL / execute query</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"curd", "crude"</td><td>CRUD</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Melon project", "Maven"</td><td>A Maven project</td><td><span class="pill hi">High</span></td></tr>
+<tr><td>"Palm dot?" / "Inside? Palm dot?"</td><td><code>pom.xml</code></td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"MySQL CJ"</td><td>The newer driver class <code>com.mysql.cj.jdbc.Driver</code></td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"3, 2, double C… 06", "MySQL 20 something colon double slash"</td><td>Port 3306; the <code>jdbc:mysql://</code> URL prefix</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Driver up? Connector, drive it up", "Vanetta"</td><td>Connector/J</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"White Praven dependency"</td><td>Maven Dependencies (the library node)</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"on hold has been changed to Big"</td><td>Status changed from on hold to paid</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Insert into Audacity… 3, Mouse"</td><td>An insert of a third record (a "Mouse" order) into the order table</td><td><span class="pill med">Medium</span></td></tr>
+<tr><td>"Kumar Maj Sikundism"</td><td>The old, deprecated driver class name (<code>com.mysql.jdbc.Driver</code>)</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"for this RTC version, I'll provide you the compile time"</td><td>Possibly the dependency's compile scope — unclear</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"…I will get four records"</td><td>Record count after the insert — doesn't add up with two original rows plus one</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"Update… Set… Here, 2. Boom, bam, live, where id equal to This one"</td><td><code>update … set status = 'paid' where id = …</code> — exact id unclear</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"Reverse of the domain… MySQL is providing"</td><td>A remark about package naming — unclear</td><td><span class="pill low">Low</span></td></tr>
+<tr><td>Database name, password, table name</td><td>Not clearly stated; I used <code>first_june</code>, a placeholder password and <code>order_history</code></td><td><span class="pill low">Low</span></td></tr>
+<tr><td>"500 plus classes inside one JAR"</td><td>A rough figure quoted by the instructor, not a count of the connector</td><td><span class="pill low">Low</span></td></tr>
+</table>
+</div>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Previous Classes:</b> The <b>MySQL / SQL basics</b> class (the day before) — the database, tables, the console client, and the CRUD vocabulary; it ended with "tomorrow starts with JDBC". The <b>Maven</b> class — dependencies, <code>.m2</code>, local-first resolution, and the remark that a program can't connect to MySQL without the MySQL JAR. The <b>JAR</b> class (<code>jar -tvf</code>) and <b>exception handling</b> (checked exceptions). The earlier e-commerce project's in-memory repository is what a database will replace.</li>
+<li><b>Upcoming Topics:</b> The instructor said the class will keep using <b>these steps for the next couple of days</b>, and more methods can be tried. The minor project (an extension of your earlier project with MySQL as permanent storage) is where this gets applied. Anything beyond that wasn't specified.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+Section headings, card grouping, the flow diagrams, the terminology/comparison tables, the interview Q&amp;A, and the styling were added to match your earlier notes. The lecture content comes from your transcript. Because the transcript was auto-generated and often garbled, I corrected clear speech errors, flagged unclear ones in the clean-up map, and left out unreadable passages and the long career/mindset talk (only its clear points are summarised in one card). Everything marked with a yellow dashed box or the "Added" tag — JDBC as an API, automatic driver registration, driver class and Maven coordinate details, executeQuery/executeUpdate/execute, resource closing, PreparedStatement and SQL injection, credentials handling, the follow-up questions, the extra code samples and the practice list — is my clarification, not something the instructor said, so verify it against the JDBC and MySQL Connector/J documentation or your instructor before relying on it in an interview. All code is reconstructed from descriptions, not copied from the instructor's screen, and none of it was run against a real database.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Logging with Log4j</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+td.c,th.c{text-align:center;}
+td.yes{background:#e6f6ea;color:#1e8e3e;font-weight:700;text-align:center;}
+td.no{background:#f5f5f5;color:#aaa;text-align:center;}
+.tw{overflow-x:auto;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Logging with Log4j — Why <code style="background:rgba(255,255,255,.2);color:#fff;">System.out.println</code> Doesn't Scale, Log Levels, Configuration and Rolling Files</p>
+<p class="meta">Source: June 2026 offline class · Oct 28, 2026 · 45:28</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>What we use <code>System.out.println</code> for today, and why logs still matter in production</li>
+<li>Why SOP fails at scale, and what a logging framework changes</li>
+<li>Log levels, and which level production runs at</li>
+<li>Setting up Log4j in three steps; the configuration file that sits outside the code</li>
+<li>Appenders (console / file) and rolling log files</li>
+<li>Homework: configure logging in your JDBC project</li>
+</ul>
+<div class="flag">
+<b>How to read these notes:</b> green cards = taught in class; <b>yellow dashed boxes</b> = my additions, not said in class; orange boxes = interview angles. The transcript is auto-generated and noisy — some level names and parts of the demo are garbled — so the code and configuration here are my reconstruction of what he described.
+</div>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>What Are We Using System.out.println For Today?</b>
+<p>The instructor opened by asking why we write <code>System.out.println</code> (SOP). The answer: <b>to trace</b>. With no debugging mechanism you print lines so you can follow the flow of the program in the console. SOP does no business work — the logic runs regardless; the printing exists only for the developer, so they can look later.</p>
+<p style="margin-top:8px;">That tracing is still needed in production, but in a different form. When a customer complains "I placed an order three days back and didn't get it", <b>the developer goes to the log file and checks what happened</b> — without those details you can't tell whether the order was placed or rejected. Example from class: a customer in Delhi places an order, the product name arrives as <b>null</b>, the system logs it, and the next day you read the line and know the problem. Class demo: an <code>OrderManagement</code> flow — receive the order, validate the customer and quantity, check stock — logging each step so that later you can see, say, <em>"your order got rejected because…"</em>.</p>
+</div>
+
+<div class="card">
+<b>Why Logs Must Be Controlled — Volume and Cost</b>
+<ul style="margin-top:8px;">
+<li>Imagine <b>10,000 classes</b>, each full of SOP lines on every decision ("this is true, this is false, got this ID"). The output is huge — the instructor's figures were <b>terabytes every day</b>, and he mentioned a company that cleaned up petabytes of logs. His estimates were rough, but the point is storage costs money and copying logs to your local system from the server (say 20 TB) takes a long time.</li>
+<li>You don't need all of it all the time — maybe once in 30 days you look at a log, and the other 29 days it is unnecessary printing that slows the application down. <b>So: print only when needed, turn it on and off when you want.</b></li>
+<li><b>Analogy:</b> a phone keeps a call history for a limited period (he said about a month on his phone) — you can't check what happened six months back. Recording everything forever costs space and slows things, and you only look at it when something goes wrong.</li>
+<li>Everything has a limit, and logs are no exception.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>What SOP Can't Do — and What a Logging Framework Does</b>
+<p>The instructor's verdict: <b>SOP is not the right approach — you won't write it in a company.</b> The alternative is a <b>logging framework — Log4j</b>.</p>
+<div class="tw">
+<table>
+<tr><th>Problem with System.out.println</th><th>What Log4j gives you</th></tr>
+<tr><td><b>It always prints</b> — you can't skip it, even when the system is healthy.</td><td>You choose which messages are printed <b>by level</b>; if the system is fine, don't print.</td></tr>
+<tr><td><b>It can't be changed while the program runs</b> — to stop it you have to remove the line (a code change and a fresh deployment); to use it again, add it back.</td><td>You control the level <b>dynamically</b>, through a configuration file — <b>no code change</b>.</td></tr>
+<tr><td><b>It is static</b> — no notion of how serious a message is.</td><td>Every message has a <b>level</b> (trace, debug, info, warn, error, fatal).</td></tr>
+<tr><td><b>It only goes to the console</b> — and in production there is no Eclipse.</td><td>Output can be written to <b>files</b> on disk, and optionally to the console too.</td></tr>
+<tr><td><b>One stream that only grows.</b></td><td><b>Rolling files</b> — a new file per hour, day or size.</td></tr>
+</table>
+</div>
+<div class="hot" style="margin-bottom:0;">
+<b>🔥 Interview angle:</b> "What is the purpose of Log4j?" / "why not just print?" — control <em>what</em> is logged, <em>where</em> and at <em>what level</em>, without changing code.
+</div>
+</div>
+
+<div class="card">
+<b>Log Levels</b>
+<ul style="margin-top:8px;">
+<li>From lowest to highest: <b>TRACE → DEBUG → INFO → WARN → ERROR → FATAL</b>. The low levels mean "everything, in detail".</li>
+<li><b>Whatever level you configure, you get that level and everything above it.</b> TRACE prints all of it (like SOP did); INFO skips trace (and debug); ERROR prints only error and above.</li>
+<li><b>Production normally runs in ERROR mode</b> — only errors are captured, so logs stay small. That is why it is the <b>developer's responsibility to write the right log statements</b>.</li>
+<li>When a problem comes, you switch to <b>debug</b> (or trace) to get meaningful, detailed information.</li>
+</ul>
+<div class="tw">
+<table>
+<tr><th>Configured level ↓ / message level →</th><th class="c">TRACE</th><th class="c">DEBUG</th><th class="c">INFO</th><th class="c">WARN</th><th class="c">ERROR</th><th class="c">FATAL</th></tr>
+<tr><td><b>TRACE</b></td><td class="yes">✔</td><td class="yes">✔</td><td class="yes">✔</td><td class="yes">✔</td><td class="yes">✔</td><td class="yes">✔</td></tr>
+<tr><td><b>INFO</b></td><td class="no">✘</td><td class="no">✘</td><td class="yes">✔</td><td class="yes">✔</td><td class="yes">✔</td><td class="yes">✔</td></tr>
+<tr><td><b>ERROR</b> (production)</td><td class="no">✘</td><td class="no">✘</td><td class="no">✘</td><td class="no">✘</td><td class="yes">✔</td><td class="yes">✔</td></tr>
+</table>
+</div>
+<div class="lane">
+<div class="label">Investigating a production problem</div>
+<div class="flowbox">
+<div class="fstep">system runs at ERROR — little detail</div>
+<div class="farrow">→</div>
+<div class="fstep notify">change the level to DEBUG / TRACE in the config file</div>
+<div class="farrow">→</div>
+<div class="fstep">new request comes</div>
+<div class="farrow">→</div>
+<div class="fstep notify">read the actual flow in the log</div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<b>The Developer's Mindset — Find One Line in Lakhs</b>
+<ul style="margin-top:8px;">
+<li><b>Think like an Amazon developer:</b> one customer says their order failed, while lakhs of customers placed orders at the same time. <b>How much log does the system generate, and how do you find the one line for that customer?</b> That is why logging matters — don't think "hello world".</li>
+<li>The instructor's recurring message: <b>logic isn't the critical part — understand the process.</b> Logic comes once you join a company; "before logic, you should know the right process".</li>
+<li><b>Logging is compulsory</b>, even for one line of code. It is <b>standard practice</b>, and nobody will give it to you as a requirement — "develop the application, write logs". Every system writes logs; they are heavy and necessary.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Setting Up Log4j — Three Steps</b>
+<ol style="padding-left:20px;margin-top:8px;">
+<li><b>Dependencies in <code>pom.xml</code>:</b> the <b>Log4j API</b> and <b>Log4j Core</b>.</li>
+<li><b>A configuration file</b> in the project's resources — the instructor called it a log4j properties file. It holds <b>the settings for logging</b>:
+<ul style="margin-top:6px;">
+<li>the <b>pattern</b> of each log line (time, package name, class name, message…),</li>
+<li>the <b>destination</b>: the console and/or a <b>file location</b>,</li>
+<li>the <b>level</b> you want (trace and above, error and above…).</li>
+</ul></li>
+<li><b>In the code:</b> create a logger with <code>LogManager.getLogger(…)</code> and call methods such as <code>logger.info(…)</code>, <code>logger.error(…)</code> where you used to print.</li>
+</ol>
+<p style="margin-top:8px;"><b>The big advantage:</b> the configuration file sits <b>outside your code</b>, so changing the level means <b>no code change</b>. This is the only code you write; "there's not much coding here". To convert an existing class, the SOP lines are replaced by logger calls — the recording suggests a tool did the replacement for him, with <b>no change to the business logic</b>.</p>
+</div>
+
+<div class="card">
+<b>The Demo — Changing the Level Without Touching the Code</b>
+<ul style="margin-top:8px;">
+<li>He logged at several levels: normal flow as info, problems as errors. Then <b>only the configuration</b> changed:</li>
+<li><b>Error</b> → only the error line (and fatal) appeared. <b>Info</b> → trace was gone, info and above remained. <b>Trace</b> → every line appeared, with all the details.</li>
+<li><b>The same code</b>, different output — "now you'll see the magic". That is the difference between SOP and logging: <b>you control the level</b>.</li>
+<li><b>Where it goes:</b> with a file appender the lines are written to the log file; if you also keep the console appender they show on the console too. In <b>production</b> you run on a <b>Linux box</b> with no Eclipse, so the console is turned off and <b>only the file</b> is written — you go and read the file on the server.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Rolling Files — Don't Let One File Grow Forever</b>
+<ul style="margin-top:8px;">
+<li>Logs are usually retained for <b>a couple of months</b> (depending on the project). A single file would keep growing until nobody could open it — "let's say 200 GB: can you open that file? No."</li>
+<li>So use a <b>rolling file appender</b>: change the file by <b>time</b> or <b>size</b>. Typically every <b>hour</b> or every <b>day</b> — at midnight the current file is renamed with the date (for example the 28th of October) and a new file starts a second later.</li>
+<li><b>Size-based rolling</b> also works: "don't wait for an hour — at 100 MB, write a new one".</li>
+<li>For the demo he rolled <b>every minute</b>, because he couldn't wait an hour: when the minute changed, the old file moved aside and a fresh one started. You set the rolling <b>pattern</b> in the configuration.</li>
+<li>Whether it is hours or days depends on the nature of the application and how much it logs.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Instructor's Closing Remarks and Homework</b>
+<ul style="margin-top:8px;">
+<li><b>Homework:</b> <b>configure logging for your existing JDBC project</b>, and from today <b>don't write SOP — write logs</b>. Do it at least <b>7 days</b> so you feel comfortable. (He checked in the files.)</li>
+<li>Try to <b>understand the domain</b>. He said the question "why do I write this?" should never be asked — <b>before the task, understand why the company pays you</b> — then start writing code. Follow the process.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification:</b>
+<ul style="margin-top:8px;">
+<li><b>Log4j 2:</b> the <code>LogManager.getLogger</code> style belongs to <b>Log4j 2</b> (packages <code>org.apache.logging.log4j</code>). Early 2.x versions had a serious security hole (<b>Log4Shell, CVE-2021-44228</b>), so copy a <b>current</b> version from the Maven repository site rather than an old one from an example.</li>
+<li><b>Level names:</b> the recording garbles some of them; I used the standard Log4j order. <code>FATAL</code> sits above <code>ERROR</code>; <code>OFF</code> and <code>ALL</code> also exist.</li>
+<li><b>Applying a level change:</b> Log4j 2 can re-read its configuration periodically (the <code>monitorInterval</code> setting), so a level change can take effect without a restart. After investigating, set the level back to ERROR so the logs stay small.</li>
+<li><b>Write messages with placeholders</b> — <code>logger.info("Order {} placed", orderId)</code> — and pass an exception as the last argument (<code>logger.error("…", e)</code>) so the stack trace is logged.</li>
+<li><b>Singleton:</b> the instructor described the logger as the singleton pattern. More precisely, <code>LogManager</code> hands out one cached logger per name, so the usual practice is one <code>static final</code> logger per class.</li>
+<li><b>Never log secrets</b> — passwords, card numbers, tokens.</li>
+</ul>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the instructor configured this on screen and the transcript only describes it, so these snippets are <b>my reconstruction</b> — the class names, file path and pattern are my choices. The ideas (API + Core dependencies, a properties file outside the code, <code>LogManager.getLogger</code>, a level in the configuration, console and file output, rolling files) are from the class. Nothing here was run.
+</div>
+
+<p><b>1. Dependencies in pom.xml (take the current 2.x version from the Maven repository site):</b></p>
+<pre><code class="language-markup">&lt;dependencies&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.apache.logging.log4j&lt;/groupId&gt;
+        &lt;artifactId&gt;log4j-api&lt;/artifactId&gt;
+        &lt;version&gt;&lt;!-- current 2.x version --&gt;&lt;/version&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.apache.logging.log4j&lt;/groupId&gt;
+        &lt;artifactId&gt;log4j-core&lt;/artifactId&gt;
+        &lt;version&gt;&lt;!-- same version as log4j-api --&gt;&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;</code></pre>
+
+<p><b>2. The configuration file — src/main/resources/log4j2.properties (outside your Java code):</b></p>
+<pre><code class="language-properties">status = error
+name = AppConfig
+
+# --- console output (turn this off in production) ---
+appender.console.type = Console
+appender.console.name = ConsoleAppender
+appender.console.layout.type = PatternLayout
+appender.console.layout.pattern = %d{yyyy-MM-dd HH:mm:ss} %-5level %c{1} - %msg%n
+
+# --- file output that rolls over ---
+appender.rolling.type = RollingFile
+appender.rolling.name = FileAppender
+appender.rolling.fileName = logs/application.log
+appender.rolling.filePattern = logs/application-%d{yyyy-MM-dd}.log
+#   for the every-minute experiment use: logs/application-%d{yyyy-MM-dd-HH-mm}.log
+appender.rolling.layout.type = PatternLayout
+appender.rolling.layout.pattern = %d{yyyy-MM-dd HH:mm:ss} %-5level %c - %msg%n
+appender.rolling.policies.type = Policies
+appender.rolling.policies.time.type = TimeBasedTriggeringPolicy
+appender.rolling.policies.time.interval = 1
+appender.rolling.policies.size.type = SizeBasedTriggeringPolicy
+appender.rolling.policies.size.size = 100MB
+
+# --- THE level: change error -&gt; info -&gt; trace here, no code change ---
+rootLogger.level = error
+rootLogger.appenderRef.console.ref = ConsoleAppender
+rootLogger.appenderRef.file.ref = FileAppender</code></pre>
+
+<p><b>3. Using the logger instead of System.out.println (the order flow from class):</b></p>
+<pre><code class="language-java">import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+
+public class OrderManagement {
+
+    private static final Logger logger = LogManager.getLogger(OrderManagement.class);
+
+    public void placeOrder(String customerId, String productName, int quantity) {
+        logger.trace("placeOrder() entered");
+        logger.info("Order received for customer {}", customerId);
+
+        if (productName == null) {
+            logger.error("Order failed for customer {}: product name came as null", customerId);
+            return;
+        }
+        if (quantity &lt;= 0) {
+            logger.warn("Customer {} sent an invalid quantity {}", customerId, quantity);
+            return;
+        }
+
+        logger.debug("Validated order: product={}, quantity={}", productName, quantity);
+        // ... business logic -- unchanged ...
+        logger.info("Order placed for customer {}", customerId);
+    }
+}
+// rootLogger.level = error  -&gt; only the "Order failed ..." line is printed
+// rootLogger.level = info   -&gt; the info, warn and error lines
+// rootLogger.level = trace  -&gt; everything, including placeOrder() entered</code></pre>
+
+</div>
+
+<div class="section">
+<h2>✅ Action Items</h2>
+<div class="flag" style="margin-top:0;">
+<b>Suggested practice (added — beyond the one homework in the card above):</b>
+<ul style="margin-top:8px;">
+<li>Run the same program at error, info and trace by editing only the configuration, and compare the output.</li>
+<li>Turn the console appender off so only the file is written, then open the log file.</li>
+<li>Set the rolling to every minute and watch the files appear; then switch to daily and 100 MB.</li>
+<li>Pick one failure in your JDBC project (for example an update that matches no row) and write the log line you'd want to find three days later.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Applies to:</b> your existing JDBC project (the homework), and <b>pom.xml</b> dependencies from the Maven classes.</li>
+<li><b>Echoes:</b> the project-review advice to <b>keep configuration outside the code</b> — the log level and file settings are exactly that kind of configuration.</li>
+<li><b>Later:</b> not specified in this recording.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+Layout, diagrams and the level table are my additions; the lecture content comes from your transcript. Yellow dashed boxes mark everything the instructor didn't say. The configuration and code are reconstructed from his description and weren't run. The instructor's volume figures (terabytes, petabytes) were rough estimates, and no student questions came up in this class.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-properties.min.js"></script>
+</body>
+</html>
