@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Spring Framework: IoC Container, Beans &amp; XML Configuration</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Spring Framework — The IoC Container, Beans and Creating Beans with XML Configuration</p>
+<p class="meta">Source: Kodewala class · Nov 3, 2026</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>What the Spring Framework is, and why it is called lightweight; its modules</li>
+<li>Bean, Inversion of Control (IoC) and the IoC container</li>
+<li>The two container types: BeanFactory and ApplicationContext</li>
+<li>Demo: creating <code>Employee</code> beans from an XML file and fetching them with <code>getBean</code></li>
+</ul>
+<div class="flag">
+<b>How to read these notes:</b> green cards = taught in class; <b>yellow dashed boxes</b> = my additions, not said in class; orange boxes = interview angles. The audio was noisy and the instructor typed the demo on screen, so the code is my reconstruction; a few words (the version number, one server name) were unclear in the recording and are marked where they matter.
+</div>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>What Is the Spring Framework?</b>
+<ul style="margin-top:8px;">
+<li>Spring is an <b>open-source, lightweight, web-development framework</b>. With it you can build <b>web / enterprise applications</b>. The class starts with it to see "why Spring is so powerful and why everybody is talking about Spring and Spring Boot".</li>
+<li><b>Open source:</b> you can download and modify the source code.</li>
+<li><b>Lightweight:</b> before Spring there was <b>EJB</b>, which was heavyweight — even for a small piece of functionality you had to load many things (all the modules). Spring is <b>plug and play</b>: need only security → take the security module; need MVC → take the MVC module. You use only the modules you need, and the application runs in an application server such as Tomcat.</li>
+<li>Spring has many modules — <b>Spring Core</b> (IoC and dependency injection), <b>Web / MVC</b>, <b>Data JPA</b>, <b>Security</b>, <b>AOP</b> (aspect-oriented programming), and AI integration. The class starts with Core and moves forward.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>The Instructor's Study Rules</b>
+<ul style="margin-top:8px;">
+<li><b>Do the homework every day</b> — not "Monday to Friday I'll learn, the weekend I'll practise". Setup gets people stuck sometimes, and setup <b>comes with experience; there is no fixed formula</b> (Tomcat not starting → refresh; port problems; and so on).</li>
+<li><b>If you can't set up Tomcat properly, there's no point learning the framework</b> — make sure the setup works on your machine.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Bean — Just a New Word for a Managed Object</b>
+<p>In Java we say "object". <b>Inside Spring, an object that is managed by the Spring Framework is called a bean.</b> A bean is nothing special — it's an object.</p>
+<p style="margin-top:8px;">You never say "I'm unable to create an Employee object inside Spring". You say <em>"create the bean for Employee"</em>. The terminology moves from object to bean.</p>
+<div class="hot" style="margin-bottom:0;">
+<b>🔥 Interview angle:</b> "What is a bean?" — an object managed by the Spring container.
+</div>
+</div>
+
+<div class="card">
+<b>Inversion of Control (IoC)</b>
+<div class="tw">
+<table>
+<tr><th></th><th>Before Spring (plain Java)</th><th>With Spring</th></tr>
+<tr><td>Who creates the object?</td><td>Your application — with <code>new</code></td><td>The <b>IoC container</b> creates it</td></tr>
+<tr><td>Who manages the life cycle?</td><td>The application: <b>create → use → destroy</b>. You write the code to manage it.</td><td>The container manages the whole life cycle</td></tr>
+<tr><td>What the developer does</td><td>Creates, uses and destroys the object</td><td><b>Requests</b> the bean from the container, uses it, and gives it back</td></tr>
+<tr><td>Reuse or destroy?</td><td>Your decision</td><td>The container decides whether to destroy the bean or reuse it</td></tr>
+</table>
+</div>
+<ul style="margin-top:10px;">
+<li>The responsibility for the object's life cycle has been <b>transferred from the application to a container</b>. That design is <b>Inversion of Control</b>.</li>
+<li>You say "I want this bean", the container hands you the object, you call its methods — "you don't have to use the new keyword", and "forget the rest — the IoC container will manage it".</li>
+</ul>
+<div class="hot" style="margin-bottom:0;">
+<b>🔥 Interview angle:</b> "What is IoC?" — the object life-cycle responsibility moves from the application to the container.
+</div>
+</div>
+
+<div class="card">
+<b>How the Container Works — What You Must Supply</b>
+<p>The IoC container is just a process in memory (the JVM). Developers must give it information so anyone can get beans from it:</p>
+<ol style="padding-left:20px;margin-top:8px;">
+<li><b>For which class to create a bean</b> — a POJO (plain old Java object): the class with fields and getters/setters, e.g. <code>Employee</code>.</li>
+<li><b>How to create and initialise it</b> — in today's approach, an <b>XML configuration</b>.</li>
+</ol>
+<ul style="margin-top:8px;">
+<li>The container then creates the object, gives it a <b>unique ID</b> and initialises its fields with the values from the configuration. The bean is now available inside the container.</li>
+<li>To get one, you <b>request it by name or ID</b> — there may be thousands of beans, so every bean has a <b>unique ID</b>. You use it and it goes back to the container for the next person.</li>
+<li>There are <b>two ways to define beans</b>: <b>XML</b> (today) and <b>Java</b> configuration — which, with annotations (as I read the recording), comes from the next class.</li>
+</ul>
+<div class="lane">
+<div class="label">Request and return</div>
+<div class="flowbox">
+<div class="fstep">Developer supplies: class + XML config</div>
+<div class="farrow">→</div>
+<div class="fstep notify">IoC container creates the beans (unique IDs)</div>
+<div class="farrow">→ getBean("emp1") →</div>
+<div class="fstep">Application gets the bean and uses it</div>
+<div class="farrow">→ returned →</div>
+<div class="fstep notify">Container: reuse or destroy</div>
+</div>
+</div>
+</div>
+
+<div class="card">
+<b>Two Types of IoC Container</b>
+<div class="tw">
+<table>
+<tr><th></th><th>BeanFactory</th><th>ApplicationContext</th></tr>
+<tr><td>Instructor's description</td><td>The older, simpler container — a <b>lazy initializer</b>; "outdated"</td><td>The <b>more powerful</b> container; the very famous one</td></tr>
+<tr><td>Use for</td><td>A small application with limited users and limited scope</td><td><b>Production-grade applications</b></td></tr>
+<tr><td>In class</td><td>Not used</td><td><b>Used</b> (the advanced one)</td></tr>
+</table>
+</div>
+<div class="hot" style="margin-bottom:0;">
+<b>🔥 Interview angle:</b> "BeanFactory vs ApplicationContext?" — BeanFactory is lazy and for small applications; ApplicationContext is more powerful and what production uses.
+</div>
+</div>
+
+<div class="card">
+<b>The Demo — Creating Beans with XML</b>
+<ul style="margin-top:8px;">
+<li><b>Project:</b> a standalone Maven project (the web part isn't needed yet) containing an <code>Employee</code> class with name and ID fields and getters/setters.</li>
+<li><b>Dependency:</b> the <b>spring-context</b> Maven dependency. The instructor said to use <b>version 6.1</b> (as heard) and repeated his rule: <b>never use the latest version — use N−1</b>, where N is the newest; and in advanced Java, <b>use the same version throughout</b> instead of playing with versions.</li>
+<li><b>Java version:</b> his run failed because the project was on an older Java — <b>Spring needs a minimum of Java 17</b>. "Start from 17."</li>
+<li><b>The XML file:</b> any file name works. It starts with the <code>&lt;beans&gt;</code> schema header (the one from yesterday). Inside, a <code>&lt;bean&gt;</code> has an <b><code>id</code></b> (the name you'll request it by — <code>emp1</code>) and a <b><code>class</code></b> (the fully qualified class name), with a <code>&lt;property&gt;</code> for each field to initialise (name, ID).</li>
+<li><b>Starting the container:</b> create an <b><code>ApplicationContext</code></b> by passing the XML path — <code>ClassPathXmlApplicationContext</code> — which starts the container and builds the beans.</li>
+<li><b>Getting the bean:</b> <code>getBean("emp1")</code>. It returns a generic <code>Object</code>, so <b>downcast to Employee</b>.</li>
+<li><b>Result:</b> the object exists although nobody wrote <code>new</code> — "that is the bean"; the IoC container manages it and its memory.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>What Happens With a Wrong ID, and Adding More Beans</b>
+<ul style="margin-top:8px;">
+<li>Change the ID in <code>getBean</code> to one that isn't defined and you get a <b>"no such bean definition"</b> exception (<code>NoSuchBeanDefinitionException</code>) — the container has no bean with that name.</li>
+<li>You can define <b>hundreds of beans</b>. He added a second one, <code>emp2</code>, with a different name (Aditya); request <code>emp1</code> or <code>emp2</code> to get the respective object.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Q&amp;A From the End of the Class</b>
+<div class="tw">
+<table>
+<tr><th>Question</th><th>Answer Given</th></tr>
+<tr><td>We created two beans. What if I need more than two — will the application generate them automatically?</td><td>No — you get only the beans you define. This is the <b>core principle</b>; later, beans are created <b>dynamically</b> from user requests. For now it's about understanding the fundamentals. He tied it to yesterday's classes — the request handler and view resolver objects that MVC needs are the kind of objects created as beans.</td></tr>
+<tr><td>(Several students were unsure about the downcast.)</td><td><code>getBean</code> returns the generic <code>Object</code>, so you cast it to the class you know it is — here <code>Employee</code>.</td></tr>
+</table>
+</div>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification:</b>
+<ul style="margin-top:8px;">
+<li><b>Singleton by default:</b> unless you say otherwise, the container creates <b>one shared instance</b> per bean ID — which is what "returned to the container so the next person can use it" really means. Asking twice for <code>emp1</code> gives the same object (compare with <code>==</code>). A <i>prototype</i> scope gives a fresh object each time.</li>
+<li><b>Lazy vs eager:</b> an <code>ApplicationContext</code> creates its singleton beans <b>when it starts</b>, so mistakes in the XML show up straight away; a <code>BeanFactory</code> creates them only when asked — the "lazy" the instructor mentioned. <code>ApplicationContext</code> builds on <code>BeanFactory</code>.</li>
+<li><b>Avoid the cast:</b> <code>getBean("emp1", Employee.class)</code> returns the right type directly (snippet 3).</li>
+<li><b>Java 17:</b> Spring Framework 6 and later require Java 17 or newer, which matches what he hit.</li>
+</ul>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the instructor typed it live; the transcript only describes it. These snippets are <b>my reconstruction</b> — the package name (<code>com.example.spring</code>), file name (<code>beans.xml</code>) and the names/IDs are my choices. The structure (a bean with an id and class, property values, <code>ApplicationContext</code>, <code>getBean</code> with a downcast) is from the class. Nothing was run.
+</div>
+
+<p><b>1. The Employee class (a POJO) and the Maven dependency:</b></p>
+<pre><code class="language-java">package com.example.spring;
+
+public class Employee {
+    private String name;
+    private String id;
+
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
+
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+
+    @Override
+    public String toString() { return "Employee[id=" + id + ", name=" + name + "]"; }
+}</code></pre>
+<pre><code class="language-markup">&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-context&lt;/artifactId&gt;
+    &lt;version&gt;6.1.14&lt;/version&gt;   &lt;!-- a 6.1.x version, as in class (N-1 rule); copy the exact one from the Maven repository site --&gt;
+&lt;/dependency&gt;</code></pre>
+
+<p><b>2. The XML configuration — tells the container which beans to create (src/main/resources/beans.xml):</b></p>
+<pre><code class="language-markup">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+                           https://www.springframework.org/schema/beans/spring-beans.xsd"&gt;
+
+    &lt;!-- id = the name you request it by; class = which class to create a bean of --&gt;
+    &lt;bean id="emp1" class="com.example.spring.Employee"&gt;
+        &lt;property name="name" value="Ravi"/&gt;
+        &lt;property name="id"   value="101"/&gt;
+    &lt;/bean&gt;
+
+    &lt;bean id="emp2" class="com.example.spring.Employee"&gt;
+        &lt;property name="name" value="Aditya"/&gt;
+        &lt;property name="id"   value="102"/&gt;
+    &lt;/bean&gt;
+&lt;/beans&gt;</code></pre>
+
+<p><b>3. Starting the container and requesting beans:</b></p>
+<pre><code class="language-java">import org.springframework.context.ApplicationContext;
+import org.springframework.context.support.ClassPathXmlApplicationContext;
+
+public class App {
+    public static void main(String[] args) {
+
+        // start the IoC container and give it the XML (the container builds the beans now)
+        ApplicationContext context = new ClassPathXmlApplicationContext("beans.xml");
+
+        // request a bean by its id; getBean returns Object, so downcast (as in class)
+        Employee emp1 = (Employee) context.getBean("emp1");
+        System.out.println(emp1);                        // Employee[id=101, name=Ravi]
+
+        Employee emp2 = (Employee) context.getBean("emp2");
+        System.out.println(emp2);                        // Employee[id=102, name=Aditya]
+
+        // an id that isn't defined:
+        // context.getBean("emp9");   // NoSuchBeanDefinitionException: No bean named 'emp9' available
+    }
+}</code></pre>
+
+<p><b>4. Without the cast, and closing the container cleanly (added):</b></p>
+<pre><code class="language-java">try (ClassPathXmlApplicationContext context = new ClassPathXmlApplicationContext("beans.xml")) {
+    Employee emp1 = context.getBean("emp1", Employee.class);   // typed: no downcast
+    Employee again = context.getBean("emp1", Employee.class);
+    System.out.println(emp1 == again);                          // true: one shared (singleton) bean
+}   // closing the context lets the container destroy its beans properly</code></pre>
+
+</div>
+
+<div class="section">
+<h2>✅ Action Items / Homework</h2>
+<div class="card" style="margin-top:0;">
+<b>From the class</b>
+<ul style="margin-top:8px;">
+<li>Write <b>similar programs with XML</b> — take <b>5–6 examples</b> and play with the setup. Tomorrow's class moves to <b>Java-based configuration</b>.</li>
+<li>Make sure your <b>Tomcat/Java setup works</b>, and use <b>Java 17 or newer</b>. Let the instructor know about any doubts. (He said he'd check in the code.)</li>
+</ul>
+</div>
+<div class="flag">
+<b>Suggested practice (added):</b>
+<ul style="margin-top:8px;">
+<li>Make a second bean class (for example <code>Product</code>) with an int field and a numeric <code>value</code> in the XML.</li>
+<li>Request the same ID twice and compare the references; then request an ID that doesn't exist and read the exception.</li>
+<li>Explain "bean", "IoC" and "BeanFactory vs ApplicationContext" out loud in one minute each.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Builds on:</b> the previous day's setup and the MVC-style classes (request handler, view resolver) that the instructor relates to beans; the Maven dependency and version practice from the Maven and JUnit classes ("use N−1"); the Tomcat/Eclipse setup from the enterprise web application class.</li>
+<li><b>Next:</b> Java-based configuration and annotations (tomorrow), then the other Spring modules — Web MVC, Data JPA, Security, AOP.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+Layout, tables and the diagram are my additions; the lecture content comes from your transcript. Yellow dashed boxes mark everything the instructor didn't say. The code is reconstructed and wasn't run. Housekeeping chatter (phone interruptions, other conversations) was left out.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>

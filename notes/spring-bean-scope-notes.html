@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Spring Bean Scope</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+html{scroll-behavior:smooth;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:32px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:6px;border-left:6px solid #0066ff;padding-left:12px;}
+.section .sub{color:#777;font-size:14px;margin-bottom:14px;padding-left:18px;}
+.section h3{color:#0066ff;font-size:18px;margin:26px 0 6px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+.card.add{background:#fffdf2;border:2px dashed #e0b400;border-left:6px solid #e0b400;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+.card.add b{color:#a67c00;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:14.5px;}
+code{font-size:14.5px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:16px;}
+th{background:#0077ff;color:white;padding:11px;text-align:left;}
+td{padding:11px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.pill{display:inline-block;padding:1px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;margin-left:6px;vertical-align:middle;}
+.pill.lec{background:#e3f2fd;color:#0066ff;}
+.pill.add{background:#fff3cd;color:#a67c00;}
+.pill.part{background:#efe9ff;color:#5b3fd1;}
+.jump{margin-top:12px;font-size:14px;}
+.jump a{display:inline-block;margin:4px 8px 4px 0;padding:4px 14px;border-radius:20px;background:#e3f2fd;color:#0066ff;text-decoration:none;font-weight:600;}
+.qa{background:#f8fbff;border-left:5px solid #6c63ff;padding:16px 18px;border-radius:10px;margin:16px 0;}
+.qa .q{font-weight:600;color:#3b3b98;}
+.qa .a{margin-top:6px;}
+.num{display:inline-block;min-width:34px;padding:0 8px;margin-right:8px;border-radius:14px;background:#6c63ff;color:white;font-size:12.5px;font-weight:600;text-align:center;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Spring Bean Scope — Singleton, Prototype, Request, Session and Application, with a FinTech Example</p>
+<p class="meta">Source: Kodewala class · Nov 18, 2026 · recording 1:08:41 — an opening revision, a short bean-scope explanation and a hands-on set-up</p>
+</div>
+
+<div class="section">
+<h2>🎯 Read This First</h2>
+<div class="flag">
+<b>How much of this is lecture?</b> The transcript is noisy and the bean-scope part is short. The instructor named the five scopes, said why scope exists, explained application scope with a "100 users" example, and said the web scopes can't be validated until Spring web starts. <b>Everything else — the lifecycle, thread safety, how Spring stores instances, the code, the diagrams and the interview material — is my explanation of standard Spring behaviour</b>, written so you can follow the topic without replaying the lecture. Every such card has a <span class="pill add">🧠 Added</span> tag and a dashed yellow border; lecture cards are green and tagged <span class="pill lec">📘 Lecture</span>. Unclear audio is not guessed; where a line is garbled I say so.
+</div>
+<div class="jump"><b>Jump to:</b>
+<a href="#s1">1 · Lecture summary</a><a href="#s2">2 · Concepts</a><a href="#s3">3 · Code</a><a href="#s4">4 · Comparison</a><a href="#s5">5 · Real-world</a><a href="#s6">6 · Interview Q&amp;A</a><a href="#s7">7 · Assignment</a><a href="#s8">8 · Cheat sheet</a>
+</div>
+</div>
+
+<!-- ============================ 1 ============================ -->
+<div class="section" id="s1">
+<h2>📋 1 · Lecture Summary</h2>
+<p class="sub">In the instructor's order. Only what was said.</p>
+
+<div class="card">
+<b>1.1 · Revision of the previous topics</b> <span class="pill lec">Lecture</span>
+<p style="margin-top:6px;">The class opened by quickly revising the Spring ideas so far:</p>
+<ul>
+<li><b>Bean</b> — an object managed by Spring (the IoC container); a managed object is called a bean.</li>
+<li><b><code>@Primary</code> and <code>@Qualifier</code></b> — both for conflict cases: several bean definitions returning the same type (his example: three definitions all returning an employee).</li>
+<li><b><code>@Configuration</code></b> — class level; "this class is responsible for bean definitions". <b><code>@ComponentScan</code></b> — scan the named package for components. <b><code>@Component</code></b> — ask Spring to manage a bean of the class. <b><code>@Autowired</code></b> (read from the garbled "AutoWire") — inject the dependencies.</li>
+<li><b>Containers:</b> the small <code>BeanFactory</code> for small applications; <code>ApplicationContext</code> for large, production-grade ones.</li>
+<li><b>Three ways of creating beans:</b> XML, Java configuration and annotations. He said object creation is "a little tricky" and some students don't get the confidence yet.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>1.2 · The purpose of bean scope</b> <span class="pill lec">Lecture</span>
+<p style="margin-top:6px;">"What is the purpose of bean scope? <b>How do we control</b> [object creation]? Otherwise — if you keep on creating —" Sometimes you need <b>only one bean</b>, with no more objects; sometimes you want <b>a new object every time</b>. Scope is how you control that.</p>
+</div>
+
+<div class="card">
+<b>1.3 · The five scopes, as he described them</b> <span class="pill lec">Lecture</span>
+<div class="tw">
+<table>
+<tr><th>Scope</th><th>His words, tidied</th></tr>
+<tr><td><b>Singleton</b></td><td>"If you want one bean to be created — make that a single [singleton]." No more objects, no more beans.</td></tr>
+<tr><td><b>Prototype</b></td><td>"Every time somebody requests, give a new object, a new bean — make it prototype."</td></tr>
+<tr><td><b>Request</b></td><td>"If you want [it] within the request, go for request."</td></tr>
+<tr><td><b>Session</b></td><td>"...the same session — session."</td></tr>
+<tr><td><b>Application</b></td><td>"...and application."</td></tr>
+</table>
+</div>
+<p class="small" style="margin-top:6px;">The recording's wording for the first two is rough ("single turn"), but singleton and prototype are clear from the explanation that follows.</p>
+</div>
+
+<div class="card">
+<b>1.4 · Application scope — the "100 users" example</b> <span class="pill lec">Lecture</span>
+<p style="margin-top:6px;">An application is running and <b>100 users are connected</b>, from different systems. If a bean is at <b>application level, all of them see the same bean</b> — "you have one system, another system… all you'll see the same."</p>
+</div>
+
+<div class="card">
+<b>1.5 · The web scopes can't be validated yet</b> <span class="pill lec">Lecture</span>
+<p style="margin-top:6px;">The request, session and application scopes "will be more useful when we start Spring web". <b>For now they can't be validated</b> — but "you understand the idea". No questions came up.</p>
+</div>
+
+<div class="card">
+<b>1.6 · The hands-on task</b> <span class="pill part">Lecture — partly unclear</span>
+<ul style="margin-top:6px;">
+<li>Create a <b>new project</b> with a <b>meaningful</b> example; a group name that is a kind of department — he gave <b>fintech</b> ("just give group as fintech only") — and an artifact that is the project name, heard as <b>bean-scope</b>. "How can we learn that? Try bean-scope."</li>
+<li>Bean names should be meaningful. He added that they should be related to "your delivery" — the exact wording is unclear.</li>
+<li>The rest of this recording is classroom chatter (font size, computer skills, work-from-home remarks) and is left out.</li>
+</ul>
+</div>
+
+<h3>Coverage map — your 13 topics against the lecture</h3>
+<div class="tw">
+<table>
+<tr><th>#</th><th>Topic</th><th>In the lecture?</th></tr>
+<tr><td>1</td><td>What is a Spring bean</td><td><span class="pill lec">Yes</span> (revision)</td></tr>
+<tr><td>2</td><td>Bean scope — what and why</td><td><span class="pill lec">Yes</span> (purpose in one sentence)</td></tr>
+<tr><td>3–4</td><td>Singleton, prototype</td><td><span class="pill part">One line each</span></td></tr>
+<tr><td>5–6</td><td>Request, session</td><td><span class="pill part">One line each; not validated</span></td></tr>
+<tr><td>7</td><td>Application scope</td><td><span class="pill lec">Yes</span> (100-users example)</td></tr>
+<tr><td>8</td><td>How Spring controls creation and reuse</td><td><span class="pill add">Added</span></td></tr>
+<tr><td>9</td><td>Singleton vs prototype</td><td><span class="pill add">Added</span></td></tr>
+<tr><td>10</td><td>Multiple users, concurrent requests</td><td><span class="pill part">Application example only; the rest added</span></td></tr>
+<tr><td>11</td><td>How to configure scopes</td><td><span class="pill add">Added</span> (not shown in this recording)</td></tr>
+<tr><td>12</td><td>FinTech project</td><td><span class="pill part">Set-up only (group and artifact); the example is added</span></td></tr>
+<tr><td>13</td><td>Lifecycle and scope behaviour</td><td><span class="pill add">Added</span></td></tr>
+</table>
+</div>
+</div>
+
+<!-- ============================ 2 ============================ -->
+<div class="section" id="s2">
+<h2>🧠 2 · Detailed Concept Explanations</h2>
+<p class="sub">Beginner → advanced, following the instructor's order. All of Part 2 is added.</p>
+
+<div class="card add">
+<b>2.1 · What a bean is — the foundation</b> <span class="pill add">🧠 Added</span>
+<p style="margin-top:6px;">A <b>bean</b> is an ordinary Java object that the <b>Spring IoC container creates and manages</b> — you register a class (XML, <code>@Bean</code>, <code>@Component</code>) and ask the container for the object instead of writing <code>new</code>. The container owns the object's life. Scope is the rule that answers: <b>"how many instances of this bean will exist, and who shares them?"</b></p>
+</div>
+
+<div class="card add">
+<b>2.2 · What bean scope is, and why it is needed</b> <span class="pill add">🧠 Added</span>
+<ul style="margin-top:6px;">
+<li><b>Scope = the lifespan and sharing rule of a bean</b>: how many instances, when they are created, who can see them, and when they go away.</li>
+<li><b>Without a rule</b> you'd either create objects needlessly (wasting memory and time) or share an object that should be private (leaking one customer's data to another).</li>
+<li>In a FinTech app: a <b>tax or interest calculator</b> has no per-customer data, so one shared instance is enough. A <b>transfer-in-progress</b> object holds one customer's amount, so each transfer needs its own.</li>
+<li>The decision is a design decision: <b>"does this object hold state that belongs to one operation, one request, one user, or nobody in particular?"</b></li>
+</ul>
+</div>
+
+<div class="card add">
+<b>2.3 · How Spring controls object creation and reuse</b> <span class="pill add">🧠 Added</span>
+<p style="margin-top:6px;">The container keeps a <b>bean definition</b> for each bean (class, name, scope). When something asks for the bean, the scope decides what happens:</p>
+<div class="lane">
+<div class="label">Singleton — one shared instance per container</div>
+<div class="flowbox">
+<div class="fstep">getBean("interestCalculator")</div><div class="farrow">→</div>
+<div class="fstep notify">Instance already in the container's singleton cache?</div><div class="farrow">→ yes →</div>
+<div class="fstep">Return the same instance</div>
+</div>
+</div>
+<div class="lane">
+<div class="label">Prototype — the container creates, hands over and forgets</div>
+<div class="flowbox">
+<div class="fstep">getBean("transactionContext")</div><div class="farrow">→</div>
+<div class="fstep notify">Create a NEW instance, inject its dependencies, run init callbacks</div><div class="farrow">→</div>
+<div class="fstep">Return it — not cached, not tracked afterwards</div>
+</div>
+</div>
+<div class="lane">
+<div class="label">Request / session / application — the instance lives in the scope's own store</div>
+<div class="flowbox">
+<div class="fstep">Bean needed during an HTTP request</div><div class="farrow">→</div>
+<div class="fstep notify">Is one stored for this request / session / servlet context?</div><div class="farrow">→ no →</div>
+<div class="fstep">Create it and store it there</div><div class="farrow">→</div>
+<div class="fstep">Discard it when that request / session / application ends</div>
+</div>
+</div>
+<ul style="margin-top:8px;">
+<li>For the default singleton scope, an <code>ApplicationContext</code> normally creates the instance <b>at startup</b> ("eager"), unless the bean is marked <code>@Lazy</code>.</li>
+<li>A "singleton" in Spring means <b>one instance per bean definition per container</b> — not "one per JVM" and not the GoF pattern (see 2.4).</li>
+</ul>
+</div>
+
+<div class="card add">
+<b>2.4 · Singleton scope</b> <span class="pill add">🧠 Added</span>
+<ul style="margin-top:6px;">
+<li><b>The default.</b> If you write no scope, you get a singleton.</li>
+<li><b>One instance, shared by everything</b> that asks for the bean — every <code>getBean</code> call and every injection point gets the same object (<code>==</code> is true).</li>
+<li><b>Not the GoF Singleton pattern:</b> the class itself isn't restricted to one object. If you define the same class under two names, the container holds <b>two</b> instances.</li>
+<li><b>Full life cycle:</b> created at startup, initialised once, destroyed when the container closes.</li>
+<li><b>Thread safety is your job.</b> Many request threads call the one instance at the same time, and Spring does not synchronise it. Good singleton beans are <b>stateless</b> (or hold only immutable or thread-safe state).</li>
+<li><b>Best for:</b> services, repositories, calculators, clients of external systems.</li>
+</ul>
+</div>
+
+<div class="card add">
+<b>2.5 · Prototype scope</b> <span class="pill add">🧠 Added</span>
+<ul style="margin-top:6px;">
+<li><b>A new instance every time</b> the bean is requested or injected (<code>==</code> is false).</li>
+<li><b>Created lazily</b> — only when someone asks.</li>
+<li><b>Partial life cycle:</b> Spring creates it, injects its dependencies and runs the <b>initialisation</b> callbacks — then <b>stops tracking it</b>. <b>Destruction callbacks (<code>@PreDestroy</code>) are never called</b>; cleaning up is the caller's job.</li>
+<li><b>Best for:</b> stateful, short-lived, per-operation objects — a transaction context, a statement builder, a one-time challenge.</li>
+<li><b>Cost:</b> every request allocates an object; the garbage collector reclaims it later.</li>
+</ul>
+</div>
+
+<div class="card add">
+<b>2.6 · Singleton vs prototype</b> <span class="pill add">🧠 Added</span>
+<div class="tw">
+<table>
+<tr><th>Dimension</th><th>Singleton</th><th>Prototype</th></tr>
+<tr><td>Instances</td><td>One per container</td><td>One per request for the bean</td></tr>
+<tr><td>Created</td><td>At startup (default) or first use if lazy</td><td>Each time it is requested</td></tr>
+<tr><td>State</td><td>Must be stateless or thread-safe</td><td>Can safely hold per-operation state</td></tr>
+<tr><td>Thread safety</td><td>You must ensure it</td><td>Not shared, so no sharing problem — unless you share it yourself</td></tr>
+<tr><td>Destruction callbacks</td><td>Called when the container closes</td><td><b>Not called</b></td></tr>
+<tr><td>Memory</td><td>Constant</td><td>Grows with the number of created objects until GC</td></tr>
+<tr><td>Injected into a singleton</td><td>Works as expected</td><td><b>Injected once only</b> — see 2.13</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card add">
+<b>2.7 · Request scope</b> <span class="pill add">🧠 Added</span>
+<ul style="margin-top:6px;">
+<li><b>One instance per HTTP request.</b> It is created when the request first needs it and discarded when the request finishes.</li>
+<li>Ideal for data that belongs to <b>one request only</b>: a correlation ID, the request's start time, the caller's IP.</li>
+<li>Needs a <b>web application</b> (Spring MVC/Boot, a web-aware context). In a plain console program the container has no "request", and asking for it fails — the reason the instructor said it can't be validated yet (see 3.8).</li>
+</ul>
+</div>
+
+<div class="card add">
+<b>2.8 · Session scope</b> <span class="pill add">🧠 Added</span>
+<ul style="margin-top:6px;">
+<li><b>One instance per HTTP session</b> — i.e. per logged-in browser session. All of one user's requests share it; another user gets a different instance.</li>
+<li>Typical use: the logged-in customer's profile, a multi-step loan application draft.</li>
+<li>Lives until the session ends or times out. Memory use grows with the number of <b>active</b> sessions, and in a cluster sessions must be replicated (and beans made <code>Serializable</code>) or pinned to a server.</li>
+<li>Also needs a web application.</li>
+</ul>
+</div>
+
+<div class="card add">
+<b>2.9 · Application scope</b> <span class="pill add">🧠 Added</span>
+<ul style="margin-top:6px;">
+<li><b>One instance for the whole web application</b> (bound to the servlet context): <b>every user, every session, every request sees the same bean</b> — the instructor's "100 users" example.</li>
+<li>Use it for application-wide read-mostly data: an exchange-rate cache, a bank-holiday calendar, feature flags.</li>
+<li>It behaves much like a singleton, but it is stored as a servlet-context attribute and only exists in a web application.</li>
+<li><b>Careful:</b> shared by many threads, so the same thread-safety rules as a singleton. And "application-wide" means <b>per server instance</b> — three servers in a cluster hold three copies.</li>
+</ul>
+</div>
+
+<div class="card add">
+<b>2.10 · Multiple users and concurrent requests — who sees what</b> <span class="pill add">🧠 Added</span>
+<p style="margin-top:6px;">Suppose user A sends two requests and user B sends one, all at the same moment:</p>
+<div class="tw">
+<table>
+<tr><th>Scope</th><th>A · request 1</th><th>A · request 2</th><th>B · request 1</th><th>Meaning</th></tr>
+<tr><td><b>Singleton</b></td><td>Instance #1</td><td>Instance #1</td><td>Instance #1</td><td>All three threads share one object</td></tr>
+<tr><td><b>Prototype</b></td><td>New</td><td>New</td><td>New</td><td>A new object at each lookup / injection</td></tr>
+<tr><td><b>Request</b></td><td>R1</td><td>R2</td><td>R3</td><td>One per request, even for the same user</td></tr>
+<tr><td><b>Session</b></td><td>S<sub>A</sub></td><td>S<sub>A</sub></td><td>S<sub>B</sub></td><td>Shared within a user's session, never across users</td></tr>
+<tr><td><b>Application</b></td><td>Instance #1</td><td>Instance #1</td><td>Instance #1</td><td>Shared by all users</td></tr>
+</table>
+</div>
+<ul style="margin-top:10px;">
+<li>Shared scopes (singleton, application) are touched by <b>concurrent threads</b> → they need thread-safe design.</li>
+<li>Per-user or per-request data therefore belongs in session, request or prototype beans — never in a singleton or application field.</li>
+</ul>
+</div>
+
+<div class="card add">
+<b>2.11 · How to configure a scope</b> <span class="pill add">🧠 Added</span>
+<p style="margin-top:6px;">The instructor listed the scopes but didn't show the syntax in this recording. The three ways to create beans you already know each have a form:</p>
+<div class="tw">
+<table>
+<tr><th>Way of defining the bean</th><th>How to set the scope</th></tr>
+<tr><td>XML</td><td><code>&lt;bean id="…" class="…" scope="prototype"/&gt;</code></td></tr>
+<tr><td><code>@Component</code> class</td><td>Add <code>@Scope("prototype")</code> on the class</td></tr>
+<tr><td><code>@Bean</code> method</td><td>Add <code>@Scope("prototype")</code> on the method</td></tr>
+<tr><td>Web scopes (shortcut)</td><td><code>@RequestScope</code>, <code>@SessionScope</code>, <code>@ApplicationScope</code> — or <code>@Scope("request")</code> and so on</td></tr>
+</table>
+</div>
+<p style="margin-top:8px;">Valid scope names: <code>singleton</code>, <code>prototype</code>, <code>request</code>, <code>session</code>, <code>application</code> (plus <code>websocket</code>). No annotation means <code>singleton</code>. Full code is in section 3.</p>
+</div>
+
+<div class="card add">
+<b>2.12 · Object life cycle and scope-related behaviour</b> <span class="pill add">🧠 Added</span>
+<div class="lane">
+<div class="label">The life of a bean</div>
+<div class="flowbox">
+<div class="fstep">Instantiate</div><div class="farrow">→</div>
+<div class="fstep">Inject dependencies</div><div class="farrow">→</div>
+<div class="fstep notify">Initialise (@PostConstruct / init method)</div><div class="farrow">→</div>
+<div class="fstep">In use</div><div class="farrow">→</div>
+<div class="fstep wait">Destroy (@PreDestroy) — when the scope ends</div>
+</div>
+</div>
+<div class="tw">
+<table>
+<tr><th>Scope</th><th>Created</th><th>Destroyed</th><th>Container manages the full life cycle?</th></tr>
+<tr><td>Singleton</td><td>At container start (default)</td><td>When the container closes</td><td>Yes</td></tr>
+<tr><td>Prototype</td><td>On every request for it</td><td><b>Never by Spring</b> — the caller cleans up</td><td><b>No</b> — creation and initialisation only</td></tr>
+<tr><td>Request</td><td>When first needed in a request</td><td>When the request ends</td><td>Yes</td></tr>
+<tr><td>Session</td><td>When first needed in a session</td><td>When the session ends or times out</td><td>Yes</td></tr>
+<tr><td>Application</td><td>When first needed</td><td>When the web application shuts down</td><td>Yes</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card add">
+<b>2.13 · Advanced: a prototype inside a singleton</b> <span class="pill add">🧠 Added</span>
+<p style="margin-top:6px;">A singleton is built <b>once</b>, so its dependencies are injected <b>once</b>. If one of them is a prototype, the singleton keeps that single instance forever — the "new every time" behaviour is lost. The same trap applies to request- and session-scoped beans injected into a singleton.</p>
+<ul>
+<li><b><code>ObjectProvider&lt;T&gt;</code></b> — inject the provider and call <code>getObject()</code> each time you need a fresh bean (snippet 5).</li>
+<li><b><code>@Lookup</code> method injection</b> — Spring overrides an abstract/stub method to return a new bean on each call.</li>
+<li><b>Scoped proxy</b> (<code>proxyMode = ScopedProxyMode.TARGET_CLASS</code>) — Spring injects a proxy; each call on it is routed to the right instance for the current request/session. The web-scope shortcut annotations already use it.</li>
+<li>Or ask the context directly (<code>getBean</code>) — it works but ties your class to Spring.</li>
+</ul>
+</div>
+
+<div class="card add">
+<b>2.14 · Common mistakes</b> <span class="pill add">🧠 Added</span>
+<ul style="margin-top:6px;">
+<li><b>Mutable per-user fields in a singleton</b> — one customer's data appears for another; a serious bug in banking code.</li>
+<li><b>Expecting "new every time" from a prototype injected into a singleton</b> — it is injected once.</li>
+<li><b>Expecting <code>@PreDestroy</code> on a prototype</b> — Spring never calls it.</li>
+<li><b>Using request/session scope in a console program</b> — there is no web scope registered.</li>
+<li><b>Treating the Spring singleton as the GoF pattern</b> — Spring only guarantees one per definition per container.</li>
+<li><b>Putting sensitive data in session or application scope</b> without thinking about who can reach it and how long it lives.</li>
+<li><b>Registering a class twice</b> (<code>@Component</code> on the class and a <code>@Bean</code> method) — you get two beans and possibly a "no unique bean" error.</li>
+<li><b>Assuming an application-scoped cache is shared across servers</b> — it is per JVM.</li>
+<li><b>Prototype everywhere "to be safe"</b> — wasted objects; use it only where state is per-operation.</li>
+</ul>
+</div>
+</div>
+
+<!-- ============================ 3 ============================ -->
+<div class="section" id="s3">
+<h2>💻 3 · Java and Spring Code Examples</h2>
+<p class="sub"><span class="pill add">🧠 Added</span> All code is mine: a small FinTech project (<code>group: fintech</code>, <code>artifact: bean-scope</code> as the instructor set up). Nothing here was run; outputs are what Spring normally prints. Spring 6.x needs Java 17+.</p>
+
+<p><b>1 · Project structure and dependency</b></p>
+<pre><code>fintech.beanscope                    (package; the artifact id bean-scope can't contain a hyphen)
+├── AppConfig.java                   @Configuration + @ComponentScan
+├── BeanScopeApp.java                main class
+├── InterestCalculator.java          singleton (stateless)
+├── TransactionContext.java          prototype (per-operation state)
+├── FeeCalculator.java               the thread-safety bug and its fix
+└── TransferService.java             singleton that needs a fresh TransactionContext</code></pre>
+<pre><code class="language-markup">&lt;dependencies&gt;
+    &lt;dependency&gt;
+        &lt;groupId&gt;org.springframework&lt;/groupId&gt;
+        &lt;artifactId&gt;spring-context&lt;/artifactId&gt;
+        &lt;version&gt;6.1.14&lt;/version&gt;   &lt;!-- example 6.1.x; copy the exact version from the Maven repository --&gt;
+    &lt;/dependency&gt;
+    &lt;dependency&gt;                         &lt;!-- only needed for @PostConstruct / @PreDestroy --&gt;
+        &lt;groupId&gt;jakarta.annotation&lt;/groupId&gt;
+        &lt;artifactId&gt;jakarta.annotation-api&lt;/artifactId&gt;
+        &lt;version&gt;2.1.1&lt;/version&gt;
+    &lt;/dependency&gt;
+&lt;/dependencies&gt;</code></pre>
+
+<p><b>2 · A singleton bean (the default) and a prototype bean</b></p>
+<pre><code class="language-java">package fintech.beanscope;
+
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+import org.springframework.stereotype.Component;
+
+@Component                                   // no @Scope -> SINGLETON (the default)
+public class InterestCalculator {
+
+    public InterestCalculator() { System.out.println("InterestCalculator created"); }
+
+    @PostConstruct void ready()   { System.out.println("InterestCalculator ready"); }
+    @PreDestroy    void cleanup() { System.out.println("InterestCalculator destroyed"); }
+
+    public double simpleInterest(double principal, double ratePercent, int years) {
+        return principal * ratePercent * years / 100;      // stateless: no fields that change
+    }
+}
+
+package fintech.beanscope;
+
+import jakarta.annotation.PreDestroy;
+import java.util.UUID;
+import org.springframework.context.annotation.Scope;
+import org.springframework.stereotype.Component;
+
+@Component
+@Scope("prototype")                          // a NEW instance every time it is requested
+public class TransactionContext {
+
+    private final String transactionId = UUID.randomUUID().toString().substring(0, 8);
+    private double amount;                   // per-operation state: safe because it is not shared
+
+    public TransactionContext() { System.out.println("TransactionContext created: " + transactionId); }
+
+    @PreDestroy void cleanup() { System.out.println("never printed - Spring doesn't destroy prototypes"); }
+
+    public String getTransactionId() { return transactionId; }
+    public double getAmount() { return amount; }
+    public void setAmount(double amount) { this.amount = amount; }
+}
+
+package fintech.beanscope;
+
+import org.springframework.context.annotation.ComponentScan;
+import org.springframework.context.annotation.Configuration;
+
+@Configuration
+@ComponentScan("fintech.beanscope")
+public class AppConfig { }</code></pre>
+
+<p><b>3 · Same object or new object? — the demo and its output</b></p>
+<pre><code class="language-java">package fintech.beanscope;
+
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class BeanScopeApp {
+    public static void main(String[] args) {
+        AnnotationConfigApplicationContext ctx = new AnnotationConfigApplicationContext(AppConfig.class);
+
+        InterestCalculator c1 = ctx.getBean(InterestCalculator.class);
+        InterestCalculator c2 = ctx.getBean(InterestCalculator.class);
+        System.out.println("singleton same object? " + (c1 == c2));              // true
+
+        TransactionContext t1 = ctx.getBean(TransactionContext.class);
+        TransactionContext t2 = ctx.getBean(TransactionContext.class);
+        System.out.println("prototype same object? " + (t1 == t2));              // false
+        System.out.println(t1.getTransactionId() + " vs " + t2.getTransactionId());
+
+        ctx.close();                         // destroys singletons; prototypes are not touched
+    }
+}</code></pre>
+<pre><code>InterestCalculator created          &lt;- singleton: built at startup, before main's first print
+InterestCalculator ready
+singleton same object? true
+TransactionContext created: 3fa9c1d2   &lt;- prototype: built on each getBean (ids differ)
+TransactionContext created: b17e44a0
+prototype same object? false
+3fa9c1d2 vs b17e44a0
+InterestCalculator destroyed        &lt;- only the singleton is destroyed on close()</code></pre>
+
+<p><b>4 · A singleton shared by threads — the bug and the fix</b></p>
+<pre><code class="language-java">@Component                                   // singleton: ONE instance for ALL request threads
+public class FeeCalculator {
+
+    private double amount;                   // BAD: shared mutable state
+
+    public double fee(double amt) {
+        this.amount = amt;                   // thread A stores 1000 ...
+        // ... thread B stores 50 here, before A reads it back
+        return this.amount * 0.01;           // A may now compute the fee on 50 - a wrong result
+    }
+}
+
+// FIX 1 - keep singletons stateless; use local variables and parameters
+public double fee(double amount) { return amount * 0.01; }
+
+// FIX 2 - if state is unavoidable, make it per-operation (prototype, or request scope in a web app)
+//         or use thread-safe types (AtomicLong, ConcurrentHashMap).</code></pre>
+
+<p><b>5 · A prototype inside a singleton — the trap and the fix</b></p>
+<pre><code class="language-java">// WRONG: TransferService is created once, so it gets ONE TransactionContext for its whole life
+@Component
+public class TransferService {
+    private final TransactionContext context;
+    public TransferService(TransactionContext context) { this.context = context; }
+}
+
+// RIGHT: ask for a fresh prototype each time through an ObjectProvider
+@Component
+public class TransferService {
+
+    private final ObjectProvider&lt;TransactionContext&gt; contextProvider;
+
+    public TransferService(ObjectProvider&lt;TransactionContext&gt; contextProvider) {
+        this.contextProvider = contextProvider;
+    }
+
+    public void transfer(double amount) {
+        TransactionContext ctx = contextProvider.getObject();   // a NEW instance on every call
+        ctx.setAmount(amount);
+        System.out.println("Transferring " + ctx.getAmount() + " under " + ctx.getTransactionId());
+    }
+}
+// import org.springframework.beans.factory.ObjectProvider;</code></pre>
+
+<p><b>6 · Other ways to declare a scope: <code>@Bean</code> and XML</b></p>
+<pre><code class="language-java">@Configuration
+public class ScopeConfig {
+
+    @Bean                                    // singleton by default
+    public InterestCalculator interestCalculator() { return new InterestCalculator(); }
+
+    @Bean
+    @Scope("prototype")                      // or @Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+    public TransactionContext transactionContext() { return new TransactionContext(); }
+}
+// (don't also put @Component on these classes - that registers them twice)</code></pre>
+<pre><code class="language-markup">&lt;bean id="interestCalculator" class="fintech.beanscope.InterestCalculator" scope="singleton"/&gt;
+&lt;bean id="transactionContext" class="fintech.beanscope.TransactionContext"  scope="prototype"/&gt;</code></pre>
+
+<p><b>7 · The web scopes — request, session, application</b> <span class="small">(for a Spring MVC / Spring Boot web app — the part the instructor said comes later)</span></p>
+<pre><code class="language-java">import org.springframework.web.context.annotation.ApplicationScope;
+import org.springframework.web.context.annotation.RequestScope;
+import org.springframework.web.context.annotation.SessionScope;
+
+@Component
+@RequestScope                                 // a new bean for every HTTP request
+public class RequestAudit {
+    private final String correlationId = UUID.randomUUID().toString();
+    private final long startedAt = System.currentTimeMillis();
+    // getters ...
+}
+
+@Component
+@SessionScope                                 // one bean per logged-in user session
+public class CustomerSession implements java.io.Serializable {
+    private String customerId;                // keep sensitive data out of long-lived beans
+    private java.time.Instant loggedInAt;
+    // getters/setters ...
+}
+
+@Component
+@ApplicationScope                             // ONE bean for every user of the web application
+public class ExchangeRateCache {
+    private final java.util.Map&lt;String, Double&gt; rates = new java.util.concurrent.ConcurrentHashMap&lt;&gt;();
+    // shared by all threads, so thread-safe structures are a must
+}
+
+// The annotations above are shortcuts for, e.g.:
+// @Scope(value = WebApplicationContext.SCOPE_REQUEST, proxyMode = ScopedProxyMode.TARGET_CLASS)
+// A singleton controller can then inject RequestAudit: the proxy routes each call to the current request's bean.</code></pre>
+
+<p><b>8 · Why the web scopes can't be tried in a console program</b></p>
+<pre><code class="language-java">@Component
+@Scope("request")                             // in a plain AnnotationConfigApplicationContext ...
+public class RequestAudit { }
+
+// ... asking for it fails because no request scope is registered outside a web application:
+//   java.lang.IllegalStateException: No Scope registered for scope name 'request'</code></pre>
+</div>
+
+<!-- ============================ 4 ============================ -->
+<div class="section" id="s4">
+<h2>📊 4 · Scope Comparison Table</h2>
+<p class="sub"><span class="pill part">Names and one-liners from the lecture</span> <span class="pill add">Details added</span></p>
+<div class="tw">
+<table>
+<tr><th>Scope</th><th>Instances</th><th>Created</th><th>Shared by</th><th>Destroyed</th><th>Needs web app?</th><th>Lecture's one-liner</th></tr>
+<tr><td><b>Singleton</b></td><td>1 per container</td><td>At startup (default)</td><td>Everything in the container</td><td>Container close</td><td>No</td><td>"One bean — a single [ton]"</td></tr>
+<tr><td><b>Prototype</b></td><td>1 per request for the bean</td><td>Each lookup / injection</td><td>Only its receiver</td><td>Never by Spring</td><td>No</td><td>"Every time somebody requests, give a new bean"</td></tr>
+<tr><td><b>Request</b></td><td>1 per HTTP request</td><td>First use in the request</td><td>That request only</td><td>Request ends</td><td><b>Yes</b></td><td>"Within the request"</td></tr>
+<tr><td><b>Session</b></td><td>1 per HTTP session</td><td>First use in the session</td><td>One user's requests</td><td>Session ends / times out</td><td><b>Yes</b></td><td>"The same session"</td></tr>
+<tr><td><b>Application</b></td><td>1 per web application</td><td>First use</td><td>All users and requests</td><td>Application shutdown</td><td><b>Yes</b></td><td>"100 users — all see the same bean"</td></tr>
+</table>
+</div>
+</div>
+
+<!-- ============================ 5 ============================ -->
+<div class="section" id="s5">
+<h2>🏦 5 · Real-World Use Cases</h2>
+<p class="sub"><span class="pill add">🧠 Added</span> The FinTech picture, and what each choice does to a production system.</p>
+<div class="tw">
+<table>
+<tr><th>Scope</th><th>FinTech examples</th><th>Why that scope</th><th>What can go wrong in production</th></tr>
+<tr><td><b>Singleton</b></td><td><code>InterestCalculator</code>, <code>FeeCalculator</code>, <code>AccountService</code>, repositories, a payment-gateway client</td><td>Stateless logic: one shared instance is enough and cheapest</td><td>A mutable field turns it into a data leak between customers and an intermittent wrong-amount bug under load</td></tr>
+<tr><td><b>Prototype</b></td><td><code>TransactionContext</code>, a statement/receipt builder, a one-time challenge object</td><td>Each operation needs its own state</td><td>Over-use churns memory; resources inside it are never closed by Spring; injected into a singleton it silently becomes a singleton</td></tr>
+<tr><td><b>Request</b></td><td>Request audit (correlation ID, start time, caller IP), a per-request risk score</td><td>Data that belongs to a single call</td><td>Not available outside web threads (jobs, schedulers); needs proxies when injected into singletons</td></tr>
+<tr><td><b>Session</b></td><td>Logged-in customer's profile, a multi-step loan-application draft</td><td>Follows one user across requests</td><td>Memory grows with active users; replication or sticky sessions in a cluster; sensitive data lingering until timeout</td></tr>
+<tr><td><b>Application</b></td><td>Exchange-rate cache, bank-holiday calendar, feature flags</td><td>One read-mostly copy for everybody</td><td>Concurrent updates need thread-safe structures; stale data; one copy <b>per server</b>, so servers can disagree</td></tr>
+</table>
+</div>
+<div class="card add" style="margin-top:16px;">
+<b>Design rule of thumb</b>
+<ul style="margin-top:6px;">
+<li>Holds <b>nothing that changes</b> → <b>singleton</b>.</li>
+<li>Holds state for <b>one operation</b> → <b>prototype</b> (fetched through an <code>ObjectProvider</code> if a singleton needs it).</li>
+<li>Holds state for <b>one HTTP request</b> → <b>request</b>; for <b>one logged-in user</b> → <b>session</b>.</li>
+<li>Holds <b>read-mostly data for everyone</b> → <b>application</b> (or a singleton) with thread-safe structures.</li>
+</ul>
+</div>
+</div>
+
+<!-- ============================ 6 ============================ -->
+<div class="section" id="s6">
+<h2>💼 6 · Interview Questions and Answers</h2>
+<p class="sub"><span class="pill add">🧠 Added</span> Standard Spring answers, not lecture statements.</p>
+
+<div class="qa"><div class="q"><span class="num">Q1</span>What is a Spring bean?</div>
+<div class="a">An object created and managed by the Spring IoC container — you define the class and ask the container for the object instead of calling <code>new</code>.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q2</span>What is bean scope and why do we need it?</div>
+<div class="a">Scope defines how many instances of a bean exist, when they are created, who shares them and when they end. Without it you would over-create objects or share objects that should be private to one operation, request or user.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q3</span>What is the default scope?</div>
+<div class="a">Singleton — one instance per bean definition per container. No annotation means singleton.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q4</span>Singleton vs prototype?</div>
+<div class="a">A singleton is created once (at startup by default) and shared by everything; Spring manages its whole life cycle, and it must be stateless or thread-safe. A prototype is created anew on each request for the bean, can hold per-operation state, and Spring runs only its creation and initialisation — never its destruction callbacks.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q5</span>Is Spring's singleton the same as the GoF Singleton pattern?</div>
+<div class="a">No. The GoF pattern restricts the <em>class</em> to one instance per JVM. Spring's singleton is one instance per <em>bean definition</em> per <em>container</em>: define the class under two names and you get two instances, and two containers each have their own.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q6</span>When is a singleton bean created — startup or first use?</div>
+<div class="a">An <code>ApplicationContext</code> creates singletons eagerly at startup, so wiring errors surface immediately; <code>@Lazy</code> postpones creation to first use. Prototypes are always created on demand.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q7</span>Does Spring call <code>@PreDestroy</code> on prototype beans?</div>
+<div class="a">No. The container creates, injects and initialises a prototype, then hands it over and stops tracking it. Releasing resources is the caller's responsibility.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q8</span>Are singleton beans thread-safe?</div>
+<div class="a">Not automatically. All request threads share the one instance and Spring doesn't synchronise it. Keep it stateless (local variables, parameters), or hold only immutable or thread-safe state; put per-operation state in a prototype or per-request state in a request-scoped bean.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q9</span>What are the request, session and application scopes, and what do they need?</div>
+<div class="a">Request: one bean per HTTP request. Session: one per HTTP session (one user). Application: one per web application, shared by every user. All three are web scopes — they need a web-aware context (Spring MVC/Boot); in a console program asking for one fails with "No Scope registered for scope name…".</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q10</span>100 users are connected. What does each scope give them?</div>
+<div class="a">Application: all 100 see the same bean (the lecture's example). Session: each user has their own, shared across that user's requests. Request: a fresh one for every request, even from the same user. Singleton: one bean for all of them, shared by concurrent threads. Prototype: a new one at each lookup or injection.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q11</span>How do you configure a scope?</div>
+<div class="a"><code>@Scope("prototype")</code> on a <code>@Component</code> class or a <code>@Bean</code> method; <code>scope="prototype"</code> in XML; or <code>@RequestScope</code> / <code>@SessionScope</code> / <code>@ApplicationScope</code> for the web scopes.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q12</span>A prototype bean injected into a singleton behaves like a singleton. Why, and how do you fix it?</div>
+<div class="a">The singleton is created once, so injection happens once and it keeps that one prototype instance. Inject an <code>ObjectProvider&lt;T&gt;</code> and call <code>getObject()</code> on each use, use <code>@Lookup</code> method injection, use a scoped proxy, or fetch the bean from the context.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q13</span>What is a scoped proxy and when is it needed?</div>
+<div class="a">A proxy injected in place of a shorter-lived bean (request, session) inside a longer-lived one (a singleton). Each call on the proxy is routed to the instance for the current request or session. Without it the singleton would capture one instance at startup — and for request scope there is no request at startup at all. The web-scope shortcut annotations enable it by default.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q14</span>Which scope would you choose for (a) an interest calculator, (b) a customer's logged-in profile, (c) an exchange-rate cache, (d) a per-transfer context?</div>
+<div class="a">(a) Singleton — stateless. (b) Session — follows one user. (c) Application (or a singleton) with a thread-safe map — shared and read-mostly. (d) Prototype — state for one operation, fetched via an <code>ObjectProvider</code> if a singleton uses it.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q15</span>How do singletons behave in a cluster of servers?</div>
+<div class="a">"One instance" means one per JVM. Three servers hold three copies, and an application-scoped cache is likewise per server — so caches can drift apart, and session beans need replication or sticky sessions.</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q16</span>How would you prove a bean's scope in a test?</div>
+<div class="a">Fetch it twice from the context and compare with <code>==</code> (singleton true, prototype false), and count constructor calls with a counter or a print statement.</div></div>
+</div>
+
+<!-- ============================ 7 ============================ -->
+<div class="section" id="s7">
+<h2>🛠️ 7 · Hands-On Assignment</h2>
+<div class="card">
+<b>From the class</b> <span class="pill part">Lecture — partly unclear</span>
+<p style="margin-top:6px;">Create a new project: group <b>fintech</b>, artifact <b>bean-scope</b> (as heard), with meaningful bean names tied to your project's domain — then "learn" bean scope by trying it. The audio doesn't say which beans to create or which scopes to test.</p>
+</div>
+<p class="small" style="margin:10px 0 0;"><span class="pill add">🧠 Added</span> A full exercise built on that project. Predict first, then run.</p>
+<div class="tw">
+<table>
+<tr><th>#</th><th>Task</th><th>Expected result</th></tr>
+<tr><td>1</td><td>Create the Maven project (<code>fintech</code> / <code>bean-scope</code>) with the spring-context dependency on Java 17+. Write <code>AppConfig</code> with <code>@ComponentScan("fintech.beanscope")</code>.</td><td>Container starts without errors.</td></tr>
+<tr><td>2</td><td>Add <code>InterestCalculator</code> (no <code>@Scope</code>) and print from its constructor. Fetch it twice and compare with <code>==</code>.</td><td>One "created" line, printed at startup; <code>true</code>.</td></tr>
+<tr><td>3</td><td>Add <code>TransactionContext</code> with <code>@Scope("prototype")</code> and a random id. Fetch it twice.</td><td>Two "created" lines at fetch time; <code>false</code>; different ids.</td></tr>
+<tr><td>4</td><td>Add <code>@PostConstruct</code>/<code>@PreDestroy</code> to both, then call <code>ctx.close()</code>.</td><td>Destroy line for the singleton only.</td></tr>
+<tr><td>5</td><td>Re-declare both beans with <code>@Bean</code> methods, then with XML <code>scope=</code>.</td><td>Identical behaviour for all three styles.</td></tr>
+<tr><td>6</td><td>Break it: give a singleton calculator a mutable field and call it from 100 tasks in an <code>ExecutorService</code> with different amounts.</td><td>Some results are wrong under concurrency.</td></tr>
+<tr><td>7</td><td>Fix task 6 with a stateless method, then again with a prototype.</td><td>All results correct.</td></tr>
+<tr><td>8</td><td>Inject <code>TransactionContext</code> into a singleton <code>TransferService</code> by constructor; call <code>transfer</code> three times and print the ids.</td><td>The same id three times (the trap). Then switch to <code>ObjectProvider</code>: three different ids.</td></tr>
+<tr><td>9</td><td>Put <code>@Scope("request")</code> on a bean and fetch it in the console program.</td><td><code>IllegalStateException: No Scope registered for scope name 'request'</code> — explain why.</td></tr>
+<tr><td>10 (preview)</td><td>When Spring web starts: add <code>RequestAudit</code>, <code>CustomerSession</code> and <code>ExchangeRateCache</code> and hit an endpoint from two browsers.</td><td>Request bean differs per call; session bean differs per browser; application bean is identical for both.</td></tr>
+</table>
+</div>
+<p style="margin-top:10px;"><b>Self-check:</b> explain out loud why task 8 behaves that way, and which of your beans would break if two users used the app at once.</p>
+</div>
+
+<!-- ============================ 8 ============================ -->
+<div class="section" id="s8">
+<h2>📑 8 · Revision Cheat Sheet</h2>
+<p class="sub">Lecture points tagged <span class="pill lec">Lecture</span>; the rest <span class="pill add">Added</span>.</p>
+<div class="tw">
+<table>
+<tr><th>Remember</th><th></th></tr>
+<tr><td>Bean = an object managed by Spring (the IoC container)</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td>Scope controls how many beans exist and who shares them</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td>Singleton = one bean; prototype = a new bean on every request</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td>Request = within a request; session = the same session; application = all users share it</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td>Web scopes need Spring web — they can't be validated in a console program yet</td><td><span class="pill lec">Lecture</span></td></tr>
+<tr><td>Default scope is singleton; Spring's singleton ≠ GoF — it is one per definition per container</td><td><span class="pill add">Added</span></td></tr>
+<tr><td>Singleton: eager at startup, shared by threads, keep it stateless</td><td><span class="pill add">Added</span></td></tr>
+<tr><td>Prototype: created on demand; <code>@PreDestroy</code> is never called</td><td><span class="pill add">Added</span></td></tr>
+<tr><td>Prototype injected into a singleton is injected once — use <code>ObjectProvider</code>, <code>@Lookup</code> or a scoped proxy</td><td><span class="pill add">Added</span></td></tr>
+<tr><td><code>@Scope("…")</code> on a class or <code>@Bean</code>; <code>scope="…"</code> in XML; <code>@RequestScope</code>/<code>@SessionScope</code>/<code>@ApplicationScope</code></td><td><span class="pill add">Added</span></td></tr>
+<tr><td>"Application-wide" = per server; session/application beans live as long as their scope</td><td><span class="pill add">Added</span></td></tr>
+</table>
+</div>
+<div class="lane">
+<div class="label">Which scope?</div>
+<div class="flowbox">
+<div class="fstep">Does it hold changing state?</div><div class="farrow">→ no →</div>
+<div class="fstep notify">Singleton</div>
+</div>
+</div>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">Holds state for…</div><div class="farrow">→ one operation →</div><div class="fstep notify">Prototype</div>
+<div class="farrow">|</div><div class="fstep">one HTTP request →</div><div class="fstep notify">Request</div>
+<div class="farrow">|</div><div class="fstep">one user session →</div><div class="fstep notify">Session</div>
+<div class="farrow">|</div><div class="fstep">everyone, read-mostly →</div><div class="fstep notify">Application / singleton + thread-safe data</div>
+</div>
+</div>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude</h2>
+<div class="extra">
+Sections 1 and the "from the class" assignment card are the lecture; everything else is my explanation, code and exercises, and is marked as added. The transcript's classroom chatter is left out, and no clean-up map is included. The code was not run, and the version numbers are examples — copy the current ones from the Maven repository.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>

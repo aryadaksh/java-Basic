@@ -1,0 +1,11 @@
+2026-11-19 16:04:05 INFO  App:18 - This is main app this will run its will create the iocContainer
+2026-11-19 16:04:06 INFO  AppConfig:19 - THis is AppConfig class here bean defintion happens
+2026-11-19 16:04:06 INFO  Address:19 - Step 1 of bean definition
+2026-11-19 16:04:06 INFO  Address:20 -  this is inside constructor this run during bean
+2026-11-19 16:04:06 INFO  Address:29 - This is @PostConstruct this will run after the bean definiton for intilization
+2026-11-19 16:04:06 INFO  Address:35 - this will verify that @PostConstruct method is initlized everything corretly or not
+2026-11-19 16:04:06 INFO  AddressMgmt:18 - This is AddressMgmt class inside the method disDetails  Start
+2026-11-19 16:04:06 INFO  Address:40 - This is address class inside the method display 
+2026-11-19 16:04:06 INFO  AddressMgmt:20 - This is AddressMgmt class inside the method disDetails  End
+2026-11-19 16:04:06 INFO  Address:48 - This will cleanup the intilize after the container call its clean() method
+2026-11-19 16:04:06 INFO  Address:55 - this will verify that the cleanup is happened correctly or not

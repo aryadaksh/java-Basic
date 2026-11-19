@@ -1,0 +1,12 @@
+2026-11-17 12:12:17 [main] INFO  com.spingdifieldinjection.App - This is main App Start
+2026-11-17 12:12:18 [main] INFO  com.spingdifieldinjection.magmt.EmployeeMgmt - Start the display of empMgmt
+2026-11-17 12:12:18 [main] INFO  com.spingdifieldinjection.bean.Employee - THis is employee class display method Start
+2026-11-17 12:12:18 [main] INFO  com.spingdifieldinjection.bean.Employee - THis is employee class display method ENd
+2026-11-17 12:12:18 [main] INFO  com.spingdifieldinjection.magmt.EmployeeMgmt - End the display of empMgmt
+2026-11-17 12:12:18 [main] INFO  com.spingdifieldinjection.App - This is main App END
+2026-11-17 12:12:53 [main] INFO  com.spingdifieldinjection.App - This is main App Start
+2026-11-17 12:12:54 [main] INFO  com.spingdifieldinjection.magmt.EmployeeMgmt - Start the display of empMgmt
+2026-11-17 12:12:54 [main] INFO  com.spingdifieldinjection.bean.Employee - THis is employee class display method Start
+2026-11-17 12:12:54 [main] INFO  com.spingdifieldinjection.bean.Employee - THis is employee class display method ENd
+2026-11-17 12:12:54 [main] INFO  com.spingdifieldinjection.magmt.EmployeeMgmt - End the display of empMgmt
+2026-11-17 12:12:54 [main] INFO  com.spingdifieldinjection.App - This is main App END

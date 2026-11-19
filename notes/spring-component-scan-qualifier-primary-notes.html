@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Spring Component Scan, Multiple Beans, @Qualifier &amp; @Primary</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+html{scroll-behavior:smooth;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:32px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:6px;border-left:6px solid #0066ff;padding-left:12px;}
+.section .sub{color:#777;font-size:14px;margin-bottom:14px;padding-left:18px;}
+.section h3{color:#0066ff;font-size:18px;margin:26px 0 6px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+.card.add{background:#fffdf2;border:2px dashed #e0b400;border-left:6px solid #e0b400;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+.card.add b{color:#a67c00;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:14.5px;}
+code{font-size:14.5px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:16px;}
+th{background:#0077ff;color:white;padding:11px;text-align:left;}
+td{padding:11px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.pill{display:inline-block;padding:1px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;margin-left:6px;vertical-align:middle;}
+.pill.lec{background:#e3f2fd;color:#0066ff;}
+.pill.add{background:#fff3cd;color:#a67c00;}
+.jump{margin-top:12px;font-size:14px;}
+.jump a{display:inline-block;margin:4px 8px 4px 0;padding:4px 14px;border-radius:20px;background:#e3f2fd;color:#0066ff;text-decoration:none;font-weight:600;}
+.qa{background:#f8fbff;border-left:5px solid #6c63ff;padding:16px 18px;border-radius:10px;margin:16px 0;}
+.qa .q{font-weight:600;color:#3b3b98;}
+.qa .a{margin-top:6px;}
+.qa .fu{margin-top:8px;font-size:14.5px;}
+.qa .fu b{color:#6c63ff;}
+.num{display:inline-block;min-width:34px;padding:0 8px;margin-right:8px;border-radius:14px;background:#6c63ff;color:white;font-size:12.5px;font-weight:600;text-align:center;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:25px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Spring Component Scanning, Base Packages, Troubleshooting Missing Beans, Multiple Beans of the Same Type, <code style="background:rgba(255,255,255,.2);color:#fff;">@Qualifier</code> and <code style="background:rgba(255,255,255,.2);color:#fff;">@Primary</code></p>
+<p class="meta">Source: Kodewala class · Nov 17, 2026 · 11:06 AM · recording 1:02:48 — the transcript covers roughly 00:45:05 onward</p>
+</div>
+
+<div class="section">
+<h2>🎯 How This Sheet Is Organised</h2>
+<div class="tw">
+<table>
+<tr><th>Part</th><th>Content</th><th>Origin</th></tr>
+<tr><td><b>A</b></td><td>What the instructor said, in his order: base package → scanning → two student problems → naming → "process over logic" → reading the error → debugging → the research homework</td><td><span class="pill lec">📘 Lecture</span></td></tr>
+<tr><td><b>B</b></td><td>The technical explanation, beginner to advanced: component scanning, package layout, the IoC flow, troubleshooting, multiple beans, <code>NoUniqueBeanDefinitionException</code>, <code>@Primary</code>, <code>@Qualifier</code>, both together</td><td><span class="pill add">🧠 Added</span></td></tr>
+<tr><td><b>C</b></td><td>Complete Java examples with package structures — incorrect and corrected configurations</td><td><span class="pill add">🧠 Added</span></td></tr>
+<tr><td><b>D–F</b></td><td>Interview questions with follow-ups, a revision sheet, and a practical coding exercise (two beans of one interface type)</td><td><span class="pill add">🧠 Added</span></td></tr>
+</table>
+</div>
+<div class="flag">
+<b>Read this first:</b> the lecture segment in this transcript is short and mostly troubleshooting. <b>The instructor only posed</b> the multiple-bean, <code>@Qualifier</code>, <code>@Primary</code> and "which one wins" questions as <b>research homework</b> — he did not answer them in this recording. Everything about those topics, and all the code, is my explanation of standard Spring behaviour, and every such card is marked <span class="pill add">🧠 Added</span> with a dashed yellow border. The first 45 minutes of the class and the unrelated classroom chatter are not in this source. A few garbled words are read in context and the reading is stated where it matters.
+</div>
+<div class="jump"><b>Jump to:</b>
+<a href="#A">A · Lecture</a><a href="#B">B · Concepts</a><a href="#C">C · Code</a><a href="#D">D · Interview Q&amp;A</a><a href="#E">E · Revision sheet</a><a href="#F">F · Exercise</a>
+</div>
+</div>
+
+<!-- ============================ PART A ============================ -->
+<div class="section" id="A">
+<h2>📘 Part A — The Lecture, in the Instructor's Order</h2>
+<p class="sub">Only what was said. Nothing in this part is my addition.</p>
+
+<div class="card">
+<b>A1 · Base Package and the Main Application Class</b> <span class="pill lec">Lecture</span>
+<ul style="margin-top:8px;">
+<li>He asked: <em>"Where have you got the main application class?"</em> — the package that contains the main application class (<code>Application.java</code>) is <b>the base package</b>.</li>
+<li>In the configuration you tell Spring to <b>go to that package and scan</b>: whatever is inside the package is scanned, <b>including its sub-packages</b> — "these sub-packages are there, right? So all will be scanned."</li>
+<li>He talked through moving a class outside the employee package relative to <code>Application.java</code> to show the risk of where a class sits (the exact demonstration is unclear in the recording).</li>
+</ul>
+</div>
+
+<div class="card">
+<b>A2 · Be Careful With the Base Package</b> <span class="pill lec">Lecture</span>
+<ul style="margin-top:8px;">
+<li>Many students wrote only <code>@Component</code> on the class and expected the bean to be created. That isn't enough — <b>you must be very careful in providing the base package</b>.</li>
+<li>Otherwise <b>the scan won't pick up the component you marked, and it won't be created as a bean inside the IoC container.</b></li>
+</ul>
+</div>
+
+<div class="card">
+<b>A3 · Two Student Problems, Diagnosed</b> <span class="pill lec">Lecture</span>
+<div class="tw">
+<table>
+<tr><th>Student</th><th>Symptom</th><th>Cause</th></tr>
+<tr><td>First</td><td>Couldn't create the bean</td><td>He passed a <b>config class from a different project</b> — one where the <code>Employee</code> class was not part of the configuration. (The recording says "string config"; read here as the Spring config class that is passed to the container.)</td></tr>
+<tr><td>Second</td><td>Same: bean not created</td><td>The <b>package was not mentioned properly</b> — the base package was missing or wrong in the scan.</td></tr>
+</table>
+</div>
+<p style="margin-top:10px;">His advice: <b>verify every class name — "am I using the right class name or not?"</b> Nobody else reported a problem.</p>
+</div>
+
+<div class="card">
+<b>A4 · Package Naming</b> <span class="pill lec">Lecture</span>
+<ul style="margin-top:8px;">
+<li>When you create a package, <b>write a meaningful name</b>, and use that proper name as the base package in the scan.</li>
+<li>Don't write names with odd capitals (he mocked a capital M and a capital B inside a package name): "this doesn't look good".</li>
+</ul>
+</div>
+
+<div class="card">
+<b>A5 · "It's All Process" — and AI</b> <span class="pill lec">Lecture</span>
+<ul style="margin-top:8px;">
+<li>"In most cases there's <b>no technology here — it's all process</b>." As of now the class is in the <b>object-creation phase</b> — in Spring this is called <b>bean creation</b>.</li>
+<li><b>"Don't run behind logic, run behind the process. Learn the process."</b></li>
+<li>AI will write the code for you <b>if you know the process</b>; if you don't, even AI can't help. You must give AI the right instruction. In this very problem AI wouldn't have solved it, because <b>a Spring config is a Spring config — if you give it a wrong one, it just accepts it</b>.</li>
+<li>He also stressed following instructions from day one (the remarks about a meeting invite and job prospects are garbled in the recording).</li>
+</ul>
+</div>
+
+<div class="card">
+<b>A6 · Read the Error — It Gives You a Clue</b> <span class="pill lec">Lecture</span>
+<p>The failing programs printed <b>"no such bean"</b>. The instructor's reading: the error tells you <b>which bean is missing</b> — "no such bean for employee management" — and the reason is that <b>the configuration in the IoC container wasn't proper</b>, so no bean existed for that class. (The same "no such bean" error appeared in the earlier XML and Java-config classes.)</p>
+</div>
+
+<div class="card">
+<b>A7 · Debugging by Navigating the Classes</b> <span class="pill lec">Lecture</span>
+<p>"If you're facing problems, <b>go to every class and see.</b>" Hover over the class name and navigate to it (the IDE's go-to-class), and check which class and package it really is — so you know the right class and package are the ones being used.</p>
+</div>
+
+<div class="card">
+<b>A8 · The Research Assignment</b> <span class="pill lec">Lecture</span>
+<p>"Today you have to do complete research about <b>no such unique bean / no unique bean definition</b>." The four questions:</p>
+<ol style="padding-left:20px;margin-top:6px;">
+<li>What if you have <b>multiple bean definitions of the same type</b>? How do you resolve it?</li>
+<li>What is the purpose of <code>@Qualifier</code>?</li>
+<li>What is the purpose of <code>@Primary</code>?</li>
+<li>If you put both, <b>which one takes the priority</b>?</li>
+</ol>
+<p class="small" style="margin-top:6px;">Parts B–C answer these — they are not from the recording.</p>
+</div>
+</div>
+
+<!-- ============================ PART B ============================ -->
+<div class="section" id="B">
+<h2>🧠 Part B — The Technical Explanation (Beginner → Advanced)</h2>
+<p class="sub">Everything below is added by me, following the order of the topics above.</p>
+
+<div class="card add">
+<b>B1 · Component Scanning and <code>@ComponentScan</code></b> <span class="pill add">🧠 Added</span>
+<p style="margin-top:6px;"><b>Beginner:</b> marking a class with <code>@Component</code> only says "this class may be a bean". Nothing happens until Spring <b>searches for such classes</b>. <b>Component scanning</b> is that search; <code>@ComponentScan</code> tells Spring <b>where to search</b>.</p>
+<p style="margin-top:8px;"><b>How it works:</b> Spring walks the classpath <b>under the named package and every sub-package</b>, finds concrete classes annotated with <code>@Component</code> (or a stereotype built on it — <code>@Service</code>, <code>@Repository</code>, <code>@Controller</code>), and registers a <b>bean definition</b> for each. The default bean name is the <b>simple class name with a lowercase first letter</b> (<code>OrderService</code> → <code>orderService</code>).</p>
+<div class="tw">
+<table>
+<tr><th>Form</th><th>Meaning</th></tr>
+<tr><td><code>@ComponentScan("com.kodewala.shop")</code></td><td>Scan this package and its sub-packages</td></tr>
+<tr><td><code>@ComponentScan(basePackages = {"com.a", "com.b"})</code></td><td>Scan several packages</td></tr>
+<tr><td><code>@ComponentScan(basePackageClasses = App.class)</code></td><td>Scan the package of that class — safe against typos and package renames</td></tr>
+<tr><td><code>@ComponentScan</code> (no arguments)</td><td>Scan <b>the package of the class carrying the annotation</b> — the usual trap when the config class sits in a sub-package such as <code>config</code></td></tr>
+</table>
+</div>
+<p style="margin-top:8px;"><b>Advanced:</b> filters (<code>includeFilters</code>, <code>excludeFilters</code>) refine what is picked up; interfaces and abstract classes are never registered because they can't be instantiated. In Spring Boot, <code>@SpringBootApplication</code> already contains a <code>@ComponentScan</code> starting at <b>the main class's package</b> — which is why the main application class belongs in the root package.</p>
+</div>
+
+<div class="card add">
+<b>B2 · Base Package, the Main Class and Package Structure</b> <span class="pill add">🧠 Added</span>
+<p style="margin-top:6px;">Put the main class (and, in this setup, the scan configuration's reach) at the <b>root of your own code</b>, and keep features in sub-packages beneath it. The base package is then one meaningful, lowercase name that covers everything.</p>
+<div class="tw">
+<table>
+<tr><th></th><th>Good</th><th>Problem</th></tr>
+<tr><td>Where the base package points</td><td><code>com.kodewala.shop</code> — the root; features in <code>payment</code>, <code>order</code>, <code>config</code> below it</td><td>Pointing at a sub-package such as <code>...shop.config</code> — siblings (<code>order</code>, <code>payment</code>) are outside it</td></tr>
+<tr><td>Naming</td><td>Lowercase, meaningful: <code>com.company.project.feature</code></td><td><code>Com.MyApp.Emp</code>-style capitals — against convention (the instructor's point) and fragile on case-sensitive systems</td></tr>
+<tr><td>Classes you want as beans</td><td>Inside the scanned tree</td><td>A package outside the base package is never scanned, however correct the annotation</td></tr>
+<tr><td>Config class passed to the container</td><td>The one that scans <b>this</b> project's packages</td><td>A config class copied from another project (student 1's mistake)</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card add">
+<b>B3 · What the IoC Container Does — Execution Flow</b> <span class="pill add">🧠 Added</span>
+<ol style="padding-left:20px;margin-top:8px;">
+<li><code>new AnnotationConfigApplicationContext(AppConfig.class)</code> registers <code>AppConfig</code> and processes its annotations.</li>
+<li><code>@ComponentScan</code> is read: the container scans the classpath under the base package and all sub-packages.</li>
+<li>Every concrete class carrying <code>@Component</code> (or a stereotype) becomes a <b>bean definition</b> — a recipe saying which class to instantiate and under which name.</li>
+<li>The container then <b>instantiates the singleton beans</b>. For each one it resolves the <b>dependencies</b> — a constructor parameter of type <code>PaymentService</code> is searched for among bean definitions <b>by type</b>.</li>
+<li>Exactly one match → injected. None → <code>NoSuchBeanDefinitionException</code>. More than one and no tie-breaker → <code>NoUniqueBeanDefinitionException</code>.</li>
+<li>When startup completes, <code>getBean(...)</code> returns the ready beans.</li>
+</ol>
+<div class="lane">
+<div class="label">Happy path</div>
+<div class="flowbox">
+<div class="fstep">Config class given</div><div class="farrow">→</div>
+<div class="fstep notify">@ComponentScan: scan base package + sub-packages</div><div class="farrow">→</div>
+<div class="fstep">@Component classes → bean definitions</div><div class="farrow">→</div>
+<div class="fstep notify">Create beans, inject dependencies by type</div><div class="farrow">→</div>
+<div class="fstep">getBean() returns the bean</div>
+</div>
+</div>
+<div class="lane">
+<div class="label">The failure the lecture was about</div>
+<div class="flowbox">
+<div class="fstep wait">Base package wrong, or wrong config class</div><div class="farrow">→</div>
+<div class="fstep wait">Class never scanned → no bean definition</div><div class="farrow">→</div>
+<div class="fstep wait">getBean / injection → NoSuchBeanDefinitionException</div>
+</div>
+</div>
+</div>
+
+<div class="card add">
+<b>B4 · Why a Component May Not Become a Bean</b> <span class="pill add">🧠 Added</span>
+<div class="tw">
+<table>
+<tr><th>Cause</th><th>Why it happens</th><th>Fix</th></tr>
+<tr><td>Class outside the base package</td><td>It is never scanned</td><td>Move it under the base package, or add its package to <code>@ComponentScan</code></td></tr>
+<tr><td>Base package wrong or misspelled</td><td>The scan finds nothing (this is student 2's problem)</td><td>Copy the real package name, or use <code>basePackageClasses</code></td></tr>
+<tr><td>Scan argument missing</td><td>Bare <code>@ComponentScan</code> scans only the config class's own package</td><td>Name the root package explicitly</td></tr>
+<tr><td>Wrong config class passed to the context</td><td>The config that was passed doesn't scan your classes (student 1's problem)</td><td>Pass this project's config class</td></tr>
+<tr><td>No <code>@Component</code> (or stereotype)</td><td>The scanner ignores unmarked classes</td><td>Add the annotation</td></tr>
+<tr><td>Interface or abstract class annotated</td><td>Can't be instantiated, so no bean</td><td>Annotate the concrete implementation</td></tr>
+<tr><td>Requested by the wrong name or type</td><td>Bean exists but under a different name/type</td><td>Check the default name (<code>orderService</code>) or ask by class</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card add">
+<b>B5 · Debugging Steps and Reading the Exception</b> <span class="pill add">🧠 Added</span>
+<p style="margin-top:6px;">The instructor's advice — read the error, then check every class and package — as a procedure:</p>
+<ol style="padding-left:20px;">
+<li><b>Read the message for the missing type.</b> <code>No qualifying bean of type '…OrderService' available</code> tells you exactly which bean is missing (his "clue").</li>
+<li><b>Check the config class passed to the container</b> — is it this project's, and does it have <code>@Configuration</code> and <code>@ComponentScan</code>?</li>
+<li><b>Check the scan argument</b> against the real package declaration at the top of the missing class (navigate to the class, as he said).</li>
+<li><b>Check the annotation</b> on that class and that it is a concrete class.</li>
+<li><b>Print what the container actually holds</b> — <code>getBeanDefinitionNames()</code> (snippet 9). If your class isn't listed, the scan never reached it.</li>
+</ol>
+<div class="tw">
+<table>
+<tr><th>Message</th><th>Meaning</th></tr>
+<tr><td><code>NoSuchBeanDefinitionException: No qualifying bean of type 'X' available</code></td><td><b>Zero</b> beans match — a scanning/configuration problem</td></tr>
+<tr><td><code>NoUniqueBeanDefinitionException: … expected single matching bean but found 2: a,b</code></td><td><b>Several</b> beans match — a selection problem (next cards)</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card add">
+<b>B6 · Multiple Beans of the Same Type — <code>NoUniqueBeanDefinitionException</code></b> <span class="pill add">🧠 Added</span>
+<p style="margin-top:6px;"><b>The scenario:</b> an interface <code>PaymentService</code> has two implementations, <code>UpiPaymentService</code> and <code>CardPaymentService</code>, both <code>@Component</code>. A class asks Spring for a <code>PaymentService</code>. Both beans are <code>PaymentService</code>s, so Spring has <b>no way to choose</b>.</p>
+<ul style="margin-top:8px;">
+<li><b>Why it happens:</b> injection is <b>by type</b> first. Two candidates and no tie-breaker → <code>NoUniqueBeanDefinitionException</code>.</li>
+<li><b>When it appears:</b> singleton beans are created at startup, so the failure appears when the context starts — usually wrapped in <code>UnsatisfiedDependencyException</code>, with <code>NoUniqueBeanDefinitionException</code> as the cause.</li>
+<li><b>Ways to resolve it:</b></li>
+</ul>
+<div class="tw">
+<table>
+<tr><th>Option</th><th>Use when</th></tr>
+<tr><td><code>@Primary</code> on one bean</td><td>One implementation is the <b>default</b> almost everywhere</td></tr>
+<tr><td><code>@Qualifier("name")</code> at the injection point</td><td>A specific consumer needs a <b>specific</b> bean</td></tr>
+<tr><td>Match the parameter/field name to the bean name</td><td>A fallback that works but is fragile — avoid relying on it</td></tr>
+<tr><td>Inject <code>List&lt;PaymentService&gt;</code> or <code>Map&lt;String, PaymentService&gt;</code></td><td>You want <b>all</b> implementations (strategy-style selection by key)</td></tr>
+<tr><td>Register only one (<code>@Profile</code>, <code>@Conditional</code>, remove the annotation)</td><td>Only one should exist in a given environment</td></tr>
+</table>
+</div>
+</div>
+
+<div class="card add">
+<b>B7 · <code>@Primary</code></b> <span class="pill add">🧠 Added</span>
+<ul style="margin-top:6px;">
+<li><b>Purpose:</b> marks a bean as the <b>preferred candidate</b> when several beans of the same type qualify. It is a <b>default</b>, applied wherever no other selection is made.</li>
+<li><b>Where:</b> on a <code>@Component</code> class, or on a <code>@Bean</code> method.</li>
+<li><b>Rule:</b> at most <b>one</b> primary per type. Two primaries fail with <code>NoUniqueBeanDefinitionException: more than one 'primary' bean found among candidates</code>.</li>
+<li><b>Effect:</b> consumers need no change — the injection point stays <code>PaymentService</code>.</li>
+</ul>
+</div>
+
+<div class="card add">
+<b>B8 · <code>@Qualifier</code></b> <span class="pill add">🧠 Added</span>
+<ul style="margin-top:6px;">
+<li><b>Purpose:</b> at the <b>injection point</b>, names which bean you want. It <b>narrows the candidates</b> to the one(s) with that qualifier.</li>
+<li><b>By bean name:</b> <code>@Qualifier("upiPaymentService")</code> — the default name of a scanned class, or the method name of a <code>@Bean</code>.</li>
+<li><b>By custom label:</b> put <code>@Qualifier("upi")</code> on the bean class and the same label at the injection point — the consumer then doesn't depend on a class name.</li>
+<li><b>Where:</b> on a constructor parameter, a setter parameter or a field.</li>
+</ul>
+</div>
+
+<div class="card add">
+<b>B9 · When Both <code>@Qualifier</code> and <code>@Primary</code> Are Present</b> <span class="pill add">🧠 Added</span>
+<p style="margin-top:6px;">The lecture's last question. <b>Answer: <code>@Qualifier</code> wins.</b> <code>@Primary</code> is a general default; <code>@Qualifier</code> is an explicit choice at one particular injection point, and the explicit choice overrides the default. A <code>@Primary</code> bean is simply <b>not selected</b> at an injection point that qualifies a different bean.</p>
+<p style="margin-top:8px;"><b>Advanced nuance:</b> qualifiers filter the candidates first; <code>@Primary</code> only breaks a tie among whatever is left. So if a qualifier matches <b>several</b> beans, a <code>@Primary</code> among <em>them</em> decides.</p>
+<div class="lane">
+<div class="label">How Spring picks one bean when more than one matches the type</div>
+<div class="flowbox">
+<div class="fstep">Candidates by type</div><div class="farrow">→</div>
+<div class="fstep notify">@Qualifier at the injection point? → keep only matching beans</div><div class="farrow">→</div>
+<div class="fstep">Still several? @Primary → that one</div><div class="farrow">→</div>
+<div class="fstep">Still several? injection-point name = a bean name → that one</div><div class="farrow">→</div>
+<div class="fstep wait">Otherwise → NoUniqueBeanDefinitionException</div>
+</div>
+</div>
+<p class="small">(Spring also honours <code>@Priority</code> between primary and the name fallback; it is rarely used and omitted from the flow.)</p>
+</div>
+</div>
+
+<!-- ============================ PART C ============================ -->
+<div class="section" id="C">
+<h2>💻 Part C — Complete Examples: Incorrect and Corrected</h2>
+<p class="sub">All code is mine — a small shop project. Exception messages follow Spring's usual wording; class order in lists can vary. Nothing here was run.</p>
+
+<p><b>1. Package structure</b> <span class="pill add">🧠 Added</span></p>
+<pre><code>src/main/java
+└── com/kodewala/shop                    &lt;-- BASE PACKAGE (root of your own code)
+    ├── App.java                         main class
+    ├── config/
+    │   └── AppConfig.java               @Configuration + @ComponentScan
+    ├── payment/
+    │   ├── PaymentService.java          interface
+    │   ├── UpiPaymentService.java       @Component
+    │   └── CardPaymentService.java      @Component   (added later in step 4)
+    └── order/
+        └── OrderService.java            @Component, needs a PaymentService</code></pre>
+
+<p><b>2. The working baseline — one implementation</b></p>
+<pre><code class="language-java">// payment/PaymentService.java
+package com.kodewala.shop.payment;
+public interface PaymentService {
+    String pay(double amount);
+}
+
+// payment/UpiPaymentService.java
+package com.kodewala.shop.payment;
+import org.springframework.stereotype.Component;
+
+@Component
+public class UpiPaymentService implements PaymentService {
+    @Override public String pay(double amount) { return "Paid " + amount + " via UPI"; }
+}
+
+// order/OrderService.java
+package com.kodewala.shop.order;
+import com.kodewala.shop.payment.PaymentService;
+import org.springframework.stereotype.Component;
+
+@Component
+public class OrderService {
+    private final PaymentService paymentService;
+
+    public OrderService(PaymentService paymentService) {    // constructor injection, by type
+        this.paymentService = paymentService;
+    }
+    public void placeOrder(double amount) { System.out.println(paymentService.pay(amount)); }
+}
+
+// config/AppConfig.java  -- CORRECT: the scan starts at the root (base) package
+package com.kodewala.shop.config;
+import org.springframework.context.annotation.*;
+
+@Configuration
+@ComponentScan("com.kodewala.shop")          // covers config, payment and order sub-packages
+public class AppConfig { }
+
+// App.java
+package com.kodewala.shop;
+import com.kodewala.shop.config.AppConfig;
+import com.kodewala.shop.order.OrderService;
+import org.springframework.context.ApplicationContext;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+
+public class App {
+    public static void main(String[] args) {
+        ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
+        context.getBean(OrderService.class).placeOrder(499);      // Paid 499.0 via UPI
+    }
+}</code></pre>
+
+<p><b>3. Incorrect configurations — the lecture's missing-bean problems</b></p>
+<pre><code class="language-java">// WRONG 1: bare @ComponentScan in a sub-package -> scans only com.kodewala.shop.config
+@Configuration
+@ComponentScan
+public class AppConfig { }
+
+// WRONG 2: base package too narrow (points at a sub-package)
+@ComponentScan("com.kodewala.shop.config")
+
+// WRONG 3: misspelled base package (student 2's problem)
+@ComponentScan("com.kodewala.shopp")
+
+// WRONG 4: the config class from ANOTHER project (student 1's problem)
+ApplicationContext context = new AnnotationConfigApplicationContext(OtherProjectConfig.class);
+
+// Result in every case: the context starts, but nothing from payment/ or order/ was scanned:
+//   context.getBean(OrderService.class)
+//   -&gt; NoSuchBeanDefinitionException: No qualifying bean of type
+//      'com.kodewala.shop.order.OrderService' available</code></pre>
+<p><b>Corrected:</b> the config class in snippet 2 — <code>@ComponentScan("com.kodewala.shop")</code>, passed to the context from <code>App</code>.</p>
+
+<p><b>4. Add a second implementation — now selection fails</b></p>
+<pre><code class="language-java">// payment/CardPaymentService.java
+package com.kodewala.shop.payment;
+import org.springframework.stereotype.Component;
+
+@Component
+public class CardPaymentService implements PaymentService {
+    @Override public String pay(double amount) { return "Paid " + amount + " via Card"; }
+}
+
+// Same OrderService, same AppConfig. Starting the context now fails:
+//
+// UnsatisfiedDependencyException: Error creating bean with name 'orderService':
+//   Unsatisfied dependency expressed through constructor parameter 0:
+//   No qualifying bean of type 'com.kodewala.shop.payment.PaymentService' available:
+//   expected single matching bean but found 2: cardPaymentService,upiPaymentService
+//   (cause: NoUniqueBeanDefinitionException)</code></pre>
+
+<p><b>5. Fix A — <code>@Primary</code> (a default for everyone)</b></p>
+<pre><code class="language-java">import org.springframework.context.annotation.Primary;
+
+@Component
+@Primary                                           // Card is now the default PaymentService
+public class CardPaymentService implements PaymentService { /* ... */ }
+
+// OrderService is unchanged -> its constructor receives CardPaymentService
+// placeOrder(499)  -&gt;  Paid 499.0 via Card</code></pre>
+
+<p><b>6. Fix B — <code>@Qualifier</code> (a specific choice at the injection point)</b></p>
+<pre><code class="language-java">import org.springframework.beans.factory.annotation.Qualifier;
+
+// (a) by the default bean name
+public OrderService(@Qualifier("upiPaymentService") PaymentService paymentService) { ... }
+
+// (b) by a custom label - the consumer no longer depends on a class name
+@Component @Qualifier("upi")  public class UpiPaymentService  implements PaymentService { ... }
+@Component @Qualifier("card") public class CardPaymentService implements PaymentService { ... }
+
+public OrderService(@Qualifier("upi") PaymentService paymentService) { ... }
+// placeOrder(499)  -&gt;  Paid 499.0 via UPI</code></pre>
+
+<p><b>7. Both together — and two primaries</b></p>
+<pre><code class="language-java">@Component @Primary   public class CardPaymentService implements PaymentService { ... }
+@Component            public class UpiPaymentService  implements PaymentService { ... }
+
+public OrderService(@Qualifier("upiPaymentService") PaymentService paymentService) { ... }
+
+// Card is @Primary, but the injection point explicitly asks for UPI:
+// placeOrder(499)  -&gt;  Paid 499.0 via UPI          (the @Qualifier wins)
+
+// If BOTH classes are @Primary, startup fails:
+// NoUniqueBeanDefinitionException: more than one 'primary' bean found among candidates:
+//   [cardPaymentService, upiPaymentService]</code></pre>
+
+<p><b>8. The same ideas with <code>@Bean</code> methods</b></p>
+<pre><code class="language-java">@Configuration
+public class PaymentConfig {
+
+    @Bean @Primary                                  // bean name = method name: cardPayment
+    public PaymentService cardPayment() { return new CardPaymentService(); }
+
+    @Bean                                           // bean name: upiPayment
+    public PaymentService upiPayment() { return new UpiPaymentService(); }
+}
+// (remove @Component from the two classes, or you would register them twice)
+// Select explicitly with @Qualifier("upiPayment") at the injection point.</code></pre>
+
+<p><b>9. Debug helper — what does the container really hold?</b></p>
+<pre><code class="language-java">ApplicationContext context = new AnnotationConfigApplicationContext(AppConfig.class);
+
+for (String name : context.getBeanDefinitionNames()) {
+    System.out.println(name);                       // is your class listed at all?
+}
+String[] payments = context.getBeanNamesForType(PaymentService.class);
+System.out.println(java.util.Arrays.toString(payments));   // [cardPaymentService, upiPaymentService]</code></pre>
+</div>
+
+<!-- ============================ PART D ============================ -->
+<div class="section" id="D">
+<h2>💼 Part D — Interview Questions with Detailed Answers and Follow-Ups</h2>
+<p class="sub"><span class="pill add">🧠 Added</span> All answers are standard Spring behaviour, not lecture statements. Cross-references point to Parts B and C.</p>
+
+<div class="qa"><div class="q"><span class="num">Q1</span>What does <code>@ComponentScan</code> do?</div>
+<div class="a">It tells the container which packages to search for classes annotated with <code>@Component</code> or its stereotypes. Spring scans the named package and all sub-packages, registers a bean definition for each concrete match, and later instantiates them. With no argument it scans the package of the class carrying the annotation.</div>
+<div class="fu"><b>Follow-ups:</b> How do you scan several packages? (<code>basePackages</code> array.) Why prefer <code>basePackageClasses</code>? (It survives renames and typos.) How do you leave a class out? (<code>excludeFilters</code>.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q2</span>My class has <code>@Component</code> but I get "no such bean". Why?</div>
+<div class="a">The annotation only marks the class; the scan must reach it. Check, in order: the config class passed to the context; the scan's base package against the class's real package; whether a bare <code>@ComponentScan</code> sits in a sub-package; that the class is concrete and annotated; and the name or type you request (B4, snippet 3).</div>
+<div class="fu"><b>Follow-ups:</b> Does annotating an interface work? (No — only concrete classes become beans.) How would you prove the class was or wasn't scanned? (<code>getBeanDefinitionNames()</code>.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q3</span>What is the base package, and does Spring scan sub-packages?</div>
+<div class="a">The base package is the root package named in the scan — normally the package holding the main class. Spring scans it and every sub-package beneath it, so features can live in sub-packages. Classes outside that tree are never scanned. Use a meaningful, lowercase name such as <code>com.company.project</code>.</div>
+<div class="fu"><b>Follow-ups:</b> Why does Spring Boot put the main class in the root package? (Its <code>@SpringBootApplication</code> scans from there.) What goes wrong if the config class is in <code>config</code> and the scan is bare?</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q4</span>What happens if I pass the wrong configuration class to <code>AnnotationConfigApplicationContext</code>?</div>
+<div class="a">The container starts without complaint but builds only what <em>that</em> config defines. Beans from packages it doesn't scan don't exist, so <code>getBean</code> or an injection point fails with <code>NoSuchBeanDefinitionException</code> — the first student's problem.</div>
+<div class="fu"><b>Follow-ups:</b> Can you pass several config classes? (Yes, as varargs.) Why doesn't Spring warn you? (A config is just a source of definitions; it can't know your intent.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q5</span>How do <code>NoSuchBeanDefinitionException</code> and <code>NoUniqueBeanDefinitionException</code> differ?</div>
+<div class="a">The first means <b>zero</b> beans match the requested type or name — a scanning or configuration problem. The second means <b>more than one</b> matches and nothing breaks the tie — a selection problem. The second is a subclass of the first. Fix zero-match by correcting scanning; fix multi-match with <code>@Primary</code>, <code>@Qualifier</code> or by injecting a collection.</div>
+<div class="fu"><b>Follow-ups:</b> Which one tells you the missing bean's type? (Both, in the message.) Which is wrapped by <code>UnsatisfiedDependencyException</code> at startup? (Either, when raised while creating a bean.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q6</span>Two classes implement one interface. How does Spring choose which to inject?</div>
+<div class="a">It matches by type and finds two candidates. It then applies, in order: <code>@Qualifier</code> at the injection point to filter; <code>@Primary</code> to break a tie; and finally a fallback that matches the injection point's name to a bean name. If still ambiguous it throws <code>NoUniqueBeanDefinitionException</code>.</div>
+<div class="fu"><b>Follow-ups:</b> Which of these would you rely on in production? (Explicit <code>@Qualifier</code> or <code>@Primary</code>; the name fallback is fragile.) Can you inject all implementations? (Q12.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q7</span>What is <code>@Primary</code>?</div>
+<div class="a">An annotation on a bean class or <code>@Bean</code> method that marks it as the preferred candidate among beans of the same type. It supplies a default without changing consumers. Only one bean of a type may be primary, otherwise Spring reports "more than one 'primary' bean found among candidates".</div>
+<div class="fu"><b>Follow-ups:</b> Can a consumer override it? (Yes, with <code>@Qualifier</code>.) Where would you put it for a production vs test implementation? (Combine with profiles.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q8</span>What is <code>@Qualifier</code> and how do you use it?</div>
+<div class="a">It names the bean wanted at one injection point — on a constructor parameter, setter or field. By default the value is the bean name (<code>upiPaymentService</code> for a scanned class, the method name for a <code>@Bean</code>). You can also label a bean class with <code>@Qualifier("upi")</code> and use the same label at the injection point.</div>
+<div class="fu"><b>Follow-ups:</b> Why use a custom label instead of the class name? (Consumers stay independent of implementation class names.) Does <code>@Qualifier</code> work with constructor injection? (Yes, on the parameter.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q9</span>Both <code>@Qualifier</code> and <code>@Primary</code> are present — which takes priority?</div>
+<div class="a"><code>@Qualifier</code>. It is an explicit selection at the injection point and narrows the candidates first; <code>@Primary</code> is only a default used to break ties. A primary bean is bypassed where a different bean is qualified. If the qualifier itself matches several beans, a primary among them breaks that tie.</div>
+<div class="fu"><b>Follow-ups:</b> What if the qualifier matches no bean? (<code>NoSuchBeanDefinitionException</code>.) Show it in code. (Snippet 7.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q10</span>With no <code>@Qualifier</code> and no <code>@Primary</code>, can a field called <code>upiPaymentService</code> still resolve ambiguity?</div>
+<div class="a">Yes — as a last fallback Spring compares the injection point's field or parameter name with candidate bean names, so a parameter named <code>upiPaymentService</code> picks that bean. It works but is fragile: renaming a variable changes behaviour, and constructor-parameter names must be available at runtime. Prefer an explicit annotation.</div>
+<div class="fu"><b>Follow-ups:</b> Why is this a bad habit? (Silent coupling between a variable name and a bean name.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q11</span>How do you disambiguate two <code>@Bean</code> methods returning the same type?</div>
+<div class="a">The bean name is the method name, so you can select with <code>@Qualifier("methodName")</code>, or put <code>@Primary</code> on one method. You can also name beans explicitly with <code>@Bean("name")</code>. Don't also annotate the classes with <code>@Component</code> or you register duplicates.</div>
+<div class="fu"><b>Follow-ups:</b> What is the default name of a <code>@Bean</code>? (The method name.) (Snippet 8.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q12</span>How would you use all implementations of an interface?</div>
+<div class="a">Inject a collection: <code>List&lt;PaymentService&gt;</code> gives every bean of that type; <code>Map&lt;String, PaymentService&gt;</code> gives them keyed by bean name, handy for strategy-style selection ("upiPaymentService" → bean). No tie-breaker is needed because you are asking for all.</div>
+<div class="fu"><b>Follow-ups:</b> How is the order of a list controlled? (<code>@Order</code> or <code>Ordered</code>.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q13</span>How do <code>@Service</code>, <code>@Repository</code> and <code>@Controller</code> relate to <code>@Component</code>?</div>
+<div class="a">They are specialisations of <code>@Component</code> — the scan treats them the same way — but they express the layer's role, and some add behaviour (for example <code>@Repository</code> enables persistence exception translation). The lecture's earlier remark about "component-style" annotations for service, repository and controller layers refers to these.</div>
+<div class="fu"><b>Follow-ups:</b> Does the scan need to know the difference? (No.) Why not tag everything <code>@Component</code>? (Clarity and extra layer-specific behaviour.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q14</span>In a large project you see "no such bean". What is your debugging approach?</div>
+<div class="a">Read the exception for the missing type; confirm the right config class is passed to the container; compare the scan's base package with the missing class's real package declaration; verify the annotation and that the class is concrete; and list <code>getBeanDefinitionNames()</code> to see whether the scan reached it. This mirrors the instructor's "read the error, then check every class and package" (B5).</div>
+<div class="fu"><b>Follow-ups:</b> Where would a package rename bite you? (A hard-coded string scan — use <code>basePackageClasses</code>.)</div></div>
+
+<div class="qa"><div class="q"><span class="num">Q15</span>Why does <code>NoUniqueBeanDefinitionException</code> appear when the context starts, not at <code>getBean</code>?</div>
+<div class="a">Singleton beans are created eagerly during startup. While building <code>OrderService</code> the container resolves its constructor parameter, finds two candidates and fails then — wrapped in <code>UnsatisfiedDependencyException</code>. This fail-fast behaviour is intentional: configuration mistakes show up at boot, not at the first request.</div>
+<div class="fu"><b>Follow-ups:</b> Would a lazy bean fail later? (Yes — at its first use.)</div></div>
+</div>
+
+<!-- ============================ PART E ============================ -->
+<div class="section" id="E">
+<h2>🧾 Part E — Revision Sheet</h2>
+<p class="sub"><span class="pill add">🧠 Added</span> One screen. Lecture points are tagged <span class="pill lec">Lecture</span>.</p>
+
+<div class="tw">
+<table>
+<tr><th>Concept</th><th>Remember</th></tr>
+<tr><td><code>@Component</code></td><td>Marks a class as a potential bean — does nothing without a scan</td></tr>
+<tr><td><code>@ComponentScan</code></td><td>Where to look; scans the package <b>and sub-packages</b>; bare form = own package only</td></tr>
+<tr><td>Base package <span class="pill lec">Lecture</span></td><td>Where the main application class lives; use a meaningful lowercase name; be careful, a wrong one means no bean</td></tr>
+<tr><td>Two student mistakes <span class="pill lec">Lecture</span></td><td>Wrong config class (from another project) · package not mentioned properly</td></tr>
+<tr><td>Process over logic <span class="pill lec">Lecture</span></td><td>Learn the process; AI can only help if you know it</td></tr>
+<tr><td>"No such bean" <span class="pill lec">Lecture</span></td><td>Zero beans — read the message for the missing type, check config and scan</td></tr>
+<tr><td><code>NoUniqueBeanDefinitionException</code></td><td>Several beans of one type, no tie-breaker — thrown at startup</td></tr>
+<tr><td><code>@Primary</code></td><td>Default winner; one per type</td></tr>
+<tr><td><code>@Qualifier</code></td><td>Explicit pick at the injection point, by bean name or custom label</td></tr>
+<tr><td>Both present</td><td><b>@Qualifier wins</b>; @Primary breaks ties among what remains</td></tr>
+</table>
+</div>
+
+<div class="lane">
+<div class="label">Bean-selection decision flow</div>
+<div class="flowbox">
+<div class="fstep">1 bean of the type?</div><div class="farrow">→ inject →</div>
+<div class="fstep">Several: @Qualifier given?</div><div class="farrow">→ that bean →</div>
+<div class="fstep">else @Primary?</div><div class="farrow">→ that bean →</div>
+<div class="fstep">else name matches?</div><div class="farrow">→ that bean →</div>
+<div class="fstep wait">else NoUniqueBeanDefinitionException</div>
+</div>
+</div>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">0 beans of the type?</div><div class="farrow">→</div>
+<div class="fstep wait">NoSuchBeanDefinitionException → fix scanning / config class</div>
+</div>
+</div>
+</div>
+
+<!-- ============================ PART F ============================ -->
+<div class="section" id="F">
+<h2>🛠️ Part F — Practical Coding Exercise: Two Beans of One Interface</h2>
+<p class="sub"><span class="pill add">🧠 Added</span> Build it, break it, fix it. Expected results are listed so you can check yourself.</p>
+
+<p><b>Package structure and starter code</b></p>
+<pre><code>com.kodewala.alerts
+├── AlertsApp.java
+├── config/AlertsConfig.java
+├── notify/NotificationService.java        (interface)
+├── notify/EmailNotificationService.java   (@Component)
+├── notify/SmsNotificationService.java     (@Component)
+└── alert/AlertManager.java                (@Component, needs a NotificationService)</code></pre>
+<pre><code class="language-java">// notify/NotificationService.java
+public interface NotificationService { String send(String message); }
+
+// notify/EmailNotificationService.java   -> return "EMAIL: " + message
+// notify/SmsNotificationService.java     -> return "SMS: " + message
+//   (both annotated @Component)
+
+// alert/AlertManager.java
+@Component
+public class AlertManager {
+    private final NotificationService notificationService;
+    public AlertManager(NotificationService notificationService) {    // no selection yet
+        this.notificationService = notificationService;
+    }
+    public void raise(String text) { System.out.println(notificationService.send(text)); }
+}
+
+// config/AlertsConfig.java
+@Configuration
+@ComponentScan("com.kodewala.alerts")
+public class AlertsConfig { }
+
+// AlertsApp.java
+public class AlertsApp {
+    public static void main(String[] args) {
+        ApplicationContext ctx = new AnnotationConfigApplicationContext(AlertsConfig.class);
+        ctx.getBean(AlertManager.class).raise("Server is down");
+    }
+}</code></pre>
+
+<p><b>Tasks</b></p>
+<div class="tw">
+<table>
+<tr><th>#</th><th>Do this</th><th>Predict, then check</th></tr>
+<tr><td>1</td><td>Run the starter code as it is.</td><td>The context fails at startup: <code>UnsatisfiedDependencyException</code> caused by <code>NoUniqueBeanDefinitionException</code>, found 2: <code>emailNotificationService</code>, <code>smsNotificationService</code>.</td></tr>
+<tr><td>2</td><td>Put <code>@Primary</code> on <code>SmsNotificationService</code>.</td><td><code>SMS: Server is down</code></td></tr>
+<tr><td>3</td><td>Add <code>@Qualifier("emailNotificationService")</code> to the <code>AlertManager</code> constructor parameter (keep <code>@Primary</code> on SMS).</td><td><code>EMAIL: Server is down</code> — the qualifier wins over the primary.</td></tr>
+<tr><td>4</td><td>Put <code>@Primary</code> on <b>both</b> implementations and remove the qualifier.</td><td>Startup fails: more than one 'primary' bean found among candidates.</td></tr>
+<tr><td>5</td><td>Remove <code>@Primary</code> and the qualifier, then rename the constructor parameter to <code>smsNotificationService</code>.</td><td>It runs and prints <code>SMS: …</code> through the name fallback — then explain why you wouldn't rely on it.</td></tr>
+<tr><td>6</td><td>Change the scan to <code>@ComponentScan("com.kodewala.alerts.config")</code> and request <code>AlertManager</code>.</td><td><code>NoSuchBeanDefinitionException</code> — the components were never scanned. Then repair it.</td></tr>
+<tr><td>7</td><td>Print <code>getBeanDefinitionNames()</code> and <code>getBeanNamesForType(NotificationService.class)</code> in tasks 1 and 6.</td><td>Task 1 lists both implementations; task 6 shows neither.</td></tr>
+<tr><td>8 (bonus)</td><td>Rewrite <code>AlertManager</code> to take <code>List&lt;NotificationService&gt;</code> and send to <b>all</b> of them; then try <code>Map&lt;String, NotificationService&gt;</code> and pick by key.</td><td>Both messages print; no tie-breaker is needed.</td></tr>
+<tr><td>9 (bonus)</td><td>Replace the two <code>@Component</code> classes with two <code>@Bean</code> methods in a config class and select with <code>@Qualifier("methodName")</code>.</td><td>Same behaviour as tasks 2–3, with names equal to the method names.</td></tr>
+</table>
+</div>
+<p style="margin-top:10px;"><b>Self-check questions:</b> why did task 1 fail at startup rather than at <code>getBean</code>? Which task proves "qualifier beats primary"? Which proves the scan, not the annotation, creates the bean?</p>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude</h2>
+<div class="extra">
+The transcript's lecture content is cards A1–A8; Parts B–F are my technical explanation, code, questions and exercise, and each of those is marked as added. No clean-up map is included, per your earlier request. The code is illustrative and wasn't run.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>

@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Java Backend Notes - Spring: Dependency &amp; Dependency Injection (Introduction)</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" rel="stylesheet"/>
+
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Poppins',sans-serif;}
+body{background:#eef4ff;color:#2c3e50;line-height:1.8;padding:40px;}
+.container{max-width:1100px;margin:auto;background:white;border-radius:18px;overflow:hidden;box-shadow:0 10px 35px rgba(0,0,0,.15);}
+.header{background:linear-gradient(135deg,#0077ff,#6c63ff);color:white;padding:35px;}
+.header h1{font-size:34px;}
+.header p{margin-top:8px;opacity:.9;}
+.header p.meta{font-size:13px;opacity:.8;}
+.section{padding:30px 40px;border-bottom:1px solid #ececec;}
+.section h2{color:#0066ff;margin-bottom:18px;border-left:6px solid #0066ff;padding-left:12px;}
+.card{background:#f8fbff;border-left:5px solid #4CAF50;padding:18px;border-radius:10px;margin:18px 0;}
+ul{padding-left:22px;}
+li{margin-bottom:10px;}
+b{color:#d63384;}
+pre{border-radius:10px;margin-top:15px;margin-bottom:20px;font-size:15px;}
+code{font-size:15px;}
+p code,li code,td code,b code{background:#eef2ff;color:#3b3b98;padding:1px 6px;border-radius:5px;font-family:Consolas,Monaco,'Courier New',monospace;font-size:14px;}
+table{width:100%;border-collapse:collapse;margin-top:20px;}
+th{background:#0077ff;color:white;padding:12px;text-align:left;}
+td{padding:12px;border:1px solid #ddd;vertical-align:top;}
+.tw{overflow-x:auto;}
+.extra{background:#e8fff0;border-left:6px solid #27ae60;padding:18px;border-radius:10px;}
+.footer{text-align:center;padding:20px;background:#fafafa;color:#777;}
+.hot{background:#fff3e0;border-left:6px solid #ff9800;padding:14px 18px;border-radius:10px;margin:16px 0;}
+.hot b{color:#e07800;}
+.flag{background:#fffbe6;border:2px dashed #e0b400;padding:16px 20px;border-radius:10px;margin:18px 0;font-size:14.5px;}
+.flag b{color:#a67c00;}
+.lane{margin:16px 0;}
+.lane .label{font-weight:600;color:#0066ff;margin-bottom:6px;}
+.flowbox{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:monospace;font-size:13px;}
+.fstep{background:#1e1e2f;color:#7cffb2;padding:9px 13px;border-radius:8px;text-align:center;}
+.fstep.wait{background:#3a2a2a;color:#ff9a76;}
+.fstep.notify{background:#1f2f4a;color:#8fc4ff;}
+.farrow{color:#888;font-size:18px;}
+.small{font-size:13px;color:#777;}
+@media(max-width:768px){body{padding:14px;}.section{padding:20px;}.header{padding:25px;}.header h1{font-size:26px;}}
+</style>
+</head>
+
+<body>
+<div class="container">
+
+<div class="header">
+<h1>📘 Java Backend Notes</h1>
+<p>Spring — Dependency and Dependency Injection (Introduction)</p>
+<p class="meta">Source: Kodewala class · Nov 16, 2026 · 10:30 AM · recording 1:07:52 — the transcript captures only the opening, concept part</p>
+</div>
+
+<div class="section">
+<h2>🎯 Topics Covered</h2>
+<ul>
+<li>What a dependency is — one class/object depending on another class's object</li>
+<li>The form-filling analogy (personal, education, address, employment details)</li>
+<li>Why the details are kept in separate classes</li>
+<li>Injection — supplying the dependency — and who does it</li>
+</ul>
+<div class="flag">
+<b>How to read these notes:</b> green cards = taught in class; <b>yellow dashed boxes</b> = my additions, not said in class; orange box = interview angle. The transcript is rough, mostly a spoken explanation with no code on screen, so the code below is my illustration. Details such as the exact address fields were partly garbled and are described only as heard.
+</div>
+</div>
+
+<div class="section">
+<h2>🧠 Key Concepts</h2>
+
+<div class="card">
+<b>Where We Are</b>
+<p>The last topic was <b>IoC</b> — what IoC is and what a bean is. Today the class starts <b>Dependency Injection</b>, and the instructor wanted students to understand <b>what a dependency is</b> before looking at how Spring injects it.</p>
+</div>
+
+<div class="card">
+<b>What Is a Dependency?</b>
+<p><b>Dependency means one class (or its object) depends on another class's object.</b> In his words: the <b>creation of one class's object depends on another class's object</b>.</p>
+<div class="hot" style="margin-bottom:0;">
+<b>🔥 Interview angle:</b> "What is a dependency?" / "What is dependency injection?" — the object another class needs, and supplying that object from outside (done by Spring); see the injection card below.
+</div>
+</div>
+
+<div class="card">
+<b>The Practical Scenario — Filling in a Form</b>
+<p>When you fill any form it takes your <b>personal details</b>, <b>educational details</b>, <b>address</b> and <b>employment details</b>. Combine all four and you get the <b>employee details</b>. So to create an object (bean) of <code>EmployeeDetail</code>, you need objects of these four classes:</p>
+<div class="tw">
+<table>
+<tr><th>Part of the form</th><th>Its own class</th></tr>
+<tr><td>Personal details</td><td>a personal-details class</td></tr>
+<tr><td>Educational details</td><td>an education class</td></tr>
+<tr><td>Address</td><td>an <code>Address</code> class</td></tr>
+<tr><td>Employment / employer details</td><td>an employment-details class</td></tr>
+</table>
+</div>
+<div class="lane">
+<div class="flowbox">
+<div class="fstep">Create the Personal, Education, Address and Employment objects first</div>
+<div class="farrow">→ supplied to →</div>
+<div class="fstep notify">EmployeeDetail object</div>
+</div>
+</div>
+<p><code>EmployeeDetail</code> has a <b>dependency on those classes</b>: before its object can be created, the objects of the classes it depends on are created, and then <b>those objects are injected into it</b>. "Very simple."</p>
+</div>
+
+<div class="card">
+<b>The Same Idea in Code Terms — Employee and Address</b>
+<ul style="margin-top:8px;">
+<li>An <code>Employee</code> class holds the employee's information — first name, last name, employee code and so on — and the employee also has an <b>address</b>.</li>
+<li>The address is its own class, with fields such as line one, area, city, state and country (some of the field names were garbled in the recording).</li>
+<li>To create an <code>Employee</code> object you must <b>initialise the Address first and provide it as a dependency</b>. The instructor ended by saying that when you create the object of the employee class you need the address object as well — the point where a constructor comes into play (the word itself is unclear in the recording).</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Why Separate Classes? — The Modular Approach</b>
+<ul style="margin-top:8px;">
+<li>Students may ask: <em>"why not put everything in one class?"</em> His answer: <b>always follow a modular approach</b>.</li>
+<li>An address alone has <b>many fields</b>; there's no point keeping them inside the employee class. Education details could be another ~20 fields.</li>
+<li>So put the address fields in an <b>address class</b> and the education fields in their own class: these fields hold the address, those hold the basic employee details — and the employee then <b>has</b> an address.</li>
+</ul>
+</div>
+
+<div class="card">
+<b>Injection — Who Provides the Objects?</b>
+<ul style="margin-top:8px;">
+<li>The objects the class needs are <b>injected</b> into it. <b>Providing the object is the injection</b> — the instructor called the one who provides it the "injector".</li>
+<li>This is <b>taken care of by the Spring Framework</b> — which is why Spring is the next step after IoC.</li>
+<li>The order matters: create the dependency objects first, then the object that needs them.</li>
+</ul>
+</div>
+
+<div class="flag">
+<b>💡 Added clarification:</b>
+<ul style="margin-top:8px;">
+<li><b>Terms:</b> the class that needs the object is the <b>dependent</b>; the needed object (<code>Address</code>) is the <b>dependency</b>; handing it over is <b>injection</b>; Spring's IoC container is the <b>injector</b> doing it.</li>
+<li><b>Why it matters:</b> without injection <code>Employee</code> would create its own <code>Address</code> with <code>new</code> inside, which ties the two tightly together. Supplying it from outside is loose coupling — the idea you met as constructor injection in the project reviews.</li>
+<li><b>Types of injection</b> — constructor, setter and field — exist in Spring, but this recording doesn't reach them (the instructor was just at the constructor idea).</li>
+</ul>
+</div>
+
+</div>
+
+<div class="section">
+<h2>💻 Code Snippets / Examples</h2>
+
+<div class="flag">
+<b>Note on this code:</b> the instructor explained this verbally and showed no code in this transcript, so both snippets are <b>my illustrations</b> of what he described — the field names and values are mine. The second snippet is a <b>preview of Spring's side</b>, which this recording does not cover.
+</div>
+
+<p><b>1. Plain Java — Employee depends on Address, so the Address must exist first:</b></p>
+<pre><code class="language-java">public class Address {
+    private String line1, area, city, state, country;
+
+    public Address(String line1, String area, String city, String state, String country) {
+        this.line1 = line1; this.area = area; this.city = city;
+        this.state = state; this.country = country;
+    }
+}
+
+public class Employee {
+    private String firstName, lastName, employeeCode;
+    private Address address;                 // Employee DEPENDS on an Address object
+
+    public Employee(String firstName, String lastName, String employeeCode, Address address) {
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.employeeCode = employeeCode;
+        this.address = address;              // the dependency is supplied from outside
+    }
+}
+
+public class App {
+    public static void main(String[] args) {
+        // 1. create the dependency first
+        Address address = new Address("12 MG Road", "Camp", "Pune", "Maharashtra", "India");
+        // 2. then the object that needs it - the address object is "injected" through the constructor
+        Employee emp = new Employee("Asha", "Rao", "E101", address);
+    }
+}</code></pre>
+
+<p><b>2. Preview (added) — the same wiring done by the Spring container with Java configuration:</b></p>
+<pre><code class="language-java">@Configuration
+public class AppConfig {
+
+    @Bean
+    public Address address() {
+        return new Address("12 MG Road", "Camp", "Pune", "Maharashtra", "India");
+    }
+
+    @Bean
+    public Employee employee(Address address) {      // Spring supplies the Address bean here
+        return new Employee("Asha", "Rao", "E101", address);
+    }
+}
+// Nobody calls "new Employee(..., address)" in main: the container creates the Address bean first
+// and injects it into the Employee bean - exactly the dependency + injection idea above.</code></pre>
+
+</div>
+
+<div class="section">
+<h2>✅ Action Items</h2>
+<div class="card" style="margin-top:0;">
+<b>From the class</b>
+<p>No homework is stated in the part of the recording that was captured. (The instructor opened by joking about students forgetting everything after practising — a nudge to keep practising.)</p>
+</div>
+<div class="flag">
+<b>Suggested practice (added):</b>
+<ul style="margin-top:8px;">
+<li>Model the form example: <code>PersonalDetails</code>, <code>EducationDetails</code>, <code>Address</code>, <code>EmploymentDetails</code> and an <code>EmployeeDetail</code> that holds all four. Create the objects by hand in the correct order.</li>
+<li>Try creating <code>EmployeeDetail</code> before the others exist — notice what you're missing.</li>
+<li>Explain "dependency" and "injection" in one line each, then tie them to the Spring container.</li>
+</ul>
+</div>
+</div>
+
+<div class="section">
+<h2>🔗 Connects To</h2>
+<ul>
+<li><b>Builds on:</b> the IoC and bean classes, and the Java-configuration class (<code>@Configuration</code> / <code>@Bean</code>) — the preview snippet uses exactly that.</li>
+<li><b>Not covered in this recording:</b> the 1:07 session appears much longer than the opening captured here, so how Spring performs the injection (XML, Java configuration, annotations; constructor vs setter) isn't in this source. These notes will need extending if you share the rest.</li>
+</ul>
+</div>
+
+<div class="section">
+<h2>➕ Added by Claude (Optional)</h2>
+<div class="extra">
+Layout and tables are my additions; the lecture content comes from your transcript. Yellow dashed boxes mark everything the instructor didn't say. Both code samples are illustrations, not from the class.
+</div>
+</div>
+
+<div class="footer">
+Made for Java Backend Revision 📚
+</div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-java.min.js"></script>
+</body>
+</html>
